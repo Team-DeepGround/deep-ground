@@ -2,9 +2,23 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { BookOpen, Calendar, MessageSquare, Bell, Menu, Users, User, LogIn, Search } from "lucide-react"
+import {
+  BookOpen,
+  Calendar,
+  MessageSquare,
+  Bell,
+  Menu,
+  Users,
+  User,
+  LogIn,
+  Search,
+  Settings,
+  Shield,
+  LogOut,
+  HelpCircle,
+} from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/use-auth"
@@ -15,9 +29,12 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import NotificationDropdown from "@/components/notification-dropdown"
 
 const navigation = [
   { name: "스터디", href: "/studies", icon: BookOpen },
@@ -28,12 +45,14 @@ const navigation = [
 
 export default function Header() {
   const pathname = usePathname()
+  const router = useRouter()
   const { user, signOut } = useAuth()
   const [searchOpen, setSearchOpen] = useState(false)
+  const [notificationOpen, setNotificationOpen] = useState(false)
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
+      <div className="w-full max-w-screen-2xl mx-auto px-4 flex h-16 items-center justify-between">
         <div className="flex items-center gap-2 md:gap-6">
           <Sheet>
             <SheetTrigger asChild>
@@ -99,7 +118,14 @@ export default function Header() {
             </Button>
           )}
 
-          <Button variant="ghost" size="icon" className="relative">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative"
+            onClick={() => {
+              setNotificationOpen(!notificationOpen)
+            }}
+          >
             <Bell className="h-5 w-5" />
             <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center">3</Badge>
             <span className="sr-only">알림</span>
@@ -115,21 +141,59 @@ export default function Header() {
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>내 계정</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile" className="cursor-pointer">
+                      <User className="mr-2 h-4 w-4" />
+                      <span>프로필</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile?tab=settings" className="cursor-pointer">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>계정 설정</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile?tab=security" className="cursor-pointer">
+                      <Shield className="mr-2 h-4 w-4" />
+                      <span>보안</span>
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuItem asChild>
+                    <Link href="/friends" className="cursor-pointer">
+                      <Users className="mr-2 h-4 w-4" />
+                      <span>친구</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/studies/my" className="cursor-pointer">
+                      <BookOpen className="mr-2 h-4 w-4" />
+                      <span>내 스터디</span>
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href="/profile">
-                    <User className="mr-2 h-4 w-4" />
-                    <span>프로필</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/friends">
-                    <Users className="mr-2 h-4 w-4" />
-                    <span>친구</span>
+                  <Link href="/help" className="cursor-pointer">
+                    <HelpCircle className="mr-2 h-4 w-4" />
+                    <span>도움말</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => signOut()}>로그아웃</DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => signOut()}
+                  className="cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>로그아웃</span>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
@@ -142,6 +206,9 @@ export default function Header() {
           )}
         </div>
       </div>
+
+      {/* 알림 드롭다운 */}
+      <NotificationDropdown isOpen={notificationOpen} onClose={() => setNotificationOpen(false)} />
     </header>
   )
 }

@@ -6,13 +6,13 @@ import { ThemeProvider } from "@/components/theme-provider"
 import Header from "@/components/header"
 import { Toaster } from "@/components/ui/toaster"
 import AuthProvider from "@/components/auth-provider"
+import FloatingChatButton from "@/components/floating-chat-button"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "DeepGround - 개발자 커뮤니티 & 스터디 플랫폼",
   description: "개발자들이 함께 공부하고, 질문하고, 성장하는 온라인 커뮤니티",
-    generator: 'v0.dev'
 }
 
 export default function RootLayout({
@@ -29,6 +29,7 @@ export default function RootLayout({
               <Header />
               <main className="flex-1">{children}</main>
               <Toaster />
+              <FloatingChatButton />
             </div>
           </AuthProvider>
         </ThemeProvider>
@@ -36,6 +37,3 @@ export default function RootLayout({
     </html>
   )
 }
-
-
-import './globals.css'

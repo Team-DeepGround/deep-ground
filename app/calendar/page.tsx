@@ -22,7 +22,7 @@ import { Plus, CalendarIcon, Clock, Users, MapPin } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
-import { format } from "date-fns"
+import { format, startOfWeek, endOfWeek, eachDayOfInterval, startOfMonth, endOfMonth } from "date-fns"
 import { ko } from "date-fns/locale"
 
 // 임시 일정 데이터
@@ -71,6 +71,39 @@ const events = [
     location: "온라인 (Google Meet)",
     isImportant: false,
   },
+  {
+    id: 5,
+    title: "JavaScript 심화 학습",
+    date: "2023-05-16",
+    startTime: "18:30",
+    endTime: "20:30",
+    description: "클로저와 프로토타입에 대해 학습합니다.",
+    studyGroup: "모던 자바스크립트 심화 학습",
+    location: "온라인 (Zoom)",
+    isImportant: false,
+  },
+  {
+    id: 6,
+    title: "머신러닝 기초",
+    date: "2023-05-17",
+    startTime: "19:00",
+    endTime: "21:00",
+    description: "머신러닝 기초 개념과 파이썬 라이브러리를 학습합니다.",
+    studyGroup: "머신러닝 기초부터 실전까지",
+    location: "온라인 (Google Meet)",
+    isImportant: true,
+  },
+  {
+    id: 7,
+    title: "TypeScript 타입 시스템",
+    date: "2023-05-19",
+    startTime: "20:00",
+    endTime: "22:00",
+    description: "TypeScript의 고급 타입 시스템에 대해 학습합니다.",
+    studyGroup: "모던 자바스크립트 심화 학습",
+    location: "온라인 (Discord)",
+    isImportant: false,
+  },
 ]
 
 // 임시 스터디 그룹 데이터
@@ -88,6 +121,7 @@ export default function CalendarPage() {
   const [date, setDate] = useState<Date | undefined>(new Date())
   const [selectedEvent, setSelectedEvent] = useState<(typeof events)[0] | null>(null)
   const [isAddEventOpen, setIsAddEventOpen] = useState(false)
+  const [calendarView, setCalendarView] = useState<"day" | "week" | "month">("day")
 
   // 새 일정 상태
   const [newEvent, setNewEvent] = useState({
@@ -105,6 +139,28 @@ export default function CalendarPage() {
 
   // 선택된 날짜의 이벤트 필터링
   const selectedDateEvents = date ? events.filter((event) => event.date === format(date, "yyyy-MM-dd")) : []
+
+  // 주간 뷰를 위한 날짜 범위 계산
+  const weekStart = date ? startOfWeek(date, { weekStartsOn: 1 }) : startOfWeek(new Date(), { weekStartsOn: 1 })
+  const weekEnd = date ? endOfWeek(date, { weekStartsOn: 1 }) : endOfWeek(new Date(), { weekStartsOn: 1 })
+  const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd })
+
+  // 월간 뷰를 위한 날짜 범위 계산
+  const monthStart = date ? startOfMonth(date) : startOfMonth(new Date())
+  const monthEnd = date ? endOfMonth(date) : endOfMonth(new Date())
+  const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd })
+
+  // 주간 이벤트 필터링
+  const weekEvents = events.filter((event) => {
+    const eventDate = new Date(event.date)
+    return eventDate >= weekStart && eventDate <= weekEnd
+  })
+
+  // 월간 이벤트 필터링
+  const monthEvents = events.filter((event) => {
+    const eventDate = new Date(event.date)
+    return eventDate >= monthStart && eventDate <= monthEnd
+  })
 
   const handleAddEvent = () => {
     // 필수 필드 검증
@@ -147,6 +203,31 @@ export default function CalendarPage() {
       isRecurring: false,
       recurrenceType: "weekly",
     })
+  }
+
+  // 시간대 생성 (30분 간격)
+  const timeSlots = Array.from({ length: 32 }, (_, i) => {
+    const hour = Math.floor(i / 2) + 8 // 8시부터 시작
+    const minute = i % 2 === 0 ? "00" : "30"
+    return `${hour.toString().padStart(2, "0")}:${minute}`
+  })
+
+  // 이벤트 시간 위치 계산
+  const getEventPosition = (startTime: string) => {
+    const [hours, minutes] = startTime.split(":").map(Number)
+    const totalMinutes = hours * 60 + minutes
+    const startMinutes = 8 * 60 // 8시부터 시작
+    return ((totalMinutes - startMinutes) / 30) * 40 // 각 슬롯 높이 40px
+  }
+
+  // 이벤트 높이 계산
+  const getEventHeight = (startTime: string, endTime: string) => {
+    const [startHours, startMinutes] = startTime.split(":").map(Number)
+    const [endHours, endMinutes] = endTime.split(":").map(Number)
+    const startTotalMinutes = startHours * 60 + startMinutes
+    const endTotalMinutes = endHours * 60 + endMinutes
+    const durationMinutes = endTotalMinutes - startTotalMinutes
+    return (durationMinutes / 30) * 40 // 각 슬롯 높이 40px
   }
 
   return (
@@ -308,7 +389,11 @@ export default function CalendarPage() {
 
         {/* 일정 목록 */}
         <div className="space-y-6">
-          <Tabs defaultValue="day">
+          <Tabs
+            defaultValue="day"
+            value={calendarView}
+            onValueChange={(value) => setCalendarView(value as "day" | "week" | "month")}
+          >
             <TabsList>
               <TabsTrigger value="day">일</TabsTrigger>
               <TabsTrigger value="week">주</TabsTrigger>
@@ -374,13 +459,98 @@ export default function CalendarPage() {
             <TabsContent value="week" className="mt-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>주간 일정</CardTitle>
+                  <CardTitle>
+                    {format(weekStart, "yyyy년 MM월 dd일", { locale: ko })} -{" "}
+                    {format(weekEnd, "MM월 dd일", { locale: ko })}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-12">
-                    <CalendarIcon className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <h3 className="mt-4 text-lg font-semibold">주간 보기</h3>
-                    <p className="text-muted-foreground">주간 일정 보기는 준비 중입니다.</p>
+                  <div className="grid grid-cols-7 gap-2 mb-4">
+                    {weekDays.map((day) => (
+                      <div key={day.toString()} className="text-center">
+                        <div className="font-medium">{format(day, "EEE", { locale: ko })}</div>
+                        <div
+                          className={`text-sm rounded-full w-8 h-8 flex items-center justify-center mx-auto ${
+                            format(day, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd")
+                              ? "bg-primary text-primary-foreground"
+                              : ""
+                          }`}
+                        >
+                          {format(day, "d")}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="relative border rounded-md mt-4">
+                    <div className="grid grid-cols-7 border-b">
+                      {weekDays.map((day) => (
+                        <div
+                          key={day.toString()}
+                          className="p-2 text-center border-r last:border-r-0"
+                          onClick={() => setDate(day)}
+                        >
+                          <div className="text-sm font-medium">{format(day, "M/d")}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-7 relative" style={{ height: "600px" }}>
+                      {/* 시간 표시 */}
+                      <div className="absolute left-0 top-0 bottom-0 w-16 z-10 bg-background border-r">
+                        {timeSlots.map((time, index) => (
+                          <div
+                            key={time}
+                            className="absolute left-0 right-0 text-xs text-muted-foreground px-2"
+                            style={{ top: `${index * 40}px` }}
+                          >
+                            {time}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* 시간 그리드 라인 */}
+                      {timeSlots.map((time, index) => (
+                        <div
+                          key={time}
+                          className="absolute left-16 right-0 border-t border-dashed border-muted"
+                          style={{ top: `${index * 40}px` }}
+                        />
+                      ))}
+
+                      {/* 요일 컬럼 */}
+                      {weekDays.map((day, dayIndex) => (
+                        <div
+                          key={day.toString()}
+                          className="relative border-r last:border-r-0"
+                          style={{ marginLeft: dayIndex === 0 ? "64px" : "0" }}
+                        >
+                          {/* 해당 요일의 이벤트 */}
+                          {weekEvents
+                            .filter((event) => event.date === format(day, "yyyy-MM-dd"))
+                            .map((event) => (
+                              <div
+                                key={event.id}
+                                className={`absolute rounded-md p-2 text-xs overflow-hidden cursor-pointer ${
+                                  event.isImportant ? "bg-red-100 border-red-300" : "bg-blue-100 border-blue-300"
+                                } border`}
+                                style={{
+                                  top: `${getEventPosition(event.startTime)}px`,
+                                  height: `${getEventHeight(event.startTime, event.endTime)}px`,
+                                  left: "4px",
+                                  right: "4px",
+                                }}
+                                onClick={() => setSelectedEvent(event)}
+                              >
+                                <div className="font-medium truncate">{event.title}</div>
+                                <div className="truncate">
+                                  {event.startTime} - {event.endTime}
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -389,13 +559,65 @@ export default function CalendarPage() {
             <TabsContent value="month" className="mt-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>월간 일정</CardTitle>
+                  <CardTitle>{date ? format(date, "yyyy년 MM월", { locale: ko }) : "선택된 월 없음"}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-12">
-                    <CalendarIcon className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <h3 className="mt-4 text-lg font-semibold">월간 보기</h3>
-                    <p className="text-muted-foreground">월간 일정 보기는 준비 중입니다.</p>
+                  <div className="grid grid-cols-7 gap-1">
+                    {["월", "화", "수", "목", "금", "토", "일"].map((day) => (
+                      <div key={day} className="text-center font-medium p-2">
+                        {day}
+                      </div>
+                    ))}
+
+                    {/* 월 시작 전 빈 셀 채우기 */}
+                    {Array.from({ length: getMonthStartOffset(monthStart) }).map((_, index) => (
+                      <div key={`empty-start-${index}`} className="p-2 min-h-[100px]" />
+                    ))}
+
+                    {/* 월 날짜 */}
+                    {monthDays.map((day) => (
+                      <div
+                        key={day.toString()}
+                        className={`p-2 border rounded-md min-h-[100px] ${
+                          format(day, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd") ? "bg-accent/30" : ""
+                        } ${
+                          date && format(day, "yyyy-MM-dd") === format(date, "yyyy-MM-dd") ? "ring-2 ring-primary" : ""
+                        }`}
+                        onClick={() => setDate(day)}
+                      >
+                        <div className="text-right mb-1">{format(day, "d")}</div>
+                        <div className="space-y-1">
+                          {monthEvents
+                            .filter((event) => event.date === format(day, "yyyy-MM-dd"))
+                            .slice(0, 3)
+                            .map((event) => (
+                              <div
+                                key={event.id}
+                                className={`text-xs p-1 rounded truncate ${
+                                  event.isImportant ? "bg-red-100" : "bg-blue-100"
+                                }`}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setSelectedEvent(event)
+                                }}
+                              >
+                                {event.title}
+                              </div>
+                            ))}
+                          {monthEvents.filter((event) => event.date === format(day, "yyyy-MM-dd")).length > 3 && (
+                            <div className="text-xs text-muted-foreground text-center">
+                              +{monthEvents.filter((event) => event.date === format(day, "yyyy-MM-dd")).length - 3}{" "}
+                              더보기
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* 월 끝 후 빈 셀 채우기 */}
+                    {Array.from({ length: getMonthEndOffset(monthEnd) }).map((_, index) => (
+                      <div key={`empty-end-${index}`} className="p-2 min-h-[100px]" />
+                    ))}
                   </div>
                 </CardContent>
               </Card>
@@ -451,4 +673,16 @@ export default function CalendarPage() {
       </Dialog>
     </div>
   )
+}
+
+// 월 시작 요일 오프셋 계산 (월요일 시작)
+function getMonthStartOffset(date: Date) {
+  const day = date.getDay()
+  return day === 0 ? 6 : day - 1
+}
+
+// 월 끝 요일 오프셋 계산 (월요일 시작)
+function getMonthEndOffset(date: Date) {
+  const day = date.getDay()
+  return day === 0 ? 0 : 7 - day
 }

@@ -1,14 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { MessageSquare, ThumbsUp, Share2, MoreHorizontal, ImageIcon, Send } from "lucide-react"
+import { MessageSquare, ThumbsUp, Share2, MoreHorizontal, ImageIcon, Send, X, Paperclip } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
+import { Progress } from "@/components/ui/progress"
 
 // 임시 데이터
 const feedPosts = [
@@ -35,6 +36,7 @@ const feedPosts = [
         },
         createdAt: "2023-05-10T10:15:00Z",
         likeCount: 3,
+        images: [],
       },
       {
         id: 102,
@@ -45,6 +47,7 @@ const feedPosts = [
         },
         createdAt: "2023-05-10T11:30:00Z",
         likeCount: 2,
+        images: ["/placeholder.svg?height=150&width=200"],
       },
     ],
   },
@@ -71,6 +74,7 @@ const feedPosts = [
         },
         createdAt: "2023-05-09T15:10:00Z",
         likeCount: 5,
+        images: [],
       },
       {
         id: 202,
@@ -81,6 +85,7 @@ const feedPosts = [
         },
         createdAt: "2023-05-09T16:45:00Z",
         likeCount: 4,
+        images: [],
       },
     ],
   },
@@ -107,6 +112,11 @@ export default function FeedPage() {
   const [newPostContent, setNewPostContent] = useState("")
   const [expandedComments, setExpandedComments] = useState<number[]>([])
   const [commentInputs, setCommentInputs] = useState<Record<number, string>>({})
+  const [commentImages, setCommentImages] = useState<Record<number, File[]>>({})
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({})
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const commentFileInputRefs = useRef<Record<number, HTMLInputElement | null>>({})
+  const [postImage, setPostImage] = useState<File | null>(null)
 
   const toggleComments = (postId: number) => {
     if (expandedComments.includes(postId)) {
@@ -131,10 +141,10 @@ export default function FeedPage() {
   }
 
   const handleCommentSubmit = (postId: number) => {
-    if (!commentInputs[postId]?.trim()) {
+    if (!commentInputs[postId]?.trim() && (!commentImages[postId] || commentImages[postId].length === 0)) {
       toast({
         title: "댓글 내용 필요",
-        description: "댓글 내용을 입력해주세요.",
+        description: "댓글 내용이나 이미지를 입력해주세요.",
         variant: "destructive",
       })
       return
@@ -142,7 +152,9 @@ export default function FeedPage() {
 
     toast({
       title: "댓글 등록",
-      description: "댓글이 등록되었습니다.",
+      description: commentImages[postId]?.length
+        ? `댓글과 ${commentImages[postId].length}개의 이미지가 등록되었습니다.`
+        : "댓글이 등록되었습니다.",
     })
 
     // 댓글 입력 초기화
@@ -150,13 +162,18 @@ export default function FeedPage() {
       ...commentInputs,
       [postId]: "",
     })
+    setCommentImages({
+      ...commentImages,
+      [postId]: [],
+    })
+    setUploadProgress({})
   }
 
   const handleNewPost = () => {
-    if (!newPostContent.trim()) {
+    if (!newPostContent.trim() && !postImage) {
       toast({
         title: "게시물 내용 필요",
-        description: "게시물 내용을 입력해주세요.",
+        description: "게시물 내용이나 이미지를 입력해주세요.",
         variant: "destructive",
       })
       return
@@ -164,11 +181,89 @@ export default function FeedPage() {
 
     toast({
       title: "게시물 등록",
-      description: "게시물이 등록되었습니다.",
+      description: postImage ? "게시물과 이미지가 등록되었습니다." : "게시물이 등록되었습니다.",
     })
 
     // 게시물 입력 초기화
     setNewPostContent("")
+    setPostImage(null)
+  }
+
+  const handlePostImageUpload = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handlePostImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (files && files.length > 0) {
+      setPostImage(files[0])
+      
+      // 파일 업로드 진행 상태 시뮬레이션
+      const fileId = `post-${Date.now()}`
+      setUploadProgress((prev) => ({ ...prev, [fileId]: 0 }))
+
+      let progress = 0
+      const interval = setInterval(() => {
+        progress += 10
+        setUploadProgress((prev) => ({ ...prev, [fileId]: progress }))
+
+        if (progress >= 100) {
+          clearInterval(interval)
+        }
+      }, 300)
+    }
+
+    // 파일 선택 초기화 (같은 파일 다시 선택 가능하도록)
+    if (e.target) {
+      e.target.value = ""
+    }
+  }
+
+  const handleCommentImageUpload = (postId: number) => {
+    commentFileInputRefs.current[postId]?.click()
+  }
+
+  const handleCommentImageChange = (e: React.ChangeEvent<HTMLInputElement>, postId: number) => {
+    const files = e.target.files
+    if (files && files.length > 0) {
+      const newFiles = Array.from(files)
+      setCommentImages((prev) => ({
+        ...prev,
+        [postId]: [...(prev[postId] || []), ...newFiles],
+      }))
+
+      // 파일 업로드 진행 상태 시뮬레이션
+      newFiles.forEach((file) => {
+        const fileId = `comment-${postId}-${file.name}-${Date.now()}`
+        setUploadProgress((prev) => ({ ...prev, [fileId]: 0 }))
+
+        let progress = 0
+        const interval = setInterval(() => {
+          progress += 10
+          setUploadProgress((prev) => ({ ...prev, [fileId]: progress }))
+
+          if (progress >= 100) {
+            clearInterval(interval)
+          }
+        }, 300)
+      })
+    }
+
+    // 파일 선택 초기화 (같은 파일 다시 선택 가능하도록)
+    if (e.target) {
+      e.target.value = ""
+    }
+  }
+
+  const removePostImage = () => {
+    setPostImage(null)
+  }
+
+  const removeCommentImage = (postId: number, index: number) => {
+    setCommentImages((prev) => ({
+      ...prev,
+      [postId]: prev[postId].filter((_, i) => i !== index),
+    }))
   }
 
   return (
@@ -197,12 +292,46 @@ export default function FeedPage() {
               onChange={(e) => setNewPostContent(e.target.value)}
               className="resize-none"
             />
+            
+            {/* 이미지 업로드 미리보기 */}
+            {postImage && (
+              <div className="mt-3 relative">
+                <div className="relative rounded-md overflow-hidden border">
+                  <img
+                    src={URL.createObjectURL(postImage) || "/placeholder.svg"}
+                    alt="업로드 이미지"
+                    className="w-full h-auto max-h-[300px] object-contain"
+                  />
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-2 right-2 h-6 w-6 rounded-full"
+                    onClick={removePostImage}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {postImage.name} ({(postImage.size / 1024 / 1024).toFixed(2)}MB)
+                </div>
+                {uploadProgress[`post-${Date.now()}`] !== undefined && uploadProgress[`post-${Date.now()}`] < 100 && (
+                  <Progress value={uploadProgress[`post-${Date.now()}`] || 0} className="h-1 mt-1" />
+                )}
+              </div>
+            )}
           </CardContent>
           <CardFooter className="p-4 pt-0 flex justify-between items-center">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={handlePostImageUpload}>
               <ImageIcon className="h-4 w-4 mr-2" />
               이미지
             </Button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handlePostImageChange}
+              className="hidden"
+              accept="image/*"
+            />
             <Button size="sm" onClick={handleNewPost}>
               게시하기
             </Button>
@@ -298,6 +427,21 @@ export default function FeedPage() {
                                 </span>
                               </div>
                               <p className="text-sm mt-1">{comment.content}</p>
+                              
+                              {/* 댓글 이미지 표시 */}
+                              {comment.images && comment.images.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  {comment.images.map((image, index) => (
+                                    <div key={index} className="relative">
+                                      <img
+                                        src={image || "/placeholder.svg"}
+                                        alt={`댓글 이미지 ${index + 1}`}
+                                        className="rounded-md max-w-[150px] max-h-[150px] object-cover"
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                             <div className="flex items-center gap-4 mt-1 ml-2">
                               <button className="text-xs text-muted-foreground hover:text-foreground">
@@ -315,6 +459,32 @@ export default function FeedPage() {
                     </div>
                   )}
 
+                  {/* 댓글 이미지 미리보기 */}
+                  {commentImages[post.id] && commentImages[post.id].length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      <div className="text-sm font-medium">업로드할 이미지 ({commentImages[post.id].length})</div>
+                      <div className="flex flex-wrap gap-2">
+                        {commentImages[post.id].map((file, index) => (
+                          <div key={index} className="relative">
+                            <img
+                              src={URL.createObjectURL(file) || "/placeholder.svg"}
+                              alt={`업로드 이미지 ${index + 1}`}
+                              className="rounded-md w-20 h-20 object-cover border"
+                            />
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              className="absolute -top-2 -right-2 h-5 w-5 rounded-full"
+                              onClick={() => removeCommentImage(post.id, index)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* 댓글 입력 */}
                   <div className="flex items-center gap-3 mt-4">
                     <Avatar className="h-8 w-8">
@@ -322,18 +492,36 @@ export default function FeedPage() {
                       <AvatarFallback>{user?.email?.charAt(0).toUpperCase() || "U"}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 flex gap-2">
-                      <Textarea
-                        placeholder="댓글을 입력하세요..."
-                        rows={1}
-                        value={commentInputs[post.id] || ""}
-                        onChange={(e) =>
-                          setCommentInputs({
-                            ...commentInputs,
-                            [post.id]: e.target.value,
-                          })
-                        }
-                        className="resize-none min-h-[40px] py-2"
-                      />
+                      <div className="flex-1 relative">
+                        <Textarea
+                          placeholder="댓글을 입력하세요..."
+                          rows={1}
+                          value={commentInputs[post.id] || ""}
+                          onChange={(e) =>
+                            setCommentInputs({
+                              ...commentInputs,
+                              [post.id]: e.target.value,
+                            })
+                          }
+                          className="resize-none min-h-[40px] py-2 pr-10"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8"
+                          onClick={() => handleCommentImageUpload(post.id)}
+                        >
+                          <ImageIcon className="h-4 w-4" />
+                        </Button>
+                        <input
+                          type="file"
+                          ref={(el) => (commentFileInputRefs.current[post.id] = el)}
+                          onChange={(e) => handleCommentImageChange(e, post.id)}
+                          className="hidden"
+                          accept="image/*"
+                          multiple
+                        />
+                      </div>
                       <Button size="icon" onClick={() => handleCommentSubmit(post.id)} className="h-10 w-10">
                         <Send className="h-4 w-4" />
                       </Button>
