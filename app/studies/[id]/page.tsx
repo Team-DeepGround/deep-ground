@@ -1,22 +1,27 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Calendar, Users, MapPin, Clock, FileText, ExternalLink } from "lucide-react"
+import { Calendar, Users, MapPin, Clock, FileText, ExternalLink, X } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
+import { Textarea } from "@/components/ui/textarea"
 
 export default function StudyDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
   const [isJoined, setIsJoined] = useState(false)
+  const [commentText, setCommentText] = useState("")
+  const [replyToComment, setReplyToComment] = useState<{ id: number; author: string } | null>(null)
+  const commentInputRef = useRef<HTMLTextAreaElement>(null)
+  const [expandedComments, setExpandedComments] = useState<number[]>([])
 
   // 스터디 ID
   const studyId = params.id
@@ -138,7 +143,8 @@ export default function StudyDetailPage() {
           name: "이리액트",
           avatar: "/placeholder.svg?height=40&width=40",
         },
-        content: "서버 컴포넌트와 클라이언트 컴포넌트의 구분은 어떻게 하나요?",
+        content:
+          "서버 컴포넌트와 클라이언트 컴포넌트의 구분은 어떻게 하나요? 이 부분이 조금 헷갈립니다. 자세히 설명해주실 수 있을까요?",
         createdAt: "2023-05-10T14:30:00Z",
         replies: [
           {
@@ -161,7 +167,8 @@ export default function StudyDetailPage() {
           name: "정프론트",
           avatar: "/placeholder.svg?height=40&width=40",
         },
-        content: "다음 모임에서 사용할 예제 코드를 미리 공유드립니다. 확인 부탁드려요!",
+        content:
+          "다음 모임에서 사용할 예제 코드를 미리 공유드립니다. 확인 부탁드려요! 코드는 GitHub 저장소에 올려두었습니다. 모두 클론해서 실행해보시고 질문 있으시면 댓글로 남겨주세요. 미리 준비해오시면 모임 때 더 효율적으로 진행할 수 있을 것 같습니다.",
         createdAt: "2023-05-11T10:20:00Z",
         replies: [],
       },
@@ -195,6 +202,75 @@ export default function StudyDetailPage() {
     })
   }
 
+  const handleReply = (commentId: number, authorName: string) => {
+    setReplyToComment({ id: commentId, author: authorName })
+    if (commentInputRef.current) {
+      commentInputRef.current.focus()
+    }
+  }
+
+  const cancelReply = () => {
+    setReplyToComment(null)
+  }
+
+  const handleCommentSubmit = () => {
+    if (!commentText.trim()) {
+      toast({
+        title: "내용을 입력해주세요",
+        description: "댓글 내용을 입력해주세요.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // 댓글 또는 답글 등록 로직 (실제로는 API 호출)
+    if (replyToComment) {
+      toast({
+        title: "답글 등록 완료",
+        description: `${replyToComment.author}님의 댓글에 답글을 등록했습니다.`,
+      })
+    } else {
+      toast({
+        title: "댓글 등록 완료",
+        description: "댓글이 등록되었습니다.",
+      })
+    }
+
+    // 입력 초기화
+    setCommentText("")
+    setReplyToComment(null)
+  }
+
+  const toggleExpandComment = (commentId: number) => {
+    if (expandedComments.includes(commentId)) {
+      setExpandedComments(expandedComments.filter((id) => id !== commentId))
+    } else {
+      setExpandedComments([...expandedComments, commentId])
+    }
+  }
+
+  // 댓글 내용이 긴지 확인하는 함수
+  const isLongComment = (content: string) => content.length > 150
+
+  // 댓글 내용을 표시하는 함수
+  const renderCommentContent = (comment) => {
+    const isExpanded = expandedComments.includes(comment.id)
+    const isLong = isLongComment(comment.content)
+
+    if (!isLong || isExpanded) {
+      return <p className="mt-1">{comment.content}</p>
+    }
+
+    return (
+      <div>
+        <p className="mt-1">{comment.content.substring(0, 150)}...</p>
+        <button className="text-xs text-primary mt-1 hover:underline" onClick={() => toggleExpandComment(comment.id)}>
+          더보기
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
@@ -211,7 +287,6 @@ export default function StudyDetailPage() {
                 )}
               </div>
               <h1 className="text-3xl font-bold">{study.title}</h1>
-              <p className="text-muted-foreground mt-2">{study.description}</p>
             </div>
 
             <div className="flex items-center gap-2">
@@ -263,7 +338,6 @@ export default function StudyDetailPage() {
             <Card>
               <CardHeader>
                 <CardTitle>스터디 소개</CardTitle>
-                <CardDescription>스터디의 목표와 내용을 확인하세요</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-4">
@@ -339,7 +413,7 @@ export default function StudyDetailPage() {
                                 {new Date(discussion.createdAt).toLocaleDateString()}
                               </p>
                             </div>
-                            <p className="mt-1">{discussion.content}</p>
+                            {renderCommentContent(discussion)}
 
                             {/* 댓글 */}
                             {discussion.replies.length > 0 && (
@@ -360,14 +434,19 @@ export default function StudyDetailPage() {
                                           {new Date(reply.createdAt).toLocaleDateString()}
                                         </p>
                                       </div>
-                                      <p className="mt-1 text-sm">{reply.content}</p>
+                                      {renderCommentContent(reply)}
                                     </div>
                                   </div>
                                 ))}
                               </div>
                             )}
 
-                            <Button variant="ghost" size="sm" className="mt-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="mt-2"
+                              onClick={() => handleReply(discussion.id, discussion.author.name)}
+                            >
                               답글 달기
                             </Button>
                           </div>
@@ -378,12 +457,25 @@ export default function StudyDetailPage() {
                 </CardContent>
                 <CardFooter className="border-t pt-4">
                   <div className="w-full">
-                    <textarea
+                    {replyToComment && (
+                      <div className="flex items-center justify-between bg-muted p-2 rounded-md mb-2">
+                        <p className="text-sm">
+                          <span className="font-medium">{replyToComment.author}</span>님에게 답글 작성 중
+                        </p>
+                        <Button variant="ghost" size="sm" onClick={cancelReply}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                    <Textarea
+                      ref={commentInputRef}
                       className="w-full border rounded-md p-3 min-h-[100px] resize-none"
                       placeholder="질문이나 의견을 작성해주세요..."
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
                     />
                     <div className="flex justify-end mt-3">
-                      <Button>작성하기</Button>
+                      <Button onClick={handleCommentSubmit}>작성하기</Button>
                     </div>
                   </div>
                 </CardFooter>

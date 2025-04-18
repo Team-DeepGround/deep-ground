@@ -5,10 +5,15 @@ import { Button } from "@/components/ui/button"
 import { MessageSquare, X } from "lucide-react"
 import ChatPopup from "@/components/chat-popup"
 import { Badge } from "@/components/ui/badge"
+import { useAuth } from "@/hooks/use-auth"
 
 export default function FloatingChatButton() {
   const [isOpen, setIsOpen] = useState(false)
   const unreadCount = 2 // 읽지 않은 메시지 수 (실제로는 API에서 가져옴)
+  const { user } = useAuth() // 로그인 상태 확인을 위해 useAuth 훅 사용
+
+  // 로그인하지 않은 경우 채팅 버튼을 표시하지 않음
+  if (!user) return null
 
   // Update the toggleChat function to handle positioning better
   const toggleChat = () => {

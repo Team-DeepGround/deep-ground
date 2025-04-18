@@ -2,8 +2,6 @@
 
 import type React from "react"
 
-import { Textarea } from "@/components/ui/textarea"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -83,7 +81,7 @@ export default function FriendsPage() {
   const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
   const [emailSearch, setEmailSearch] = useState("")
-  const [message, setMessage] = useState("")
+  // const [message, setMessage] = useState("")
 
   // 친구 검색 필터링
   const filteredFriends = friends.filter(
@@ -141,7 +139,7 @@ export default function FriendsPage() {
 
     // 입력 초기화
     setEmailSearch("")
-    setMessage("")
+    // setMessage("")
   }
 
   const handleAcceptRequest = (id: number) => {
@@ -200,14 +198,7 @@ export default function FriendsPage() {
                   onChange={(e) => setEmailSearch(e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label>메시지 (선택사항)</Label>
-                <Textarea
-                  placeholder="간단한 인사말을 남겨보세요"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                />
-              </div>
+              {/* 메시지 입력 부분 제거 */}
             </CardContent>
             <CardFooter>
               <Button onClick={handleSendRequest} className="w-full">

@@ -19,6 +19,7 @@ import { ko } from "date-fns/locale"
 import { useToast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
+import { Checkbox } from "@/components/ui/checkbox"
 
 export default function CreateStudyPage() {
   const router = useRouter()
@@ -35,18 +36,70 @@ export default function CreateStudyPage() {
   const [recruitStartDate, setRecruitStartDate] = useState<Date>()
   const [recruitEndDate, setRecruitEndDate] = useState<Date>()
 
-  const [tagInput, setTagInput] = useState("")
-  const [tags, setTags] = useState<string[]>([])
+  // 기술 태그 선택 방식으로 변경
+  const availableTags = [
+    "JavaScript",
+    "TypeScript",
+    "React",
+    "Next.js",
+    "Vue.js",
+    "Angular",
+    "Node.js",
+    "Express",
+    "NestJS",
+    "Spring",
+    "Django",
+    "Flask",
+    "Java",
+    "Python",
+    "C#",
+    "Go",
+    "Rust",
+    "PHP",
+    "Ruby",
+    "HTML",
+    "CSS",
+    "Tailwind",
+    "Bootstrap",
+    "SASS",
+    "GraphQL",
+    "REST API",
+    "SQL",
+    "NoSQL",
+    "MongoDB",
+    "PostgreSQL",
+    "MySQL",
+    "AWS",
+    "Azure",
+    "GCP",
+    "Docker",
+    "Kubernetes",
+    "CI/CD",
+    "Git",
+    "GitHub",
+    "GitLab",
+    "Testing",
+    "TDD",
+    "DevOps",
+    "Algorithm",
+    "Data Structure",
+    "Machine Learning",
+    "AI",
+    "Blockchain",
+    "Mobile",
+    "React Native",
+    "Flutter",
+    "iOS",
+    "Android",
+  ]
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
 
-  const handleAddTag = () => {
-    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
-      setTags([...tags, tagInput.trim()])
-      setTagInput("")
+  const handleTagToggle = (tag: string) => {
+    if (selectedTags.includes(tag)) {
+      setSelectedTags(selectedTags.filter((t) => t !== tag))
+    } else {
+      setSelectedTags([...selectedTags, tag])
     }
-  }
-
-  const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter((tag) => tag !== tagToRemove))
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -109,10 +162,10 @@ export default function CreateStudyPage() {
     }
 
     // 태그 검증
-    if (tags.length === 0) {
+    if (selectedTags.length === 0) {
       toast({
         title: "태그 누락",
-        description: "최소 하나 이상의 태그를 입력해주세요.",
+        description: "최소 하나 이상의 태그를 선택해주세요.",
         variant: "destructive",
       })
       return
@@ -311,31 +364,33 @@ export default function CreateStudyPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="tags">관련 기술 태그</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="tags"
-                    placeholder="태그 입력 후 엔터"
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault()
-                        handleAddTag()
-                      }
-                    }}
-                  />
-                  <Button type="button" onClick={handleAddTag}>
-                    추가
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="flex items-center gap-1">
-                      {tag}
-                      <X className="h-3 w-3 cursor-pointer" onClick={() => handleRemoveTag(tag)} />
-                    </Badge>
-                  ))}
+                <Label>관련 기술 태그</Label>
+                <div className="border rounded-md p-4">
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {selectedTags.map((tag) => (
+                      <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                        {tag}
+                        <X className="h-3 w-3 cursor-pointer" onClick={() => handleTagToggle(tag)} />
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="border-t pt-3 mt-2">
+                    <p className="text-sm text-muted-foreground mb-2">기술 태그 선택 (다중 선택 가능)</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {availableTags.map((tag) => (
+                        <div key={tag} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`tag-${tag}`}
+                            checked={selectedTags.includes(tag)}
+                            onCheckedChange={() => handleTagToggle(tag)}
+                          />
+                          <label htmlFor={`tag-${tag}`} className="text-sm cursor-pointer">
+                            {tag}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>
