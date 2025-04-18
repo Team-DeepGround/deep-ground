@@ -12,9 +12,9 @@ export default function Home() {
       <section className="py-12 md:py-20">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
           <div className="space-y-6">
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight">개발자들의 성장 커뮤니티</h1>
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tight">구름 딥다이브의 <br/> 성장 커뮤니티</h1>
             <p className="text-xl text-muted-foreground">
-              함께 공부하고, 질문하고, 성장하는 온라인 개발자 커뮤니티에 참여하세요.
+              함께 공부하고, 질문하고, 성장하는 <br/> 딥다이브 커뮤니티에 참여하세요.
             </p>
             <div className="flex flex-wrap gap-4">
               <Button asChild size="lg">
@@ -70,7 +70,7 @@ export default function Home() {
       </section>
 
       {/* Featured Studies */}
-      <section className="py-12">
+      {/* <section className="py-12">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl font-bold">인기 스터디</h2>
           <Button asChild variant="ghost">
@@ -78,10 +78,10 @@ export default function Home() {
           </Button>
         </div>
         <FeaturedStudies />
-      </section>
+      </section> */}
 
       {/* Recent Q&A */}
-      <section className="py-12">
+      {/* <section className="py-12">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl font-bold">최근 질문</h2>
           <Button asChild variant="ghost">
@@ -89,10 +89,10 @@ export default function Home() {
           </Button>
         </div>
         <RecentQuestions />
-      </section>
+      </section> */}
 
       {/* Tech Feed Preview */}
-      <section className="py-12">
+      {/* <section className="py-12">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl font-bold">기술 피드</h2>
           <Button asChild variant="ghost">
@@ -100,7 +100,7 @@ export default function Home() {
           </Button>
         </div>
         <TechFeed />
-      </section>
+      </section> */}
     </div>
   )
 }

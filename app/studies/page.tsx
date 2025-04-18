@@ -10,9 +10,17 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Calendar, Users, Search, Filter, Plus, MapPin } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
-// 임시 데이터
-const studyGroups = [
+// 임시 데이터 - 더 많은 데이터 추가
+const allStudyGroups = [
   {
     id: 1,
     title: "React와 Next.js 마스터하기",
@@ -109,15 +117,84 @@ const studyGroups = [
     isOnline: true,
     location: null,
   },
+  {
+    id: 7,
+    title: "웹 접근성과 시맨틱 HTML",
+    description: "웹 접근성 향상을 위한 시맨틱 HTML 작성법과 ARIA 속성 활용법을 학습합니다.",
+    period: "2023.08.01 ~ 2023.09.15",
+    recruitmentPeriod: "2023.07.01 ~ 2023.07.25",
+    tags: ["HTML", "Accessibility", "Frontend"],
+    maxMembers: 10,
+    currentMembers: 3,
+    organizer: {
+      name: "웹접근성전문가",
+      avatar: "/placeholder.svg?height=40&width=40",
+    },
+    isOnline: true,
+    location: null,
+  },
+  {
+    id: 8,
+    title: "GraphQL API 설계와 구현",
+    description: "GraphQL을 활용한 효율적인 API 설계 및 구현 방법을 학습합니다.",
+    period: "2023.08.15 ~ 2023.10.15",
+    recruitmentPeriod: "2023.07.15 ~ 2023.08.10",
+    tags: ["GraphQL", "API", "Backend"],
+    maxMembers: 8,
+    currentMembers: 4,
+    organizer: {
+      name: "그래프큐엘러",
+      avatar: "/placeholder.svg?height=40&width=40",
+    },
+    isOnline: false,
+    location: "서울 마포구",
+  },
+  {
+    id: 9,
+    title: "모바일 앱 UI/UX 디자인 스터디",
+    description: "모바일 앱의 사용자 경험을 향상시키는 UI/UX 디자인 원칙과 패턴을 학습합니다.",
+    period: "2023.09.01 ~ 2023.10.31",
+    recruitmentPeriod: "2023.08.01 ~ 2023.08.25",
+    tags: ["UI/UX", "Mobile", "Design"],
+    maxMembers: 6,
+    currentMembers: 2,
+    organizer: {
+      name: "디자이너",
+      avatar: "/placeholder.svg?height=40&width=40",
+    },
+    isOnline: true,
+    location: null,
+  },
+  {
+    id: 10,
+    title: "블록체인 기술과 스마트 컨트랙트",
+    description: "블록체인 기술의 기본 개념과 이더리움 기반 스마트 컨트랙트 개발을 학습합니다.",
+    period: "2023.09.15 ~ 2023.11.30",
+    recruitmentPeriod: "2023.08.15 ~ 2023.09.10",
+    tags: ["Blockchain", "Ethereum", "Smart Contract"],
+    maxMembers: 8,
+    currentMembers: 3,
+    organizer: {
+      name: "블록체인개발자",
+      avatar: "/placeholder.svg?height=40&width=40",
+    },
+    isOnline: false,
+    location: "서울 강남구",
+  },
 ]
 
 export default function StudiesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [locationFilter, setLocationFilter] = useState<string | null>(null)
+  const [sortOrder, setSortOrder] = useState<string>("latest")
+
+  // 페이지네이션 관련 상태
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 6 // 페이지당 표시할 항목 수
 
   // 필터링된 스터디 그룹
-  const filteredStudies = studyGroups.filter((study) => {
+  const filteredStudies = allStudyGroups.filter((study) => {
     const matchesSearch =
       study.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       study.description.toLowerCase().includes(searchTerm.toLowerCase())
@@ -131,6 +208,28 @@ export default function StudiesPage() {
 
     return matchesSearch && matchesTags && matchesLocation
   })
+
+  // 정렬된 스터디
+  const sortedStudies = [...filteredStudies].sort((a, b) => {
+    if (sortOrder === "latest") {
+      return (
+        new Date(b.recruitmentPeriod.split(" ~ ")[0]).getTime() -
+        new Date(a.recruitmentPeriod.split(" ~ ")[0]).getTime()
+      )
+    } else if (sortOrder === "popular") {
+      return b.currentMembers / b.maxMembers - a.currentMembers / a.maxMembers
+    } else if (sortOrder === "closing") {
+      return (
+        new Date(a.recruitmentPeriod.split(" ~ ")[1]).getTime() -
+        new Date(b.recruitmentPeriod.split(" ~ ")[1]).getTime()
+      )
+    }
+    return 0
+  })
+
+  // 페이지네이션 적용
+  const totalPages = Math.ceil(sortedStudies.length / itemsPerPage)
+  const paginatedStudies = sortedStudies.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -162,14 +261,23 @@ export default function StudiesPage() {
                   placeholder="스터디 검색..."
                   className="pl-8"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value)
+                    setCurrentPage(1) // 검색어 변경 시 첫 페이지로 이동
+                  }}
                 />
               </div>
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">스터디 장소</label>
-              <Select value={locationFilter || ""} onValueChange={setLocationFilter}>
+              <Select
+                value={locationFilter || ""}
+                onValueChange={(value) => {
+                  setLocationFilter(value === "all" ? null : value)
+                  setCurrentPage(1) // 필터 변경 시 첫 페이지로 이동
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="모든 장소" />
                 </SelectTrigger>
@@ -184,7 +292,7 @@ export default function StudiesPage() {
             <div className="space-y-2">
               <label className="text-sm font-medium">기술 태그</label>
               <div className="flex flex-wrap gap-2">
-                {Array.from(new Set(studyGroups.flatMap((study) => study.tags))).map((tag) => (
+                {Array.from(new Set(allStudyGroups.flatMap((study) => study.tags))).map((tag) => (
                   <Badge
                     key={tag}
                     variant={selectedTags.includes(tag) ? "default" : "outline"}
@@ -195,6 +303,7 @@ export default function StudiesPage() {
                       } else {
                         setSelectedTags([...selectedTags, tag])
                       }
+                      setCurrentPage(1) // 태그 변경 시 첫 페이지로 이동
                     }}
                   >
                     {tag}
@@ -217,7 +326,14 @@ export default function StudiesPage() {
               </TabsList>
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-muted-foreground" />
-                <Select defaultValue="latest">
+                <Select
+                  defaultValue="latest"
+                  value={sortOrder}
+                  onValueChange={(value) => {
+                    setSortOrder(value)
+                    setCurrentPage(1) // 정렬 변경 시 첫 페이지로 이동
+                  }}
+                >
                   <SelectTrigger className="w-[120px]">
                     <SelectValue placeholder="정렬" />
                   </SelectTrigger>
@@ -231,12 +347,47 @@ export default function StudiesPage() {
             </div>
 
             <TabsContent value="all" className="mt-6">
-              {filteredStudies.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {filteredStudies.map((study) => (
-                    <StudyCard key={study.id} study={study} />
-                  ))}
-                </div>
+              {paginatedStudies.length > 0 ? (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {paginatedStudies.map((study) => (
+                      <StudyCard key={study.id} study={study} />
+                    ))}
+                  </div>
+
+                  {/* 페이지네이션 */}
+                  {totalPages > 1 && (
+                    <Pagination className="mt-6">
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                            className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          />
+                        </PaginationItem>
+
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              isActive={page === currentPage}
+                              onClick={() => setCurrentPage(page)}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+
+                        <PaginationItem>
+                          <PaginationNext
+                            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                            className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  )}
+                </>
               ) : (
                 <div className="text-center py-12">
                   <p className="text-muted-foreground">검색 결과가 없습니다.</p>
@@ -246,25 +397,44 @@ export default function StudiesPage() {
 
             <TabsContent value="recruiting" className="mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {filteredStudies.slice(0, 3).map((study) => (
-                  <StudyCard key={study.id} study={study} />
-                ))}
+                {paginatedStudies
+                  .filter((study) => {
+                    const now = new Date()
+                    const recruitEnd = new Date(study.recruitmentPeriod.split(" ~ ")[1])
+                    return recruitEnd >= now
+                  })
+                  .map((study) => (
+                    <StudyCard key={study.id} study={study} />
+                  ))}
               </div>
             </TabsContent>
 
             <TabsContent value="upcoming" className="mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {filteredStudies.slice(3, 5).map((study) => (
-                  <StudyCard key={study.id} study={study} />
-                ))}
+                {paginatedStudies
+                  .filter((study) => {
+                    const now = new Date()
+                    const studyStart = new Date(study.period.split(" ~ ")[0])
+                    return studyStart > now
+                  })
+                  .map((study) => (
+                    <StudyCard key={study.id} study={study} />
+                  ))}
               </div>
             </TabsContent>
 
             <TabsContent value="ongoing" className="mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {filteredStudies.slice(1, 4).map((study) => (
-                  <StudyCard key={study.id} study={study} />
-                ))}
+                {paginatedStudies
+                  .filter((study) => {
+                    const now = new Date()
+                    const studyStart = new Date(study.period.split(" ~ ")[0])
+                    const studyEnd = new Date(study.period.split(" ~ ")[1])
+                    return studyStart <= now && studyEnd >= now
+                  })
+                  .map((study) => (
+                    <StudyCard key={study.id} study={study} />
+                  ))}
               </div>
             </TabsContent>
           </Tabs>
@@ -275,30 +445,32 @@ export default function StudiesPage() {
 }
 
 interface StudyCardProps {
-  study: (typeof studyGroups)[0]
+  study: (typeof allStudyGroups)[0]
 }
 
 function StudyCard({ study }: StudyCardProps) {
   return (
     <Card className="overflow-hidden">
       <CardHeader className="p-4">
-        <div className="flex justify-between items-start">
-          <div>
+        <div className="flex justify-between items-start gap-4">
+          <div className="flex-1 min-w-0">
             <h3 className="text-lg font-semibold line-clamp-1">{study.title}</h3>
             <p className="text-sm text-muted-foreground mt-1 flex items-center">
-              <Calendar className="h-3.5 w-3.5 mr-1" />
-              {study.period}
+              <Calendar className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
+              <span className="truncate">{study.period}</span>
             </p>
           </div>
-          <Badge variant={study.isOnline ? "default" : "outline"}>{study.isOnline ? "온라인" : "오프라인"}</Badge>
+          <Badge variant={study.isOnline ? "default" : "outline"} className="whitespace-nowrap flex-shrink-0">
+            {study.isOnline ? "온라인" : "오프라인"}
+          </Badge>
         </div>
       </CardHeader>
       <CardContent className="p-4 pt-0">
         <p className="text-sm text-muted-foreground line-clamp-2 h-10">{study.description}</p>
         {study.location && (
           <p className="text-sm text-muted-foreground mt-2 flex items-center">
-            <MapPin className="h-3.5 w-3.5 mr-1" />
-            {study.location}
+            <MapPin className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
+            <span className="truncate">{study.location}</span>
           </p>
         )}
         <div className="flex flex-wrap gap-1.5 mt-3">
@@ -315,14 +487,16 @@ function StudyCard({ study }: StudyCardProps) {
             <AvatarImage src={study.organizer.avatar || "/placeholder.svg"} alt={study.organizer.name} />
             <AvatarFallback>{study.organizer.name[0]}</AvatarFallback>
           </Avatar>
-          <span className="text-sm">{study.organizer.name}</span>
+          <span className="text-sm truncate">{study.organizer.name}</span>
         </div>
         <div className="flex items-center gap-4">
           <div className="text-sm text-muted-foreground flex items-center">
-            <Users className="h-3.5 w-3.5 mr-1" />
-            {study.currentMembers}/{study.maxMembers}
+            <Users className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
+            <span>
+              {study.currentMembers}/{study.maxMembers}
+            </span>
           </div>
-          <Button asChild size="sm">
+          <Button asChild size="sm" className="flex-shrink-0">
             <Link href={`/studies/${study.id}`}>상세보기</Link>
           </Button>
         </div>

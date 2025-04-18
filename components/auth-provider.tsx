@@ -18,6 +18,7 @@ type User = {
     name?: string
     avatar_url?: string
   }
+  email_confirmed?: boolean // 이메일 인증 여부 추가
 }
 
 type AuthContextType = {
@@ -27,6 +28,8 @@ type AuthContextType = {
   signUp: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<void>
+  verifyEmail: (code: string) => Promise<boolean> // 이메일 인증 함수 추가
+  resendVerificationEmail: (email: string) => Promise<void> // 인증 이메일 재발송 함수 추가
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -47,6 +50,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           id: session.user.id,
           email: session.user.email,
           user_metadata: session.user.user_metadata,
+          email_confirmed: session.user.email_confirmed_at !== null, // 이메일 인증 여부 설정
         })
       }
 
@@ -64,6 +68,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           id: session.user.id,
           email: session.user.email,
           user_metadata: session.user.user_metadata,
+          email_confirmed: session.user.email_confirmed_at !== null, // 이메일 인증 여부 설정
         })
       } else {
         setUser(null)
@@ -77,11 +82,29 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+
+    if (error) throw error
+
+    // 이메일 인증 여부 확인
+    if (data.user && !data.user.email_confirmed_at) {
+      throw new Error("이메일 인증이 완료되지 않았습니다. 이메일을 확인해주세요.")
+    }
   }
 
   const signUp = async (email: string, password: string) => {
-    await supabase.auth.signUp({ email, password })
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/verify-email`,
+      },
+    })
+
+    if (error) throw error
+
+    // 실제로는 여기서 이메일 인증 메일이 발송됨
+    return data
   }
 
   const signOut = async () => {
@@ -92,6 +115,32 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     await supabase.auth.resetPasswordForEmail(email)
   }
 
+  // 이메일 인증 함수
+  const verifyEmail = async (code: string): Promise<boolean> => {
+    try {
+      // 실제로는 Supabase API를 통해 인증 코드 검증
+      // 여기서는 임시로 성공 처리
+      return true
+    } catch (error) {
+      console.error("이메일 인증 실패:", error)
+      return false
+    }
+  }
+
+  // 인증 이메일 재발송 함수
+  const resendVerificationEmail = async (email: string) => {
+    try {
+      // 실제로는 Supabase API를 통해 인증 이메일 재발송
+      await supabase.auth.resend({
+        type: "signup",
+        email,
+      })
+    } catch (error) {
+      console.error("인증 이메일 재발송 실패:", error)
+      throw error
+    }
+  }
+
   const value = {
     user,
     loading,
@@ -99,6 +148,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     signUp,
     signOut,
     resetPassword,
+    verifyEmail,
+    resendVerificationEmail,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

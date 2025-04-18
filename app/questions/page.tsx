@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
@@ -10,9 +11,17 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { MessageSquare, ThumbsUp, CheckCircle2, Search, Plus, SortAsc, SortDesc } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 // 임시 데이터
-const questions = [
+const allQuestions = [
   {
     id: 1,
     title: "React에서 상태 관리 라이브러리 추천해주세요",
@@ -98,15 +107,76 @@ const questions = [
     likeCount: 11,
     isResolved: true,
   },
+  {
+    id: 7,
+    title: "React Native와 Flutter 중 어떤 것을 선택���야 할까요?",
+    content: "크로스 플랫폼 모바일 앱 개발을 위해 React Native와 Flutter 중 어떤 것이 더 적합할까요?",
+    tags: ["React Native", "Flutter", "Mobile"],
+    author: {
+      name: "모바일개발자",
+      avatar: "/placeholder.svg?height=40&width=40",
+    },
+    createdAt: "2023-05-04T15:20:00Z",
+    commentCount: 9,
+    likeCount: 14,
+    isResolved: false,
+  },
+  {
+    id: 8,
+    title: "MongoDB vs PostgreSQL 선택 기준",
+    content: "새 프로젝트를 시작하는데 MongoDB와 PostgreSQL 중 어떤 데이터베이스를 선택해야 할지 고민입니다.",
+    tags: ["MongoDB", "PostgreSQL", "Database"],
+    author: {
+      name: "디비전문가",
+      avatar: "/placeholder.svg?height=40&width=40",
+    },
+    createdAt: "2023-05-03T11:10:00Z",
+    commentCount: 6,
+    likeCount: 8,
+    isResolved: true,
+  },
+  {
+    id: 9,
+    title: "AWS Lambda vs EC2 비용 효율성",
+    content: "서버리스 아키텍처와 전통적인 서버 기반 아키텍처 중 어떤 것이 비용 효율적인가요?",
+    tags: ["AWS", "Lambda", "EC2", "Cloud"],
+    author: {
+      name: "클라우드엔지니어",
+      avatar: "/placeholder.svg?height=40&width=40",
+    },
+    createdAt: "2023-05-02T09:45:00Z",
+    commentCount: 5,
+    likeCount: 10,
+    isResolved: false,
+  },
+  {
+    id: 10,
+    title: "CI/CD 파이프라인 최적화 방법",
+    content: "CI/CD 파이프라인의 빌드 및 배포 시간을 줄이기 위한 최적화 방법이 궁금합니다.",
+    tags: ["CI/CD", "DevOps", "Pipeline"],
+    author: {
+      name: "데브옵스",
+      avatar: "/placeholder.svg?height=40&width=40",
+    },
+    createdAt: "2023-05-01T14:30:00Z",
+    commentCount: 4,
+    likeCount: 7,
+    isResolved: true,
+  },
 ]
 
 export default function QuestionsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [sortOrder, setSortOrder] = useState<string>("latest")
+  const router = useRouter()
+
+  // 페이지네이션 관련 상태
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 5 // 페이지당 표시할 항목 수
 
   // 필터링된 질문
-  const filteredQuestions = questions.filter((question) => {
+  const filteredQuestions = allQuestions.filter((question) => {
     const matchesSearch =
       question.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       question.content.toLowerCase().includes(searchTerm.toLowerCase())
@@ -129,6 +199,15 @@ export default function QuestionsPage() {
     }
     return 0
   })
+
+  // 페이지네이션 적용
+  const totalPages = Math.ceil(sortedQuestions.length / itemsPerPage)
+  const paginatedQuestions = sortedQuestions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+
+  // 질문 상세 페이지로 이동하는 함수
+  const navigateToQuestion = (questionId: number) => {
+    router.push(`/questions/${questionId}`)
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -160,14 +239,23 @@ export default function QuestionsPage() {
                   placeholder="질문 검색..."
                   className="pl-8"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value)
+                    setCurrentPage(1) // 검색어 변경 시 첫 페이지로 이동
+                  }}
                 />
               </div>
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">정렬</label>
-              <Select value={sortOrder} onValueChange={setSortOrder}>
+              <Select
+                value={sortOrder}
+                onValueChange={(value) => {
+                  setSortOrder(value)
+                  setCurrentPage(1) // 정렬 변경 시 첫 페이지로 이동
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="정렬 기준" />
                 </SelectTrigger>
@@ -203,7 +291,7 @@ export default function QuestionsPage() {
             <div className="space-y-2">
               <label className="text-sm font-medium">기술 태그</label>
               <div className="flex flex-wrap gap-2">
-                {Array.from(new Set(questions.flatMap((question) => question.tags))).map((tag) => (
+                {Array.from(new Set(allQuestions.flatMap((question) => question.tags))).map((tag) => (
                   <Badge
                     key={tag}
                     variant={selectedTags.includes(tag) ? "default" : "outline"}
@@ -214,6 +302,7 @@ export default function QuestionsPage() {
                       } else {
                         setSelectedTags([...selectedTags, tag])
                       }
+                      setCurrentPage(1) // 태그 변경 시 첫 페이지로 이동
                     }}
                   >
                     {tag}
@@ -234,11 +323,48 @@ export default function QuestionsPage() {
             </TabsList>
 
             <TabsContent value="all" className="mt-6">
-              {sortedQuestions.length > 0 ? (
+              {paginatedQuestions.length > 0 ? (
                 <div className="space-y-4">
-                  {sortedQuestions.map((question) => (
-                    <QuestionCard key={question.id} question={question} />
+                  {paginatedQuestions.map((question) => (
+                    <QuestionCard
+                      key={question.id}
+                      question={question}
+                      onTitleClick={() => navigateToQuestion(question.id)}
+                    />
                   ))}
+
+                  {/* 페이지네이션 */}
+                  {totalPages > 1 && (
+                    <Pagination className="mt-6">
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                            className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          />
+                        </PaginationItem>
+
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              isActive={page === currentPage}
+                              onClick={() => setCurrentPage(page)}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+
+                        <PaginationItem>
+                          <PaginationNext
+                            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                            className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-12">
@@ -249,20 +375,28 @@ export default function QuestionsPage() {
 
             <TabsContent value="unresolved" className="mt-6">
               <div className="space-y-4">
-                {sortedQuestions
+                {paginatedQuestions
                   .filter((question) => !question.isResolved)
                   .map((question) => (
-                    <QuestionCard key={question.id} question={question} />
+                    <QuestionCard
+                      key={question.id}
+                      question={question}
+                      onTitleClick={() => navigateToQuestion(question.id)}
+                    />
                   ))}
               </div>
             </TabsContent>
 
             <TabsContent value="resolved" className="mt-6">
               <div className="space-y-4">
-                {sortedQuestions
+                {paginatedQuestions
                   .filter((question) => question.isResolved)
                   .map((question) => (
-                    <QuestionCard key={question.id} question={question} />
+                    <QuestionCard
+                      key={question.id}
+                      question={question}
+                      onTitleClick={() => navigateToQuestion(question.id)}
+                    />
                   ))}
               </div>
             </TabsContent>
@@ -274,10 +408,11 @@ export default function QuestionsPage() {
 }
 
 interface QuestionCardProps {
-  question: (typeof questions)[0]
+  question: (typeof allQuestions)[0]
+  onTitleClick: () => void
 }
 
-function QuestionCard({ question }: QuestionCardProps) {
+function QuestionCard({ question, onTitleClick }: QuestionCardProps) {
   return (
     <Card>
       <CardHeader className="p-4 pb-0">
@@ -295,7 +430,12 @@ function QuestionCard({ question }: QuestionCardProps) {
                 </span>
               </div>
               <h3 className="text-lg font-semibold mt-1 flex items-center gap-2">
-                {question.title}
+                <button
+                  onClick={onTitleClick}
+                  className="text-left hover:underline hover:text-primary transition-colors focus:outline-none"
+                >
+                  {question.title}
+                </button>
                 {question.isResolved && <CheckCircle2 className="h-4 w-4 text-green-500" />}
               </h3>
             </div>
