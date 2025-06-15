@@ -1,6 +1,8 @@
 import { api } from '../api-client';
 import type { ApiResponse, PaginatedResponse } from '../api-types';
 
+// 예시 API입니다. 사용하지 마세요.
+
 // 사용자 타입 정의
 export interface User {
   id: string;
