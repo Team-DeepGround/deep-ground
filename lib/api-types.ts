@@ -1,24 +1,28 @@
 // API 응답의 기본 인터페이스
 export interface ApiResponse<T> {
-  data: T;
-  message?: string;
   status: number;
+  message: string;
+  result: T | null;
 }
 
 // 페이지네이션 응답 인터페이스
 export interface PaginatedResponse<T> {
-  items: T[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
+  status: number;
+  message: string;
+  result: {
+    items: T[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  } | null;
 }
 
 // API 에러 응답 인터페이스
 export interface ApiErrorResponse {
-  message: string;
   status: number;
-  errors?: Record<string, string[]>;
+  message: string;
+  result: null;
 }
 
 // API 요청 옵션 인터페이스

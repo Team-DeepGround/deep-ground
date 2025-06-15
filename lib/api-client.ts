@@ -15,11 +15,13 @@ interface RequestOptions extends RequestInit {
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
+  const data = await response.json();
+  
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'An error occurred' }));
-    throw new ApiError(response.status, error.message);
+    throw new ApiError(data.status, data.message);
   }
-  return response.json();
+  
+  return data;
 }
 
 export async function apiClient<T>(
