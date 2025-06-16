@@ -33,8 +33,13 @@ async function apiClient(endpoint: string, options: RequestOptions = {}) {
 
   // 토큰이 있으면 Authorization 헤더 추가
   const token = await auth.getToken();
+  console.log('API 요청 - 현재 토큰:', token);
+  
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
+    console.log('API 요청 - Authorization 헤더 추가됨:', headers.get('Authorization'));
+  } else {
+    console.log('API 요청 - 토큰 없음, Authorization 헤더 미포함');
   }
 
   const init: RequestInit = {
@@ -43,8 +48,19 @@ async function apiClient(endpoint: string, options: RequestOptions = {}) {
   };
 
   try {
+    console.log('API 요청 시작:', {
+      url,
+      method: init.method,
+      headers: Object.fromEntries(headers.entries())
+    });
+    
     const response = await fetch(url, init);
     const data = await response.json();
+
+    console.log('API 응답:', {
+      status: response.status,
+      data
+    });
 
     if (!response.ok) {
       throw new ApiError(response.status, data.message || 'API 요청 실패');
@@ -52,6 +68,7 @@ async function apiClient(endpoint: string, options: RequestOptions = {}) {
 
     return data;
   } catch (error) {
+    console.error('API 요청 실패:', error);
     if (error instanceof ApiError) {
       throw error;
     }

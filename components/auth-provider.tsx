@@ -30,15 +30,19 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     // 초기 인증 상태 확인
-    const token = auth.getToken()
-    console.log('현재 토큰:', token)
-    setIsAuthenticated(!!token)
+    const checkAuth = async () => {
+      const token = await auth.getToken()
+      console.log('현재 토큰:', token)
+      setIsAuthenticated(!!token)
 
-    // 인증이 필요한 페이지에서 토큰이 없는 경우 로그인 페이지로 리다이렉트
-    if (!token && !publicPaths.includes(pathname)) {
-      console.log('인증 필요: 로그인 페이지로 리다이렉트')
-      router.push("/auth/login")
+      // 인증이 필요한 페이지에서 토큰이 없는 경우 로그인 페이지로 리다이렉트
+      if (!token && !publicPaths.includes(pathname)) {
+        console.log('인증 필요: 로그인 페이지로 리다이렉트')
+        router.push("/auth/login")
+      }
     }
+
+    checkAuth()
   }, [pathname, router])
 
   const login = (token: string) => {
