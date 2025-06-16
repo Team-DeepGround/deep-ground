@@ -19,6 +19,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+import { AVAILABLE_TECH_TAGS } from "@/lib/constants/tech-tags"
 
 // 임시 데이터
 const allQuestions = [
@@ -109,7 +110,7 @@ const allQuestions = [
   },
   {
     id: 7,
-    title: "React Native와 Flutter 중 어떤 것을 선택���야 할까요?",
+    title: "React Native와 Flutter 중 어떤 것을 선택해야 할까요?",
     content: "크로스 플랫폼 모바일 앱 개발을 위해 React Native와 Flutter 중 어떤 것이 더 적합할까요?",
     tags: ["React Native", "Flutter", "Mobile"],
     author: {
@@ -291,7 +292,7 @@ export default function QuestionsPage() {
             <div className="space-y-2">
               <label className="text-sm font-medium">기술 태그</label>
               <div className="flex flex-wrap gap-2">
-                {Array.from(new Set(allQuestions.flatMap((question) => question.tags))).map((tag) => (
+                {AVAILABLE_TECH_TAGS.map((tag) => (
                   <Badge
                     key={tag}
                     variant={selectedTags.includes(tag) ? "default" : "outline"}

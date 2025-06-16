@@ -62,7 +62,7 @@ async function apiClient(endpoint: string, options: RequestOptions = {}) {
       data
     });
 
-    if (!response.ok) {
+    if (!response.ok && response.status !== 302) {
       throw new ApiError(response.status, data.message || 'API 요청 실패');
     }
 
