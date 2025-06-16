@@ -7,7 +7,7 @@ export const auth = {
   },
 
   // 토큰 가져오기
-  getToken(): string | null {
+  async getToken(): Promise<string | null> {
     if (typeof window === 'undefined') return null;
     return localStorage.getItem(TOKEN_KEY);
   },
@@ -18,7 +18,8 @@ export const auth = {
   },
 
   // 토큰 존재 여부 확인
-  hasToken(): boolean {
-    return !!this.getToken();
+  async hasToken(): Promise<boolean> {
+    const token = await this.getToken();
+    return !!token;
   },
 }; 
