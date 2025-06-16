@@ -1,7 +1,8 @@
 import { toast } from 'sonner';
+import { auth } from '@/lib/auth';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-const API_VERSION = process.env.NEXT_PUBLIC_API_VERSION;
+// 상대 경로로 변경
+const API_BASE_URL = '/api/v1';
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -14,76 +15,68 @@ interface RequestOptions extends RequestInit {
   params?: Record<string, string>;
 }
 
-async function handleResponse<T>(response: Response): Promise<T> {
-  const data = await response.json();
-  
-  if (!response.ok) {
-    throw new ApiError(data.status, data.message);
-  }
-  
-  return data;
-}
-
-export async function apiClient<T>(
-  endpoint: string,
-  options: RequestOptions = {}
-): Promise<T> {
-  const { params, ...init } = options;
+async function apiClient(endpoint: string, options: RequestOptions = {}) {
+  const { params, ...fetchOptions } = options;
   
   // Construct URL with query parameters
-  const url = new URL(`${API_BASE_URL}/${API_VERSION}${endpoint}`);
+  let url = `${API_BASE_URL}${endpoint}`;
   if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      url.searchParams.append(key, value);
-    });
+    const searchParams = new URLSearchParams(params);
+    url += `?${searchParams.toString()}`;
   }
 
-  try {
-    const response = await fetch(url.toString(), {
-      ...init,
-      headers: {
-        'Content-Type': 'application/json',
-        ...init.headers,
-      },
-    });
+  // 기본 헤더 설정
+  const headers = new Headers(fetchOptions.headers);
+  if (!headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
 
-    return handleResponse<T>(response);
+  // 토큰이 있으면 Authorization 헤더 추가
+  const token = await auth.getToken();
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  const init: RequestInit = {
+    ...fetchOptions,
+    headers,
+  };
+
+  try {
+    const response = await fetch(url, init);
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new ApiError(response.status, data.message || 'API 요청 실패');
+    }
+
+    return data;
   } catch (error) {
     if (error instanceof ApiError) {
-      toast.error(error.message);
-    } else {
-      toast.error('An unexpected error occurred');
+      throw error;
     }
-    throw error;
+    throw new ApiError(500, '서버 오류가 발생했습니다');
   }
 }
 
-// API 메서드 헬퍼 함수들
 export const api = {
-  get: <T>(endpoint: string, options?: RequestOptions) =>
-    apiClient<T>(endpoint, { ...options, method: 'GET' }),
+  get: (endpoint: string, options?: RequestOptions) =>
+    apiClient(endpoint, { ...options, method: 'GET' }),
 
-  post: <T>(endpoint: string, data?: unknown, options?: RequestOptions) =>
-    apiClient<T>(endpoint, {
+  post: (endpoint: string, data?: any, options?: RequestOptions) =>
+    apiClient(endpoint, {
       ...options,
       method: 'POST',
-      body: JSON.stringify(data),
+      body: data ? JSON.stringify(data) : undefined,
     }),
 
-  put: <T>(endpoint: string, data?: unknown, options?: RequestOptions) =>
-    apiClient<T>(endpoint, {
+  put: (endpoint: string, data?: any, options?: RequestOptions) =>
+    apiClient(endpoint, {
       ...options,
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: data ? JSON.stringify(data) : undefined,
     }),
 
-  patch: <T>(endpoint: string, data?: unknown, options?: RequestOptions) =>
-    apiClient<T>(endpoint, {
-      ...options,
-      method: 'PATCH',
-      body: JSON.stringify(data),
-    }),
-
-  delete: <T>(endpoint: string, options?: RequestOptions) =>
-    apiClient<T>(endpoint, { ...options, method: 'DELETE' }),
+  delete: (endpoint: string, options?: RequestOptions) =>
+    apiClient(endpoint, { ...options, method: 'DELETE' }),
 }; 

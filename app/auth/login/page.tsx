@@ -1,128 +1,116 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/components/auth-provider"
+import { api } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { useToast } from "@/hooks/use-toast"
-import { useAuth } from "@/hooks/use-auth"
-import { Github, Mail } from "lucide-react"
+import { toast } from "sonner"
+
+interface LoginResponse {
+  status: number;
+  message: string;
+  result: {
+    accessToken: string;
+    refreshToken: string;
+    memberId: number;
+    email: string;
+    nickname: string;
+  } | null;
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const { toast } = useToast()
   const router = useRouter()
-  const { signIn } = useAuth()
+  const { login } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!email || !password) {
-      toast({
-        title: "입력 오류",
-        description: "이메일과 비밀번호를 모두 입력해주세요.",
-        variant: "destructive",
-      })
-      return
-    }
+    setIsLoading(true)
 
     try {
-      setIsLoading(true)
-      await signIn(email, password)
-      toast({
-        title: "로그인 성공",
-        description: "환영합니다!",
-      })
-      router.push("/")
+      console.log('API URL:', process.env.NEXT_PUBLIC_API_BASE_URL);
+      console.log('로그인 시도...')
+      const response = await api.post<LoginResponse>(
+        "/auth/login",
+        { email, password },
+        { requireAuth: false }
+      )
+
+      console.log('로그인 응답:', response)
+
+      if (response.result?.accessToken) {
+        console.log('토큰 저장 및 로그인 처리...')
+        login(response.result.accessToken)
+        toast.success("로그인에 성공했습니다.")
+        console.log('메인 페이지로 이동 시도...')
+        router.push("/")
+        console.log('라우터 푸시 완료')
+      } else {
+        console.log('토큰이 없음')
+        toast.error("로그인에 실패했습니다.")
+      }
     } catch (error) {
-      toast({
-        title: "로그인 실패",
-        description: "이메일 또는 비밀번호가 올바르지 않습니다.",
-        variant: "destructive",
-      })
+      console.error('로그인 에러:', error)
+      toast.error("로그인에 실패했습니다.")
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <div className="container mx-auto flex h-screen max-w-sm flex-col justify-center space-y-6 px-2 py-12">
-      <div className="flex flex-col space-y-2 text-center">
-        <h1 className="text-3xl font-bold">로그인</h1>
-        <p className="text-sm text-muted-foreground">DeepGround에 오신 것을 환영합니다</p>
-      </div>
-
-      <div className="grid gap-6">
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="email">이메일</Label>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            로그인
+          </h2>
+        </div>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="rounded-md shadow-sm space-y-4">
+            <div>
+              <label htmlFor="email" className="sr-only">
+                이메일
+              </label>
               <Input
                 id="email"
+                name="email"
                 type="email"
-                placeholder="name@example.com"
+                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
+                placeholder="이메일"
               />
             </div>
-            <div className="grid gap-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">비밀번호</Label>
-                <Link
-                  href="/auth/reset-password"
-                  className="text-xs text-muted-foreground underline underline-offset-4 hover:text-primary"
-                >
-                  비밀번호 찾기
-                </Link>
-              </div>
+            <div>
+              <label htmlFor="password" className="sr-only">
+                비밀번호
+              </label>
               <Input
                 id="password"
+                name="password"
                 type="password"
+                required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading}
+                placeholder="비밀번호"
               />
             </div>
-            <Button type="submit" disabled={isLoading}>
+          </div>
+
+          <div>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isLoading}
+            >
               {isLoading ? "로그인 중..." : "로그인"}
             </Button>
           </div>
         </form>
-
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <Separator className="w-full" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">또는 다음으로 계속하기</span>
-          </div>
-        </div>
-
-        <div className="grid gap-2">
-          <Button variant="outline" type="button" disabled={isLoading}>
-            <Github className="mr-2 h-4 w-4" />
-            GitHub로 로그인
-          </Button>
-          <Button variant="outline" type="button" disabled={isLoading}>
-            <Mail className="mr-2 h-4 w-4" />
-            Google로 로그인
-          </Button>
-        </div>
-
-        <div className="text-center text-sm">
-          계정이 없으신가요?{" "}
-          <Link href="/auth/register" className="underline underline-offset-4 hover:text-primary">
-            회원가입
-          </Link>
-        </div>
       </div>
     </div>
   )
