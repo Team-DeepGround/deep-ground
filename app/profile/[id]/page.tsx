@@ -30,6 +30,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { api } from "@/lib/api-client"
 
 export default function UserProfilePage() {
   const { id } = useParams()
@@ -132,22 +133,48 @@ export default function UserProfilePage() {
   ]
 
   // 친구 요청 보내기
-  const handleSendFriendRequest = () => {
-    setShowConfirmDialog(false)
-    setFriendRequestSent(true)
-    toast({
-      title: "친구 요청 전송",
-      description: `${profile.nickname}님에게 친구 요청을 보냈습니다.`,
-    })
+  const handleSendFriendRequest = async () => {
+    try {
+      const response = await api.post(`/friends/from-profile/${id}`)
+      
+      if (response?.status === 200) {
+        setShowConfirmDialog(false)
+        setFriendRequestSent(true)
+        toast({
+          title: "친구 요청 전송",
+          description: response.message || `${profile.nickname}님에게 친구 요청을 보냈습니다.`,
+        })
+      }
+    } catch (error) {
+      console.error('친구 요청 실패:', error)
+      toast({
+        title: "요청 실패",
+        description: "친구 요청 전송에 실패했습니다.",
+        variant: "destructive",
+      })
+    }
   }
 
   // 친구 요청 취소
-  const handleCancelFriendRequest = () => {
-    setFriendRequestSent(false)
-    toast({
-      title: "친구 요청 취소",
-      description: `${profile.nickname}님에게 보낸 친구 요청을 취소했습니다.`,
-    })
+  const handleCancelFriendRequest = async () => {
+    try {
+      const response = await api.patch(`/friends/sent/${profile.id}/cancel`)
+      
+      if (response?.status === 200) {
+        setFriendRequestSent(false)
+        toast({
+          title: "친구 요청 취소",
+          description: response.message || `${profile.nickname}님에게 보낸 친구 요청을 취소했습니다.`,
+        })
+      }
+    } catch (error) {
+      console.error('친구 요청 취소 실패:', error)
+      toast({
+        title: "취소 실패",
+        description: "친구 요청 취소에 실패했습니다.",
+        variant: "destructive",
+      })
+    }
   }
 
   // 스터디 카드 컴포넌트
