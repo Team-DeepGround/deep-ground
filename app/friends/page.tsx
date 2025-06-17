@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,87 +9,42 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Search, UserPlus, UserMinus, MessageSquare, Check, X, Mail } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-
-// 임시 데이터
-const friends = [
-  {
-    id: 1,
-    name: "김개발",
-    email: "kim@example.com",
-    avatar: "/placeholder.svg?height=40&width=40",
-    status: "online",
-    lastActive: null,
-  },
-  {
-    id: 2,
-    name: "이코딩",
-    email: "lee@example.com",
-    avatar: "/placeholder.svg?height=40&width=40",
-    status: "offline",
-    lastActive: "2023-05-10T14:30:00Z",
-  },
-  {
-    id: 3,
-    name: "박서버",
-    email: "park@example.com",
-    avatar: "/placeholder.svg?height=40&width=40",
-    status: "online",
-    lastActive: null,
-  },
-  {
-    id: 4,
-    name: "최데브옵스",
-    email: "choi@example.com",
-    avatar: "/placeholder.svg?height=40&width=40",
-    status: "offline",
-    lastActive: "2023-05-09T18:45:00Z",
-  },
-]
-
-const friendRequests = [
-  {
-    id: 101,
-    name: "정자바",
-    email: "jung@example.com",
-    avatar: "/placeholder.svg?height=40&width=40",
-    message: "안녕하세요! 스프링 스터디에서 만났었습니다.",
-    sentAt: "2023-05-10T09:15:00Z",
-  },
-  {
-    id: 102,
-    name: "한인공",
-    email: "han@example.com",
-    avatar: "/placeholder.svg?height=40&width=40",
-    message: "머신러닝 스터디 함께해요!",
-    sentAt: "2023-05-09T16:30:00Z",
-  },
-]
-
-const sentRequests = [
-  {
-    id: 201,
-    name: "고프론트",
-    email: "go@example.com",
-    avatar: "/placeholder.svg?height=40&width=40",
-    message: "React 스터디 같이 하실래요?",
-    sentAt: "2023-05-08T11:20:00Z",
-  },
-]
+import { sendFriendRequest, getReceivedFriendRequests, getSentFriendRequests, type Friend } from "./api"
 
 export default function FriendsPage() {
   const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
   const [emailSearch, setEmailSearch] = useState("")
-  // const [message, setMessage] = useState("")
+  const [friends, setFriends] = useState<Friend[]>([])
+  const [receivedRequests, setReceivedRequests] = useState<Friend[]>([])
+  const [sentRequests, setSentRequests] = useState<Friend[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // 친구 검색 필터링
-  const filteredFriends = friends.filter(
-    (friend) =>
-      friend.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      friend.email.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  // 초기 데이터 로드
+  useEffect(() => {
+    fetchData()
+  }, [])
 
-  const handleSendRequest = () => {
+  const fetchData = async () => {
+    try {
+      const [receivedData, sentData] = await Promise.all([
+        getReceivedFriendRequests(),
+        getSentFriendRequests()
+      ])
+      setReceivedRequests(receivedData)
+      setSentRequests(sentData)
+    } catch (error) {
+      toast({
+        title: "데이터 로드 실패",
+        description: "친구 요청 목록을 불러오는데 실패했습니다.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSendRequest = async () => {
     if (!emailSearch) {
       toast({
         title: "이메일 필요",
@@ -131,43 +85,57 @@ export default function FriendsPage() {
       return
     }
 
-    // 친구 요청 성공 (실제로는 API 호출)
-    toast({
-      title: "친구 요청 전송",
-      description: "친구 요청이 성공적으로 전송되었습니다.",
-    })
+    // 자기 자신에게 요청하는지 확인
+    const currentUserEmail = localStorage.getItem('userEmail')
+    if (currentUserEmail && currentUserEmail.toLowerCase() === emailSearch.toLowerCase()) {
+      toast({
+        title: "잘못된 요청",
+        description: "자기 자신에게 친구 요청을 보낼 수 없습니다.",
+        variant: "destructive",
+      })
+      return
+    }
 
-    // 입력 초기화
-    setEmailSearch("")
-    // setMessage("")
+    try {
+      const response = await sendFriendRequest(emailSearch)
+      toast({
+        title: "친구 요청 전송",
+        description: response.message,
+      })
+      setEmailSearch("")
+      fetchData() // 목록 새로고침
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || "친구 요청을 보내는데 실패했습니다."
+      toast({
+        title: "요청 실패",
+        description: errorMessage,
+        variant: "destructive",
+      })
+    }
   }
 
-  const handleAcceptRequest = (id: number) => {
+  const handleAcceptRequest = async (id: number) => {
     toast({
       title: "친구 요청 수락",
       description: "친구 요청을 수락했습니다.",
     })
+    fetchData()
   }
 
-  const handleRejectRequest = (id: number) => {
+  const handleRejectRequest = async (id: number) => {
     toast({
       title: "친구 요청 거절",
       description: "친구 요청을 거절했습니다.",
     })
+    fetchData()
   }
 
-  const handleRemoveFriend = (id: number) => {
+  const handleRemoveFriend = async (id: number) => {
     toast({
       title: "친구 삭제",
       description: "친구 목록에서 삭제되었습니다.",
     })
-  }
-
-  const handleCancelRequest = (id: number) => {
-    toast({
-      title: "친구 요청 취소",
-      description: "친구 요청이 취소되었습니다.",
-    })
+    fetchData()
   }
 
   const handleStartChat = (id: number) => {
@@ -175,6 +143,10 @@ export default function FriendsPage() {
       title: "채팅 시작",
       description: "채팅 기능은 준비 중입니다.",
     })
+  }
+
+  if (loading) {
+    return <div className="flex justify-center items-center min-h-screen">로딩 중...</div>
   }
 
   return (
@@ -198,7 +170,6 @@ export default function FriendsPage() {
                   onChange={(e) => setEmailSearch(e.target.value)}
                 />
               </div>
-              {/* 메시지 입력 부분 제거 */}
             </CardContent>
             <CardFooter>
               <Button onClick={handleSendRequest} className="w-full">
@@ -231,28 +202,18 @@ export default function FriendsPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {filteredFriends.length > 0 ? (
+                  {friends.length > 0 ? (
                     <div className="space-y-4">
-                      {filteredFriends.map((friend) => (
+                      {friends.map((friend) => (
                         <div key={friend.id} className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="relative">
-                              <Avatar>
-                                <AvatarImage src={friend.avatar || "/placeholder.svg"} alt={friend.name} />
-                                <AvatarFallback>{friend.name[0]}</AvatarFallback>
-                              </Avatar>
-                              <div
-                                className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background ${friend.status === "online" ? "bg-green-500" : "bg-gray-400"}`}
-                              />
-                            </div>
+                            <Avatar>
+                              <AvatarImage src="/placeholder.svg" alt={friend.name} />
+                              <AvatarFallback>{friend.name[0]}</AvatarFallback>
+                            </Avatar>
                             <div>
                               <div className="font-medium">{friend.name}</div>
                               <div className="text-sm text-muted-foreground">{friend.email}</div>
-                              {friend.status === "offline" && friend.lastActive && (
-                                <div className="text-xs text-muted-foreground">
-                                  마지막 접속: {new Date(friend.lastActive).toLocaleDateString()}
-                                </div>
-                              )}
                             </div>
                           </div>
                           <div className="flex gap-2">
@@ -285,26 +246,20 @@ export default function FriendsPage() {
                   <CardTitle>받은 친구 요청</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {friendRequests.length > 0 ? (
+                  {receivedRequests.length > 0 ? (
                     <div className="space-y-4">
-                      {friendRequests.map((request) => (
+                      {receivedRequests.map((request) => (
                         <div key={request.id} className="p-4 border rounded-lg">
                           <div className="flex items-center gap-3 mb-3">
                             <Avatar>
-                              <AvatarImage src={request.avatar || "/placeholder.svg"} alt={request.name} />
+                              <AvatarImage src="/placeholder.svg" alt={request.name} />
                               <AvatarFallback>{request.name[0]}</AvatarFallback>
                             </Avatar>
                             <div>
                               <div className="font-medium">{request.name}</div>
                               <div className="text-sm text-muted-foreground">{request.email}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {new Date(request.sentAt).toLocaleDateString()}
-                              </div>
                             </div>
                           </div>
-                          {request.message && (
-                            <div className="bg-muted p-3 rounded-md text-sm mb-3">{request.message}</div>
-                          )}
                           <div className="flex gap-2 justify-end">
                             <Button variant="outline" size="sm" onClick={() => handleRejectRequest(request.id)}>
                               <X className="mr-2 h-4 w-4" />
@@ -341,25 +296,13 @@ export default function FriendsPage() {
                         <div key={request.id} className="p-4 border rounded-lg">
                           <div className="flex items-center gap-3 mb-3">
                             <Avatar>
-                              <AvatarImage src={request.avatar || "/placeholder.svg"} alt={request.name} />
+                              <AvatarImage src="/placeholder.svg" alt={request.name} />
                               <AvatarFallback>{request.name[0]}</AvatarFallback>
                             </Avatar>
                             <div>
                               <div className="font-medium">{request.name}</div>
                               <div className="text-sm text-muted-foreground">{request.email}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {new Date(request.sentAt).toLocaleDateString()}
-                              </div>
                             </div>
-                          </div>
-                          {request.message && (
-                            <div className="bg-muted p-3 rounded-md text-sm mb-3">{request.message}</div>
-                          )}
-                          <div className="flex justify-end">
-                            <Button variant="outline" size="sm" onClick={() => handleCancelRequest(request.id)}>
-                              <X className="mr-2 h-4 w-4" />
-                              요청 취소
-                            </Button>
                           </div>
                         </div>
                       ))}
@@ -382,9 +325,5 @@ export default function FriendsPage() {
 }
 
 function Label({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-      {children}
-    </div>
-  )
+  return <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">{children}</label>
 }
