@@ -9,7 +9,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Search, UserPlus, UserMinus, MessageSquare, Check, X, Mail } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { sendFriendRequest, getReceivedFriendRequests, getSentFriendRequests, type Friend } from "./api"
+import { api } from "@/lib/api-client"
+
+interface Friend {
+  id: number;
+  name: string;
+  email: string;
+}
 
 export default function FriendsPage() {
   const { toast } = useToast()
@@ -28,8 +34,8 @@ export default function FriendsPage() {
   const fetchData = async () => {
     try {
       const [receivedData, sentData] = await Promise.all([
-        getReceivedFriendRequests(),
-        getSentFriendRequests()
+        api.get('/friends/requests/received'),
+        api.get('/friends/requests/sent')
       ])
       setReceivedRequests(receivedData)
       setSentRequests(sentData)
@@ -97,10 +103,10 @@ export default function FriendsPage() {
     }
 
     try {
-      const response = await sendFriendRequest(emailSearch)
+      await api.post('/friends/request', { receiverEmail: emailSearch })
       toast({
         title: "친구 요청 전송",
-        description: response.message,
+        description: "친구 요청을 보냈습니다.",
       })
       setEmailSearch("")
       fetchData() // 목록 새로고침
