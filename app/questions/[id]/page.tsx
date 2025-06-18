@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
-import { ThumbsUp, CheckCircle2, Calendar, ArrowLeft, X } from "lucide-react"
+import { ThumbsUp, CheckCircle2, Calendar, ArrowLeft, X, Pencil } from "lucide-react"
 import FileUpload from "@/components/file-upload"
 import { api } from "@/lib/api-client"
 
@@ -53,6 +53,17 @@ export default function QuestionDetailPage() {
         } else {
           setAnswers([])
         }
+        // 디버깅: 유저와 질문 작성자 정보 콘솔 출력
+        console.log('user:', user)
+        console.log('question:', q)
+        console.log('question.author:', q?.author)
+        console.log('question.memberId:', q?.memberId)
+        console.log('question.email:', q?.email)
+        console.log('question.nickname:', q?.nickname)
+        console.log('question.author.name:', q?.author?.name)
+        console.log('user.name:', user?.name)
+        console.log('user.email:', user?.email)
+        console.log('user.id:', user?.id)
       } catch (e) {
         setQuestion(null)
         setAnswers([])
@@ -202,6 +213,16 @@ export default function QuestionDetailPage() {
                 <Button variant="outline" size="sm" className="flex items-center gap-1">
                   <ThumbsUp className="h-4 w-4" />
                   <span>{question?.likeCount}</span>
+                </Button>
+                {/* 연필(수정) 버튼 항상 노출 */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1"
+                  onClick={() => router.push(`/questions/${params.id}/edit`)}
+                  aria-label="질문 수정하기"
+                >
+                  <Pencil className="h-4 w-4" />
                 </Button>
               </div>
             </div>
