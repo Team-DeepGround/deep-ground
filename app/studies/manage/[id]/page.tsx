@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,179 +21,206 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { api } from "@/lib/api-client"
 
-export default function StudyManagePage() {
+interface StudyGroupDetail {
+  id: number
+  title: string
+  explanation: string
+  writer: string
+  memberCount: number
+  groupLimit: number
+  location: string
+  recruitStartDate: string
+  recruitEndDate: string
+  studyStartDate: string
+  studyEndDate: string
+  commentCount: number
+  participants: string[]
+  comments: {
+    commentId: number
+    nickname: string
+    content: string
+    createdAt: string
+    replies: {
+      replyId: number
+      nickname: string
+      content: string
+      createdAt: string
+    }[]
+  }[]
+  offline: boolean
+}
+
+interface Participant {
+  memberId: number
+  nickname: string
+  joinedAt: string | null
+  owner: boolean
+}
+
+interface StudyMember {
+  memberId: number
+  nickname: string
+  joinedAt: string
+  owner: boolean
+}
+
+interface Applicant {
+  memberId: number
+  nickname: string
+  joinedAt: null
+  owner: false
+}
+
+// 신청자 더미 데이터
+const dummyApplicants = [
+  {
+    id: 1,
+    name: "김철수",
+    email: "kim@example.com",
+    message: "React와 TypeScript에 관심이 많습니다. 함께 공부하고 싶습니다.",
+    appliedAt: "2024-02-16T10:30:00",
+    status: "pending"
+  },
+  {
+    id: 2,
+    name: "이영희",
+    email: "lee@example.com",
+    message: "프론트엔드 개발자로 일하고 있습니다. 실무 경험을 공유하고 싶습니다.",
+    appliedAt: "2024-02-17T14:20:00",
+    status: "pending"
+  },
+  {
+    id: 3,
+    name: "박지민",
+    email: "park@example.com",
+    message: "Next.js를 배우고 싶어서 신청했습니다. 열심히 참여하겠습니다.",
+    appliedAt: "2024-02-18T09:15:00",
+    status: "pending"
+  }
+]
+
+// 더미 일정 데이터
+const dummySchedules = [
+  {
+    id: 1,
+    title: "React 기초 학습",
+    date: "2024-03-01",
+    time: "19:00",
+    location: "온라인",
+    description: "React의 기본 개념과 컴포넌트 구조에 대해 학습합니다.",
+    participants: 5
+  },
+  {
+    id: 2,
+    title: "TypeScript 심화",
+    date: "2024-03-08",
+    time: "19:00",
+    location: "온라인",
+    description: "TypeScript의 고급 타입과 제네릭에 대해 학습합니다.",
+    participants: 4
+  },
+  {
+    id: 3,
+    title: "프로젝트 기획 회의",
+    date: "2024-03-15",
+    time: "19:00",
+    location: "온라인",
+    description: "최종 프로젝트 주제 선정 및 역할 분담을 진행합니다.",
+    participants: 6
+  }
+]
+
+// 더미 참여자 데이터
+const dummyParticipants = [
+  {
+    id: 1,
+    name: "김철수",
+    role: "스터디장",
+    joinedAt: "2024-02-01",
+    attendance: 8,
+    contribution: "React 컴포넌트 구조 설계"
+  },
+  {
+    id: 2,
+    name: "이영희",
+    role: "참여자",
+    joinedAt: "2024-02-05",
+    attendance: 7,
+    contribution: "TypeScript 타입 시스템 정리"
+  },
+  {
+    id: 3,
+    name: "박지민",
+    role: "참여자",
+    joinedAt: "2024-02-10",
+    attendance: 6,
+    contribution: "프로젝트 기획서 작성"
+  }
+]
+
+export default function StudyManagementPage() {
   const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
   const [inviteEmail, setInviteEmail] = useState("")
   const [kickMemberId, setKickMemberId] = useState<number | null>(null)
   const [showKickDialog, setShowKickDialog] = useState(false)
+  const [study, setStudy] = useState<StudyGroupDetail | null>(null)
+  const [members, setMembers] = useState<StudyMember[]>([])
+  const [applicants, setApplicants] = useState<Applicant[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  // 스터디 ID
-  const studyId = params.id
+  useEffect(() => {
+    const fetchStudyDetail = async () => {
+      try {
+        const response = await api.get(`/study-group/${params.id}`)
+        if (response.status === 200 && response.result) {
+          setStudy(response.result)
+        }
+      } catch (error) {
+        console.error("Failed to fetch study detail:", error)
+      }
+    }
 
-  // 임시 스터디 데이터
-  const study = {
-    id: studyId,
-    title: "알고리즘 문제 풀이 스터디",
-    description: "매주 알고리즘 문제를 함께 풀고 리뷰하는 스터디입니다.",
-    period: "2023.05.15 ~ 2023.07.15",
-    recruitmentPeriod: "2023.04.20 ~ 2023.05.10",
-    tags: ["Algorithm", "Data Structure", "Problem Solving"],
-    maxMembers: 10,
-    currentMembers: 8,
-    organizer: {
-      id: 101,
-      name: "개발자123",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-    isOnline: true,
-    location: null,
-    schedule: [
-      {
-        id: 1,
-        title: "그래프 알고리즘 기초",
-        date: "2023-05-20",
-        startTime: "19:00",
-        endTime: "21:00",
-        description: "BFS, DFS, 최단 경로 알고리즘에 대해 학습합니다.",
-        location: "온라인 (Discord)",
-      },
-      {
-        id: 2,
-        title: "동적 프로그래밍",
-        date: "2023-05-27",
-        startTime: "19:00",
-        endTime: "21:00",
-        description: "DP 문제 풀이 전략에 대해 학습합니다.",
-        location: "온라인 (Discord)",
-      },
-      {
-        id: 3,
-        title: "그리디 알고리즘",
-        date: "2023-06-03",
-        startTime: "19:00",
-        endTime: "21:00",
-        description: "그리디 알고리즘의 개념과 적용 사례를 학습합니다.",
-        location: "온라인 (Discord)",
-      },
-    ],
-    members: [
-      {
-        id: 101,
-        name: "개발자123",
-        avatar: "/placeholder.svg?height=40&width=40",
-        role: "organizer",
-        joinDate: "2023-04-20T10:30:00Z",
-      },
-      {
-        id: 102,
-        name: "알고리즘마스터",
-        avatar: "/placeholder.svg?height=40&width=40",
-        role: "member",
-        joinDate: "2023-04-21T14:20:00Z",
-      },
-      {
-        id: 103,
-        name: "코딩천재",
-        avatar: "/placeholder.svg?height=40&width=40",
-        role: "member",
-        joinDate: "2023-04-22T09:15:00Z",
-      },
-      {
-        id: 104,
-        name: "자바스크립트러버",
-        avatar: "/placeholder.svg?height=40&width=40",
-        role: "member",
-        joinDate: "2023-04-23T16:40:00Z",
-      },
-      {
-        id: 105,
-        name: "파이썬고수",
-        avatar: "/placeholder.svg?height=40&width=40",
-        role: "member",
-        joinDate: "2023-04-25T11:30:00Z",
-      },
-      {
-        id: 106,
-        name: "씨샵개발자",
-        avatar: "/placeholder.svg?height=40&width=40",
-        role: "member",
-        joinDate: "2023-04-26T13:20:00Z",
-      },
-      {
-        id: 107,
-        name: "자바개발자",
-        avatar: "/placeholder.svg?height=40&width=40",
-        role: "member",
-        joinDate: "2023-04-28T10:10:00Z",
-      },
-      {
-        id: 108,
-        name: "코틀린러버",
-        avatar: "/placeholder.svg?height=40&width=40",
-        role: "member",
-        joinDate: "2023-04-30T15:45:00Z",
-      },
-    ],
-    resources: [
-      {
-        id: 1,
-        title: "알고리즘 문제 풀이 사이트",
-        type: "link",
-        url: "https://leetcode.com/",
-      },
-      {
-        id: 2,
-        title: "알고리즘 개념 정리",
-        type: "link",
-        url: "https://www.geeksforgeeks.org/fundamentals-of-algorithms/",
-      },
-      {
-        id: 3,
-        title: "그래프 알고리즘 요약 자료",
-        type: "file",
-        url: "/placeholder.svg?height=400&width=600",
-        fileType: "pdf",
-        fileSize: "2.5MB",
-      },
-    ],
-    discussions: [
-      {
-        id: 1,
-        author: {
-          id: 102,
-          name: "알고리즘마스터",
-          avatar: "/placeholder.svg?height=40&width=40",
-        },
-        content: "다음 모임에서는 어떤 문제를 풀어볼까요?",
-        createdAt: "2023-05-10T14:30:00Z",
-        replies: [
-          {
-            id: 101,
-            author: {
-              id: 101,
-              name: "개발자123",
-              avatar: "/placeholder.svg?height=40&width=40",
-            },
-            content: "LeetCode의 Medium 난이도 그래프 문제 몇 개를 선정해서 풀어보는 것이 어떨까요? 다들 의견 주세요!",
-            createdAt: "2023-05-10T15:15:00Z",
-          },
-        ],
-      },
-      {
-        id: 2,
-        author: {
-          id: 105,
-          name: "파이썬고수",
-          avatar: "/placeholder.svg?height=40&width=40",
-        },
-        content: "다음 모임에서 사용할 예제 코드를 미리 공유드립니다. 확인 부탁드려요!",
-        createdAt: "2023-05-11T10:20:00Z",
-        replies: [],
-      },
-    ],
+    const fetchMembers = async () => {
+      try {
+        const response = await api.get(`/study-group/${params.id}/members`)
+        if (response.status === 200 && response.result) {
+          setMembers(response.result)
+        }
+      } catch (error) {
+        console.error("Failed to fetch members:", error)
+      }
+    }
+
+    const fetchApplicants = async () => {
+      try {
+        const response = await api.get(`/study-group/${params.id}/applicants`)
+        setApplicants(response.result)
+      } catch (error) {
+        toast({
+          title: "오류 발생",
+          description: "신청자 목록을 불러오는데 실패했습니다.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchStudyDetail()
+    fetchMembers()
+    fetchApplicants()
+  }, [params.id, toast])
+
+  if (isLoading) {
+    return <div>로딩 중...</div>
+  }
+
+  if (!study) {
+    return <div>스터디를 찾을 수 없습니다.</div>
   }
 
   const handleInviteMember = () => {
@@ -214,24 +241,73 @@ export default function StudyManagePage() {
     setInviteEmail("")
   }
 
-  const handleKickMember = () => {
-    if (!kickMemberId) return
-
-    // 강퇴 로직 (실제로는 API 호출)
-    const memberToKick = study.members.find((member) => member.id === kickMemberId)
-
-    toast({
-      title: "멤버 강퇴 완료",
-      description: `${memberToKick?.name} 님을 스터디에서 강퇴했습니다.`,
-    })
-
-    setShowKickDialog(false)
-    setKickMemberId(null)
-  }
-
   const openKickDialog = (memberId: number) => {
     setKickMemberId(memberId)
     setShowKickDialog(true)
+  }
+
+  const handleKickMember = async () => {
+    if (!kickMemberId) return
+
+    try {
+      await api.delete(`/study-group/${params.id}/kick/${kickMemberId}`)
+
+      // 강퇴 후 목록 새로고침
+      const response = await api.get(`/study-group/${params.id}/members`)
+      setMembers(response.result)
+
+      toast({
+        title: "멤버 강퇴",
+        description: "멤버가 스터디에서 강퇴되었습니다.",
+      })
+
+      setShowKickDialog(false)
+      setKickMemberId(null)
+    } catch (error) {
+      toast({
+        title: "오류 발생",
+        description: "멤버 강퇴에 실패했습니다.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleApprove = async (memberId: number) => {
+    try {
+      await api.post(`/study-group/${params.id}/accept/${memberId}`)
+      // 승인 후 목록 새로고침
+      const response = await api.get(`/study-group/${params.id}/applicants`)
+      setApplicants(response.result)
+      toast({
+        title: "승인 완료",
+        description: "참여 신청이 승인되었습니다.",
+      })
+    } catch (error) {
+      toast({
+        title: "오류 발생",
+        description: "참여 신청 승인에 실패했습니다.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleReject = async (memberId: number) => {
+    try {
+      await api.delete(`/study-group/${params.id}/kick/${memberId}`)
+      // 거절 후 목록 새로고침
+      const response = await api.get(`/study-group/${params.id}/applicants`)
+      setApplicants(response.result)
+      toast({
+        title: "거절 완료",
+        description: "참여 신청이 거절되었습니다.",
+      })
+    } catch (error) {
+      toast({
+        title: "오류 발생",
+        description: "참여 신청 거절에 실패했습니다.",
+        variant: "destructive",
+      })
+    }
   }
 
   return (
@@ -242,15 +318,12 @@ export default function StudyManagePage() {
           <div className="flex justify-between items-start">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <Badge variant={study.isOnline ? "default" : "outline"}>{study.isOnline ? "온라인" : "오프라인"}</Badge>
-                {new Date(study.recruitmentPeriod.split(" ~ ")[1]) >= new Date() ? (
-                  <Badge variant="secondary">모집 중</Badge>
-                ) : (
-                  <Badge variant="outline">모집 완료</Badge>
-                )}
+                <Badge variant={study.offline ? "outline" : "default"}>
+                  {study.offline ? "오프라인" : "온라인"}
+                </Badge>
               </div>
               <h1 className="text-3xl font-bold">{study.title}</h1>
-              <p className="text-muted-foreground mt-2">{study.description}</p>
+              <p className="text-muted-foreground mt-2">{study.explanation}</p>
             </div>
 
             <div className="flex items-center gap-2">
@@ -272,43 +345,97 @@ export default function StudyManagePage() {
           <div className="flex flex-wrap gap-6 mt-6">
             <div className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-muted-foreground" />
-              <span>{study.period}</span>
+              <span>
+                모집 기간: {new Date(study.recruitStartDate).toLocaleDateString()} ~{" "}
+                {new Date(study.recruitEndDate).toLocaleDateString()}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-muted-foreground" />
+              <span>
+                스터디 기간: {new Date(study.studyStartDate).toLocaleDateString()} ~{" "}
+                {new Date(study.studyEndDate).toLocaleDateString()}
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5 text-muted-foreground" />
               <span>
-                {study.currentMembers}/{study.maxMembers}명
+                {study.memberCount}/{study.groupLimit}명
               </span>
             </div>
             <div className="flex items-center gap-2">
               <MapPin className="h-5 w-5 text-muted-foreground" />
-              <span>{study.location || "온라인"}</span>
+              <span>{study.offline ? study.location : "온라인"}</span>
             </div>
-          </div>
-
-          <div className="flex flex-wrap gap-2 mt-4">
-            {study.tags.map((tag) => (
-              <Badge key={tag} variant="secondary" className="font-normal">
-                {tag}
-              </Badge>
-            ))}
           </div>
         </div>
 
         {/* 스터디 관리 탭 */}
-        <Tabs defaultValue="members">
+        <Tabs defaultValue="schedule">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="members">멤버 관리</TabsTrigger>
             <TabsTrigger value="schedule">일정 관리</TabsTrigger>
-            <TabsTrigger value="resources">자료 관리</TabsTrigger>
+            <TabsTrigger value="members">참여자 관리</TabsTrigger>
+            <TabsTrigger value="applicants">신청자 관리</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="members" className="mt-6">
+          <TabsContent value="schedule">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle>멤버 관리</CardTitle>
-                  <CardDescription>스터디 멤버를 관리하고 초대하세요</CardDescription>
+                  <CardTitle>일정 관리</CardTitle>
+                  <CardDescription>스터디 일정을 관리하세요</CardDescription>
+                </div>
+                <Button>
+                  <Calendar className="mr-2 h-4 w-4" />
+                  일정 추가
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {dummySchedules.map((schedule) => (
+                    <div key={schedule.id} className="flex items-start justify-between p-4 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-semibold">{schedule.title}</h3>
+                          <Badge variant="outline">
+                            {schedule.date} {schedule.time}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">{schedule.description}</p>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <MapPin className="h-4 w-4" />
+                            {schedule.location}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Users className="h-4 w-4" />
+                            {schedule.participants}명 참여
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm">
+                          <FileText className="mr-2 h-4 w-4" />
+                          상세보기
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          <Settings className="mr-2 h-4 w-4" />
+                          수정
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="members">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>참여자 관리</CardTitle>
+                  <CardDescription>스터디 참여자를 관리하세요</CardDescription>
                 </div>
                 <Dialog>
                   <DialogTrigger asChild>
@@ -319,16 +446,17 @@ export default function StudyManagePage() {
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>스터디 멤버 초대</DialogTitle>
+                      <DialogTitle>멤버 초대</DialogTitle>
                       <DialogDescription>
-                        초대할 멤버의 이메일 주소를 입력하세요. 초대 메일이 발송됩니다.
+                        초대할 멤버의 이메일 주소를 입력하세요.
                       </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="email">이메일 주소</Label>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="email">이메일</Label>
                         <Input
                           id="email"
+                          type="email"
                           placeholder="example@email.com"
                           value={inviteEmail}
                           onChange={(e) => setInviteEmail(e.target.value)}
@@ -339,40 +467,41 @@ export default function StudyManagePage() {
                       <Button variant="outline" onClick={() => setInviteEmail("")}>
                         취소
                       </Button>
-                      <Button onClick={handleInviteMember}>초대하기</Button>
+                      <Button onClick={handleInviteMember}>
+                        초대하기
+                      </Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {study.members.map((member) => (
-                    <div key={member.id} className="flex items-center justify-between p-3 rounded-lg border">
+                  {members.map((member) => (
+                    <div key={member.memberId} className="flex items-center justify-between p-3 rounded-lg border">
                       <div className="flex items-center gap-3">
                         <Avatar>
-                          <AvatarImage src={member.avatar || "/placeholder.svg"} alt={member.name} />
-                          <AvatarFallback>{member.name[0]}</AvatarFallback>
+                          <AvatarFallback>{member.nickname[0]}</AvatarFallback>
                         </Avatar>
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="font-medium">{member.name}</p>
-                            {member.role === "organizer" && <Badge variant="secondary">스터디장</Badge>}
+                            <p className="font-medium">{member.nickname}</p>
+                            {member.owner && <Badge variant="secondary">스터디장</Badge>}
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            가입일: {new Date(member.joinDate).toLocaleDateString()}
+                          <p className="text-sm text-muted-foreground mt-1">
+                            참여일: {new Date(member.joinedAt).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/profile/${member.id}`}>프로필</Link>
+                          <Link href={`/profile/${member.memberId}`}>프로필</Link>
                         </Button>
-                        {member.role !== "organizer" && (
+                        {!member.owner && (
                           <Button
                             variant="outline"
                             size="sm"
                             className="text-destructive hover:bg-destructive/10"
-                            onClick={() => openKickDialog(member.id)}
+                            onClick={() => openKickDialog(member.memberId)}
                           >
                             <UserMinus className="mr-1 h-4 w-4" />
                             강퇴
@@ -386,113 +515,51 @@ export default function StudyManagePage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="schedule" className="mt-6">
+          <TabsContent value="applicants">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle>일정 관리</CardTitle>
-                  <CardDescription>스터디 일정을 관리하세요</CardDescription>
+                  <CardTitle>신청자 관리</CardTitle>
+                  <CardDescription>스터디 참여 신청을 관리하세요</CardDescription>
                 </div>
-                <Button>
-                  <Calendar className="mr-2 h-4 w-4" />
-                  일정 추가
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {study.schedule.map((event, index) => (
-                    <div key={event.id} className="flex gap-4">
-                      <div className="flex flex-col items-center">
-                        <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                          {index + 1}
-                        </div>
-                        {index < study.schedule.length - 1 && <div className="w-0.5 h-full bg-muted mt-2"></div>}
-                      </div>
-                      <div className="flex-1">
-                        <div className="bg-accent p-4 rounded-lg">
-                          <div className="flex justify-between items-start">
-                            <h3 className="font-semibold text-lg">{event.title}</h3>
-                            <div className="flex gap-2">
-                              <Button variant="ghost" size="sm">
-                                수정
-                              </Button>
-                              <Button variant="ghost" size="sm" className="text-destructive">
-                                삭제
-                              </Button>
-                            </div>
-                          </div>
-                          <div className="flex flex-wrap gap-4 mt-2 text-sm">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4 text-muted-foreground" />
-                              <span>{event.date}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-4 w-4 text-muted-foreground" />
-                              <span>
-                                {event.startTime} - {event.endTime}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <MapPin className="h-4 w-4 text-muted-foreground" />
-                              <span>{event.location}</span>
-                            </div>
-                          </div>
-                          <p className="mt-2 text-muted-foreground">{event.description}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="resources" className="mt-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>자료 관리</CardTitle>
-                  <CardDescription>스터디 자료를 관리하세요</CardDescription>
-                </div>
-                <Button>
-                  <FileText className="mr-2 h-4 w-4" />
-                  자료 추가
-                </Button>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {study.resources.map((resource) => (
-                    <div key={resource.id} className="flex items-center justify-between p-3 rounded-lg border">
-                      <div className="flex items-center gap-3">
-                        {resource.type === "link" ? (
-                          <ExternalLink className="h-5 w-5 text-muted-foreground" />
-                        ) : (
-                          <FileText className="h-5 w-5 text-muted-foreground" />
-                        )}
-                        <div>
-                          <p className="font-medium">{resource.title}</p>
-                          {resource.type === "file" && (
-                            <p className="text-xs text-muted-foreground">
-                              {resource.fileType.toUpperCase()} • {resource.fileSize}
-                            </p>
-                          )}
+                  {applicants.length === 0 ? (
+                    <p className="text-center text-muted-foreground">대기 중인 신청자가 없습니다.</p>
+                  ) : (
+                    applicants.map((applicant) => (
+                      <div key={applicant.memberId} className="flex items-center justify-between p-3 rounded-lg border">
+                        <div className="flex items-center gap-3">
+                          <Avatar>
+                            <AvatarFallback>{applicant.nickname[0]}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{applicant.nickname}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleApprove(applicant.memberId)}
+                          >
+                            <UserPlus className="mr-2 h-4 w-4" />
+                            승인
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive"
+                            onClick={() => handleReject(applicant.memberId)}
+                          >
+                            <UserMinus className="mr-2 h-4 w-4" />
+                            거절
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={resource.url} target="_blank" rel="noopener noreferrer">
-                            {resource.type === "link" ? "방문하기" : "다운로드"}
-                          </a>
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          수정
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-destructive">
-                          삭제
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>

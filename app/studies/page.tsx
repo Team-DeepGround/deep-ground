@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Calendar, Users, Search, Filter, Plus, MapPin } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Pagination,
   PaginationContent,
@@ -71,13 +72,76 @@ interface StudyGroupSearchResponse {
   };
 }
 
+function StudyCardSkeleton() {
+  return (
+    <Card className="overflow-hidden">
+      <CardHeader className="p-4">
+        <div className="flex justify-between items-start gap-4">
+          <div className="flex-1 min-w-0">
+            <Skeleton className="h-6 w-3/4 mb-2" />
+            <Skeleton className="h-4 w-1/2" />
+          </div>
+          <Skeleton className="h-6 w-16" />
+        </div>
+      </CardHeader>
+      <CardContent className="p-4 pt-0">
+        <Skeleton className="h-4 w-full mb-2" />
+        <Skeleton className="h-4 w-2/3 mb-4" />
+        <div className="flex flex-wrap gap-1.5 mt-3">
+          <Skeleton className="h-6 w-16" />
+          <Skeleton className="h-6 w-16" />
+          <Skeleton className="h-6 w-16" />
+        </div>
+      </CardContent>
+      <CardFooter className="p-4 pt-0 flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-6 w-6 rounded-full" />
+          <Skeleton className="h-4 w-20" />
+        </div>
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-8 w-16" />
+        </div>
+      </CardFooter>
+    </Card>
+  )
+}
+
+function FilterSkeleton() {
+  return (
+    <Card className="h-fit">
+      <CardHeader>
+        <Skeleton className="h-6 w-16" />
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-16 mb-2" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-16 mb-2" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-16 mb-2" />
+          <div className="flex flex-wrap gap-2">
+            <Skeleton className="h-6 w-16" />
+            <Skeleton className="h-6 w-16" />
+            <Skeleton className="h-6 w-16" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function StudiesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [locationFilter, setLocationFilter] = useState<string | null>(null)
   const [sortOrder, setSortOrder] = useState<string>("latest")
   const [studyGroups, setStudyGroups] = useState<StudyGroup[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<"all" | "recruiting" | "upcoming">("all")
 
   // 페이지네이션 관련 상태
   const [currentPage, setCurrentPage] = useState(1)
@@ -89,10 +153,17 @@ export default function StudiesPage() {
       try {
         const params: any = {
           keyword: searchTerm,
-          groupStatus: "RECRUITING",
           page: String(currentPage - 1),
           size: String(itemsPerPage),
         };
+
+        // 탭에 따른 상태 필터링
+        if (activeTab === "recruiting") {
+          params.groupStatus = "RECRUITING"
+        } else if (activeTab === "upcoming") {
+          params.groupStatus = "UPCOMING"
+        }
+
         if (selectedTags.length > 0) {
           params.techTags = selectedTags.map(toServerTechTag);
         }
@@ -103,12 +174,10 @@ export default function StudiesPage() {
         setTotalPages(response.result.totalPages)
       } catch (error) {
         console.error('스터디 목록 조회 실패:', error)
-      } finally {
-        setIsLoading(false)
       }
     }
     fetchStudyGroups()
-  }, [searchTerm, currentPage, selectedTags])
+  }, [searchTerm, currentPage, selectedTags, activeTab])
 
   // 필터링된 스터디 그룹
   const filteredStudies = studyGroups.filter((study) => {
@@ -124,8 +193,8 @@ export default function StudiesPage() {
   const sortedStudies = [...filteredStudies].sort((a, b) => {
     if (sortOrder === "latest") {
       return (
-        new Date(b.recruitmentPeriod.split(" ~ ")[0]).getTime() -
-        new Date(a.recruitmentPeriod.split(" ~ ")[0]).getTime()
+        new Date(b.recruitmentPeriod.split(" ~ ")[1]).getTime() -
+        new Date(a.recruitmentPeriod.split(" ~ ")[1]).getTime()
       )
     } else if (sortOrder === "popular") {
       return b.currentMembers / b.maxMembers - a.currentMembers / a.maxMembers
@@ -137,10 +206,6 @@ export default function StudiesPage() {
     }
     return 0
   })
-
-  if (isLoading) {
-    return <div>로딩 중...</div>
-  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -227,34 +292,16 @@ export default function StudiesPage() {
 
         {/* 스터디 목록 */}
         <div className="space-y-6">
-          <Tabs defaultValue="all">
+          <Tabs defaultValue="all" value={activeTab} onValueChange={(value) => {
+            setActiveTab(value as typeof activeTab)
+            setCurrentPage(1) // 탭 변경 시 첫 페이지로 이동
+          }}>
             <div className="flex justify-between items-center">
               <TabsList>
                 <TabsTrigger value="all">전체</TabsTrigger>
-                <TabsTrigger value="recruiting">모집 중</TabsTrigger>
-                <TabsTrigger value="upcoming">시작 예정</TabsTrigger>
-                <TabsTrigger value="ongoing">진행 중</TabsTrigger>
+                <TabsTrigger value="recruiting">모집중</TabsTrigger>
+                <TabsTrigger value="upcoming">시작예정</TabsTrigger>
               </TabsList>
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <Select
-                  defaultValue="latest"
-                  value={sortOrder}
-                  onValueChange={(value) => {
-                    setSortOrder(value)
-                    setCurrentPage(1) // 정렬 변경 시 첫 페이지로 이동
-                  }}
-                >
-                  <SelectTrigger className="w-[120px]">
-                    <SelectValue placeholder="정렬" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="latest">최신순</SelectItem>
-                    <SelectItem value="popular">인기순</SelectItem>
-                    <SelectItem value="closing">마감임박순</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
 
             <TabsContent value="all" className="mt-6">
@@ -275,44 +322,17 @@ export default function StudiesPage() {
 
             <TabsContent value="recruiting" className="mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {sortedStudies
-                  .filter((study) => {
-                    const now = new Date()
-                    const recruitEnd = new Date(study.recruitmentPeriod.split(" ~ ")[1])
-                    return recruitEnd >= now
-                  })
-                  .map((study) => (
-                    <StudyCard key={study.id} study={study} />
-                  ))}
+                {sortedStudies.map((study) => (
+                  <StudyCard key={study.id} study={study} />
+                ))}
               </div>
             </TabsContent>
 
             <TabsContent value="upcoming" className="mt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {sortedStudies
-                  .filter((study) => {
-                    const now = new Date()
-                    const studyStart = new Date(study.period.split(" ~ ")[0])
-                    return studyStart > now
-                  })
-                  .map((study) => (
-                    <StudyCard key={study.id} study={study} />
-                  ))}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="ongoing" className="mt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {sortedStudies
-                  .filter((study) => {
-                    const now = new Date()
-                    const studyStart = new Date(study.period.split(" ~ ")[0])
-                    const studyEnd = new Date(study.period.split(" ~ ")[1])
-                    return studyStart <= now && studyEnd >= now
-                  })
-                  .map((study) => (
-                    <StudyCard key={study.id} study={study} />
-                  ))}
+                {sortedStudies.map((study) => (
+                  <StudyCard key={study.id} study={study} />
+                ))}
               </div>
             </TabsContent>
           </Tabs>
@@ -363,7 +383,7 @@ function StudyCard({ study }: StudyCardProps) {
             <h3 className="text-lg font-semibold line-clamp-1">{study.title}</h3>
             <p className="text-sm text-muted-foreground mt-1 flex items-center">
               <Calendar className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
-              <span className="truncate">{study.period}</span>
+              <span className="truncate">{study.recruitmentPeriod}</span>
             </p>
           </div>
           <Badge variant={study.isOnline ? "default" : "outline"} className="whitespace-nowrap flex-shrink-0">
@@ -380,7 +400,7 @@ function StudyCard({ study }: StudyCardProps) {
           </p>
         )}
         <div className="flex flex-wrap gap-1.5 mt-3">
-          {study.tags.map((tag) => (
+          {study.tags?.map((tag) => (
             <Badge key={tag} variant="secondary" className="font-normal">
               {toClientTechTag(tag)}
             </Badge>
@@ -390,8 +410,8 @@ function StudyCard({ study }: StudyCardProps) {
       <CardFooter className="p-4 pt-0 flex justify-between items-center">
         <div className="flex items-center gap-2">
           <Avatar className="h-6 w-6">
-            <AvatarImage src={study.organizer.avatar || "/placeholder.svg"} alt={study.organizer.name} />
-            <AvatarFallback>{study.organizer.name[0]}</AvatarFallback>
+            <AvatarImage src={study.organizer.avatar} alt={study.organizer.name} />
+            <AvatarFallback>{study.organizer.name}</AvatarFallback>
           </Avatar>
           <span className="text-sm truncate">{study.organizer.name}</span>
         </div>
