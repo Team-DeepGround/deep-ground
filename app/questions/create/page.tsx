@@ -14,6 +14,8 @@ import { useToast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
 import FileUpload from "@/components/file-upload"
 import { Checkbox } from "@/components/ui/checkbox"
+import { apiClient } from "@/lib/api-client"
+import { api } from "@/lib/api-client"
 
 export default function CreateQuestionPage() {
   const router = useRouter()
@@ -102,7 +104,7 @@ export default function CreateQuestionPage() {
     setUploadedImages((prev) => prev.filter((_, i) => i !== index))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     // 필수 필드 검증
@@ -134,17 +136,34 @@ export default function CreateQuestionPage() {
       return
     }
 
-    // 질문 생성 성공 (실제로는 API 호출)
-    toast({
-      title: "질문 등록 성공",
-      description:
-        uploadedImages.length > 0
-          ? `질문과 ${uploadedImages.length}개의 이미지가 성공적으로 등록되었습니다.`
-          : "질문이 성공적으로 등록되었습니다.",
-    })
+    // FormData 생성
+    const formData = new FormData()
+    formData.append("title", title)
+    formData.append("content", content)
+    tags.forEach(tag => formData.append("techStacks", tag))
+    uploadedImages.forEach(file => formData.append("image", file))
 
-    // 질문 목록 페이지로 이동
-    router.push("/questions")
+    try {
+      await apiClient("/questions", {
+        method: "POST",
+        body: formData,
+        headers: {},
+      })
+      toast({
+        title: "질문 등록 성공",
+        description:
+          uploadedImages.length > 0
+            ? `질문과 ${uploadedImages.length}개의 이미지가 성공적으로 등록되었습니다.`
+            : "질문이 성공적으로 등록되었습니다.",
+      })
+      router.push("/questions")
+    } catch (error: any) {
+      toast({
+        title: "질문 등록 실패",
+        description: error?.message || "질문 등록 중 오류가 발생했습니다.",
+        variant: "destructive",
+      })
+    }
   }
 
   return (

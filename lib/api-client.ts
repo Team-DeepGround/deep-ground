@@ -27,7 +27,8 @@ async function apiClient(endpoint: string, options: RequestOptions = {}) {
 
   // 기본 헤더 설정
   const headers = new Headers(fetchOptions.headers);
-  if (!headers.has('Content-Type')) {
+  // FormData가 아닐 때만 Content-Type 세팅
+  if (!(fetchOptions.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
 
@@ -96,4 +97,6 @@ export const api = {
 
   delete: (endpoint: string, options?: RequestOptions) =>
     apiClient(endpoint, { ...options, method: 'DELETE' }),
-}; 
+};
+
+export { apiClient }; 
