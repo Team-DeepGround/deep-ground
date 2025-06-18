@@ -60,7 +60,8 @@ export default function QuestionsPage() {
       question.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       question.content.toLowerCase().includes(searchTerm.toLowerCase())
 
-    const matchesTags = selectedTags.length === 0 || question.tags.some((tag: any) => selectedTags.includes(tag))
+    const tags = question.tags || [];
+    const matchesTags = selectedTags.length === 0 || tags.some((tag: any) => selectedTags.includes(tag))
 
     return matchesSearch && matchesTags
   })
@@ -209,9 +210,9 @@ export default function QuestionsPage() {
             <TabsContent value="all" className="mt-6">
               {paginatedQuestions.length > 0 ? (
                 <div className="space-y-4">
-                  {paginatedQuestions.map((question) => (
+                  {paginatedQuestions.map((question, idx) => (
                     <QuestionCard
-                      key={question.id}
+                      key={(question.id ?? question.questionId ?? idx) + '-' + idx}
                       question={question}
                       onTitleClick={() => navigateToQuestion(question.id)}
                     />
@@ -228,8 +229,8 @@ export default function QuestionsPage() {
                           />
                         </PaginationItem>
 
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                          <PaginationItem key={page}>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page, idx) => (
+                          <PaginationItem key={page + '-' + idx}>
                             <PaginationLink
                               isActive={page === currentPage}
                               onClick={() => setCurrentPage(page)}
@@ -261,9 +262,9 @@ export default function QuestionsPage() {
               <div className="space-y-4">
                 {paginatedQuestions
                   .filter((question) => !question.isResolved)
-                  .map((question) => (
+                  .map((question, idx) => (
                     <QuestionCard
-                      key={question.id}
+                      key={(question.id ?? question.questionId ?? idx) + '-' + idx}
                       question={question}
                       onTitleClick={() => navigateToQuestion(question.id)}
                     />
@@ -275,9 +276,9 @@ export default function QuestionsPage() {
               <div className="space-y-4">
                 {paginatedQuestions
                   .filter((question) => question.isResolved)
-                  .map((question) => (
+                  .map((question, idx) => (
                     <QuestionCard
-                      key={question.id}
+                      key={(question.id ?? question.questionId ?? idx) + '-' + idx}
                       question={question}
                       onTitleClick={() => navigateToQuestion(question.id)}
                     />

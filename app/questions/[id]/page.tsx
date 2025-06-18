@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
-import { ThumbsUp, CheckCircle2, Calendar, ArrowLeft, X, Pencil } from "lucide-react"
+import { ThumbsUp, CheckCircle2, Calendar, ArrowLeft, X, Pencil, Trash } from "lucide-react"
 import FileUpload from "@/components/file-upload"
 import { api } from "@/lib/api-client"
 
@@ -191,8 +191,8 @@ export default function QuestionDetailPage() {
             <div className="flex justify-between items-start">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  {question?.techStacks.map((tag: any) => (
-                    <Badge key={tag} variant="secondary" className="font-normal">
+                  {question?.techStacks.map((tag: any, idx: number) => (
+                    <Badge key={tag + '-' + idx} variant="secondary" className="font-normal">
                       {tag}
                     </Badge>
                   ))}
@@ -224,6 +224,26 @@ export default function QuestionDetailPage() {
                 >
                   <Pencil className="h-4 w-4" />
                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1"
+                  aria-label="질문 삭제하기"
+                  onClick={async () => {
+                    if (window.confirm("정말로 이 질문을 삭제하시겠습니까?")) {
+                      try {
+                        const res = await api.delete(`/questions/${params.id}`)
+                        // 백엔드 응답에서 questionId를 받아 토스트에 표시
+                        toast({ title: "질문 삭제 완료", description: `질문이 삭제되었습니다. (ID: ${res?.result ?? params.id})` })
+                        router.push("/questions")
+                      } catch (e: any) {
+                        toast({ title: "질문 삭제 실패", description: e?.message || "삭제 중 오류가 발생했습니다.", variant: "destructive" })
+                      }
+                    }
+                  }}
+                >
+                  <Trash className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           </CardHeader>
@@ -245,8 +265,8 @@ export default function QuestionDetailPage() {
               {/* 질문 이미지 */}
               {question?.mediaUrls && question.mediaUrls.length > 0 && (
                 <div className="mt-4 space-y-4">
-                  {question.mediaUrls.map((image: any) => (
-                    <div key={image.id} className="rounded-md overflow-hidden">
+                  {question.mediaUrls.map((image: any, idx: number) => (
+                    <div key={(image.id ?? idx) + '-' + idx} className="rounded-md overflow-hidden">
                       <img src={image.url || "/placeholder.svg"} alt={image.alt} className="max-w-full h-auto" />
                     </div>
                   ))}
@@ -313,8 +333,8 @@ export default function QuestionDetailPage() {
                   {/* 답변 이미지 */}
                   {answer.images && answer.images.length > 0 && (
                     <div className="mt-4 space-y-4">
-                      {answer.images.map((image: any) => (
-                        <div key={image.id} className="rounded-md overflow-hidden">
+                      {answer.images.map((image: any, idx: number) => (
+                        <div key={(image.id ?? idx) + '-' + idx} className="rounded-md overflow-hidden">
                           <img src={image.url || "/placeholder.svg"} alt={image.alt} className="max-w-full h-auto" />
                         </div>
                       ))}
@@ -346,8 +366,8 @@ export default function QuestionDetailPage() {
                     {/* 기존 댓글 표시 */}
                     {answerCommentsData[answer.id]?.length > 0 && (
                       <div className="space-y-3 mb-4">
-                        {answerCommentsData[answer.id].map((comment: any) => (
-                          <div key={comment.id} className="flex gap-2">
+                        {answerCommentsData[answer.id].map((comment: any, idx: number) => (
+                          <div key={(comment.id ?? idx) + '-' + idx} className="flex gap-2">
                             <Avatar className="h-6 w-6">
                               <AvatarImage
                                 src={comment.author.avatar || "/placeholder.svg"}
