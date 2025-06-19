@@ -3,7 +3,7 @@
 // Create a new file for the question detail page with answer functionality and image upload
 
 // First, let's create the question detail page with image support
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
@@ -12,8 +12,9 @@ import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
-import { ThumbsUp, CheckCircle2, Calendar, ArrowLeft, X } from "lucide-react"
+import { ThumbsUp, CheckCircle2, Calendar, ArrowLeft, X, Pencil, Trash } from "lucide-react"
 import FileUpload from "@/components/file-upload"
+import { api } from "@/lib/api-client"
 
 export default function QuestionDetailPage() {
   const params = useParams()
@@ -29,62 +30,50 @@ export default function QuestionDetailPage() {
   const [answerComments, setAnswerComments] = useState<Record<number, string>>({})
   const [answerCommentsData, setAnswerCommentsData] = useState<Record<number, any[]>>({})
 
-  // 임시 질문 데이터
-  const question = {
-    id: params.id,
-    title: "Spring Security와 JWT 인증 구현 방법",
-    content: "Spring Boot 프로젝트에서 JWT를 이용한 인증 시스템을 구현하려고 합니다. 좋은 예제나 방법이 있을까요?",
-    tags: ["Spring", "Security", "JWT", "Backend"],
-    author: {
-      name: "박스프링",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-    createdAt: "2023-05-09T14:20:00Z",
-    commentCount: 5,
-    likeCount: 7,
-    isResolved: true,
-    images: [
-      {
-        id: 1,
-        url: "/placeholder.svg?height=400&width=600",
-        alt: "JWT 인증 흐름도",
-      },
-    ],
+  // 질문 상세 데이터 상태
+  const [question, setQuestion] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  // 답변 데이터 상태
+  const [answers, setAnswers] = useState<any[]>([])
+
+  const fetchQuestion = async () => {
+    setLoading(true)
+    try {
+      const res = await api.get(`/questions/${params.id}`)
+      const q = res.result?.question || res.result
+      setQuestion(q)
+      if (res.result?.answers) {
+        console.log('답변 데이터:', res.result.answers)
+        setAnswers(res.result.answers)
+      } else if (q?.answers) {
+        console.log('답변 데이터:', q.answers)
+        setAnswers(q.answers)
+      } else {
+        setAnswers([])
+      }
+      // 디버깅: 유저와 질문 작성자 정보 콘솔 출력
+      console.log('user:', user)
+      console.log('question:', q)
+      console.log('question.author:', q?.author)
+      console.log('question.memberId:', q?.memberId)
+      console.log('question.email:', q?.email)
+      console.log('question.nickname:', q?.nickname)
+      console.log('question.author.name:', q?.author?.name)
+      console.log('user.name:', user?.name)
+      console.log('user.email:', user?.email)
+      console.log('user.id:', user?.id)
+    } catch (e) {
+      setQuestion(null)
+      setAnswers([])
+    } finally {
+      setLoading(false)
+    }
   }
 
-  // 임시 답변 데이터
-  const answers = [
-    {
-      id: 1,
-      content: "Spring Security와 JWT를 연동하는 가장 좋은 방법은 다음과 같습니다...",
-      author: {
-        name: "김시큐리티",
-        avatar: "/placeholder.svg?height=40&width=40",
-      },
-      createdAt: "2023-05-09T15:30:00Z",
-      likeCount: 12,
-      isAccepted: true,
-      images: [
-        {
-          id: 1,
-          url: "/placeholder.svg?height=300&width=500",
-          alt: "코드 예시",
-        },
-      ],
-    },
-    {
-      id: 2,
-      content: "저는 다음과 같은 방식으로 구현했습니다. 참고하세요.",
-      author: {
-        name: "이자바",
-        avatar: "/placeholder.svg?height=40&width=40",
-      },
-      createdAt: "2023-05-09T16:45:00Z",
-      likeCount: 5,
-      isAccepted: false,
-      images: [],
-    },
-  ]
+  useEffect(() => {
+    if (params.id) fetchQuestion()
+  }, [params.id])
 
   const handleImageUpload = (file: File) => {
     setUploadedImages((prev) => [...prev, file])
@@ -99,7 +88,7 @@ export default function QuestionDetailPage() {
     setUploadedImages((prev) => prev.filter((_, i) => i !== index))
   }
 
-  const handleSubmitAnswer = () => {
+  const handleSubmitAnswer = async () => {
     if (!answerContent.trim()) {
       toast({
         title: "답변 내용 필요",
@@ -118,18 +107,36 @@ export default function QuestionDetailPage() {
       return
     }
 
-    // 답변 등록 로직 (실제로는 API 호출)
-    toast({
-      title: "답변 등록 성공",
-      description:
-        uploadedImages.length > 0
-          ? `답변과 ${uploadedImages.length}개의 이미지가 성공적으로 등록되었습니다.`
-          : "답변이 성공적으로 등록되었습니다.",
-    })
+    // FormData 생성
+    const formData = new FormData()
+    formData.append("answerContent", answerContent)
+    formData.append("questionId", params.id as string)
+    uploadedImages.forEach(file => formData.append("images", file))
 
-    // 입력 초기화
-    setAnswerContent("")
-    setUploadedImages([])
+    try {
+      await api.post(`/answers`, formData)
+
+      toast({
+        title: "답변 등록 성공",
+        description:
+          uploadedImages.length > 0
+            ? `답변과 ${uploadedImages.length}개의 이미지가 성공적으로 등록되었습니다.`
+            : "답변이 성공적으로 등록되었습니다.",
+      })
+
+      // 입력 초기화
+      setAnswerContent("")
+      setUploadedImages([])
+
+      // 답변 목록 새로고침
+      fetchQuestion()
+    } catch (error: any) {
+      toast({
+        title: "답변 등록 실패",
+        description: error?.message || "답변 등록 중 오류가 발생했습니다.",
+        variant: "destructive",
+      })
+    }
   }
 
   // handleLikeAnswer 함수 추가 (다른 핸들러 함수들 근처에)
@@ -189,6 +196,8 @@ export default function QuestionDetailPage() {
     })
   }
 
+  if (loading) return <div className="text-center py-20">질문을 불러오는 중...</div>
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-3xl mx-auto">
@@ -203,28 +212,58 @@ export default function QuestionDetailPage() {
             <div className="flex justify-between items-start">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  {question.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="font-normal">
+                  {question?.techStacks.map((tag: any, idx: number) => (
+                    <Badge key={tag + '-' + idx} variant="secondary" className="font-normal">
                       {tag}
                     </Badge>
                   ))}
-                  {question.isResolved && (
-                    <Badge variant="success" className="ml-2">
+                  {question?.isResolved && (
+                    <Badge variant="secondary" className="ml-2">
                       <CheckCircle2 className="h-3 w-3 mr-1" />
                       해결됨
                     </Badge>
                   )}
                 </div>
-                <CardTitle className="text-2xl">{question.title}</CardTitle>
+                <CardTitle className="text-2xl">{question?.title}</CardTitle>
                 <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
                   <Calendar className="h-3.5 w-3.5" />
-                  <span>{new Date(question.createdAt).toLocaleDateString()}</span>
+                  <span>{question?.createdAt ? new Date(question.createdAt).toISOString().slice(0, 10) : ''}</span>
                 </div>
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" className="flex items-center gap-1">
                   <ThumbsUp className="h-4 w-4" />
-                  <span>{question.likeCount}</span>
+                  <span>{question?.likeCount}</span>
+                </Button>
+                {/* 연필(수정) 버튼 항상 노출 */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1"
+                  onClick={() => router.push(`/questions/${params.id}/edit`)}
+                  aria-label="질문 수정하기"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1"
+                  aria-label="질문 삭제하기"
+                  onClick={async () => {
+                    if (window.confirm("정말로 이 질문을 삭제하시겠습니까?")) {
+                      try {
+                        const res = await api.delete(`/questions/${params.id}`)
+                        // 백엔드 응답에서 questionId를 받아 토스트에 표시
+                        toast({ title: "질문 삭제 완료", description: `질문이 삭제되었습니다. (ID: ${res?.result ?? params.id})` })
+                        router.push("/questions")
+                      } catch (e: any) {
+                        toast({ title: "질문 삭제 실패", description: e?.message || "삭제 중 오류가 발생했습니다.", variant: "destructive" })
+                      }
+                    }
+                  }}
+                >
+                  <Trash className="h-4 w-4" />
                 </Button>
               </div>
             </div>
@@ -232,23 +271,23 @@ export default function QuestionDetailPage() {
           <CardContent className="pt-0">
             <div className="flex items-center gap-3 mb-4">
               <Avatar>
-                <AvatarImage src={question.author.avatar || "/placeholder.svg"} alt={question.author.name} />
-                <AvatarFallback>{question.author.name[0]}</AvatarFallback>
+                <AvatarImage src={question?.author?.avatar || "/placeholder.svg"} alt={question?.author?.name || "알 수 없음"} />
+                <AvatarFallback>{question?.author?.name ? question.author.name[0] : "?"}</AvatarFallback>
               </Avatar>
               <div>
-                <div className="font-medium">{question.author.name}</div>
+                <div className="font-medium">{question?.author?.name || question?.nickname || question?.memberId || "알 수 없음"}</div>
                 <div className="text-xs text-muted-foreground">작성자</div>
               </div>
             </div>
 
             <div className="prose max-w-none">
-              <p className="whitespace-pre-line">{question.content}</p>
+              <p className="whitespace-pre-line">{question?.content}</p>
 
               {/* 질문 이미지 */}
-              {question.images && question.images.length > 0 && (
+              {question?.mediaUrls && question.mediaUrls.length > 0 && (
                 <div className="mt-4 space-y-4">
-                  {question.images.map((image) => (
-                    <div key={image.id} className="rounded-md overflow-hidden">
+                  {question.mediaUrls.map((image: any, idx: number) => (
+                    <div key={(image.id ?? idx) + '-' + idx} className="rounded-md overflow-hidden">
                       <img src={image.url || "/placeholder.svg"} alt={image.alt} className="max-w-full h-auto" />
                     </div>
                   ))}
@@ -261,16 +300,14 @@ export default function QuestionDetailPage() {
         {/* 답변 수 */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold">{answers.length}개의 답변</h2>
-          <Select defaultValue="votes">
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="정렬 기준" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="votes">추천순</SelectItem>
-              <SelectItem value="newest">최신순</SelectItem>
-              <SelectItem value="oldest">오래된순</SelectItem>
-            </SelectContent>
-          </Select>
+          <select
+            defaultValue="votes"
+            className="w-[180px] h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+          >
+            <option value="votes">추천순</option>
+            <option value="newest">최신순</option>
+            <option value="oldest">오래된순</option>
+          </select>
         </div>
 
         {/* 답변 목록 */}
@@ -281,19 +318,19 @@ export default function QuestionDetailPage() {
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
                     <Avatar>
-                      <AvatarImage src={answer.author.avatar || "/placeholder.svg"} alt={answer.author.name} />
-                      <AvatarFallback>{answer.author.name[0]}</AvatarFallback>
+                      <AvatarImage src="/placeholder.svg" alt={`User ${answer.memberId}`} />
+                      <AvatarFallback>{answer.memberId}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <div className="font-medium">{answer.author.name}</div>
+                      <div className="font-medium">User {answer.memberId}</div>
                       <div className="text-xs text-muted-foreground">
-                        {new Date(answer.createdAt).toLocaleDateString()}
+                        {answer.createdAt ? new Date(answer.createdAt).toISOString().slice(0, 10) : ''}
                       </div>
                     </div>
                   </div>
                   <div className="flex gap-2">
                     {answer.isAccepted && (
-                      <Badge variant="success">
+                      <Badge variant="secondary">
                         <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
                         채택된 답변
                       </Badge>
@@ -312,13 +349,12 @@ export default function QuestionDetailPage() {
               </CardHeader>
               <CardContent className="pt-0">
                 <div className="prose max-w-none">
-                  <p className="whitespace-pre-line">{answer.content}</p>
+                  <p className="whitespace-pre-line">{answer.answerContent}</p>
 
-                  {/* 답변 이미지 */}
                   {answer.images && answer.images.length > 0 && (
                     <div className="mt-4 space-y-4">
-                      {answer.images.map((image) => (
-                        <div key={image.id} className="rounded-md overflow-hidden">
+                      {answer.images.map((image: any, idx: number) => (
+                        <div key={(image.id ?? idx) + '-' + idx} className="rounded-md overflow-hidden">
                           <img src={image.url || "/placeholder.svg"} alt={image.alt} className="max-w-full h-auto" />
                         </div>
                       ))}
@@ -328,11 +364,42 @@ export default function QuestionDetailPage() {
               </CardContent>
               <CardFooter className="flex flex-col items-start gap-4 pt-0">
                 <div className="flex justify-end gap-2 w-full">
-                  {!answer.isAccepted && question.isResolved === false && (
+                  {!answer.isAccepted && question?.isResolved === false && (
                     <Button variant="outline" size="sm">
                       답변 채택하기
                     </Button>
                   )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => router.push(`/answers/${answer.answerId}/edit`)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={async () => {
+                      if (window.confirm('정말로 이 답변을 삭제하시겠습니까?')) {
+                        try {
+                          await api.delete(`/answers/${answer.answerId}`)
+                          toast({
+                            title: "답변 삭제 성공",
+                            description: "답변이 성공적으로 삭제되었습니다.",
+                          })
+                          fetchQuestion()
+                        } catch (error: any) {
+                          toast({
+                            title: "답변 삭제 실패",
+                            description: error?.message || "답변 삭제 중 오류가 발생했습니다.",
+                            variant: "destructive"
+                          })
+                        }
+                      }
+                    }}
+                  >
+                    <Trash className="h-4 w-4" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -342,28 +409,26 @@ export default function QuestionDetailPage() {
                   </Button>
                 </div>
 
-                {/* 댓글 목록 */}
                 {(answerCommentsData[answer.id]?.length > 0 || showCommentInput === answer.id) && (
                   <div className="w-full border-t pt-4 mt-2">
                     <h4 className="text-sm font-medium mb-3">댓글</h4>
 
-                    {/* 기존 댓글 표시 */}
                     {answerCommentsData[answer.id]?.length > 0 && (
                       <div className="space-y-3 mb-4">
-                        {answerCommentsData[answer.id].map((comment) => (
-                          <div key={comment.id} className="flex gap-2">
+                        {answerCommentsData[answer.id].map((comment: any, idx: number) => (
+                          <div key={(comment.id ?? idx) + '-' + idx} className="flex gap-2">
                             <Avatar className="h-6 w-6">
                               <AvatarImage
-                                src={comment.author.avatar || "/placeholder.svg"}
-                                alt={comment.author.name}
+                                src={comment.member?.avatar || "/placeholder.svg"}
+                                alt={comment.member?.nickname || "알 수 없음"}
                               />
-                              <AvatarFallback>{comment.author.name[0]}</AvatarFallback>
+                              <AvatarFallback>{comment.member?.nickname?.[0] || "?"}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
-                                <span className="text-xs font-medium">{comment.author.name}</span>
+                                <span className="text-xs font-medium">{comment.member?.nickname || "알 수 없음"}</span>
                                 <span className="text-xs text-muted-foreground">
-                                  {new Date(comment.createdAt).toLocaleDateString()}
+                                  {comment.createdAt ? new Date(comment.createdAt).toISOString().slice(0, 10) : ''}
                                 </span>
                               </div>
                               <p className="text-sm">{comment.content}</p>
@@ -373,7 +438,6 @@ export default function QuestionDetailPage() {
                       </div>
                     )}
 
-                    {/* 댓글 입력 폼 */}
                     {showCommentInput === answer.id && (
                       <div className="flex gap-2">
                         <Textarea
@@ -417,14 +481,14 @@ export default function QuestionDetailPage() {
               <FileUpload
                 onFileSelect={handleImageUpload}
                 accept="image/*"
-                maxSize={5} // 5MB
+                maxSize={5}
                 multiple={true}
                 buttonText="이미지 선택"
               />
 
               {uploadedImages.length > 0 && (
                 <div className="mt-4 space-y-2">
-                  <Label>첨부된 이미지 ({uploadedImages.length})</Label>
+                  <Label htmlFor="uploaded-image-list">첨부된 이미지 ({uploadedImages.length})</Label>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                     {uploadedImages.map((image, index) => (
                       <div key={index} className="relative group">
@@ -458,7 +522,7 @@ export default function QuestionDetailPage() {
   )
 }
 
-function Label({ htmlFor, children, className = "" }) {
+function Label({ htmlFor, children, className }: { htmlFor: string; children: React.ReactNode; className?: string }) {
   return (
     <label
       htmlFor={htmlFor}
@@ -466,38 +530,5 @@ function Label({ htmlFor, children, className = "" }) {
     >
       {children}
     </label>
-  )
-}
-
-function Select({ children, defaultValue }) {
-  return (
-    <div className="relative">
-      <select
-        defaultValue={defaultValue}
-        className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
-      >
-        {children}
-      </select>
-    </div>
-  )
-}
-
-function SelectTrigger({ className = "", children }) {
-  return <div className={`flex items-center ${className}`}>{children}</div>
-}
-
-function SelectValue({ placeholder }) {
-  return <span>{placeholder}</span>
-}
-
-function SelectContent({ children }) {
-  return <div className="absolute mt-1 w-full rounded-md border bg-background shadow-lg">{children}</div>
-}
-
-function SelectItem({ value, children }) {
-  return (
-    <div className="relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none hover:bg-accent">
-      {children}
-    </div>
   )
 }
