@@ -27,9 +27,7 @@ async function apiClient(endpoint: string, options: RequestOptions = {}) {
 
   // 기본 헤더 설정
   const headers = new Headers(fetchOptions.headers);
-  // FormData가 아닐 때만 Content-Type 세팅  
-  // if (!headers.has('Content-Type')) {
-  if (!(fetchOptions.body instanceof FormData) && !headers.has('Content-Type')) {
+  if (!headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
 
@@ -86,18 +84,16 @@ export const api = {
     apiClient(endpoint, {
       ...options,
       method: 'POST',
-      body: data instanceof FormData ? data : data ? JSON.stringify(data) : undefined,
+      body: data ? JSON.stringify(data) : undefined,
     }),
 
   put: (endpoint: string, data?: any, options?: RequestOptions) =>
     apiClient(endpoint, {
       ...options,
       method: 'PUT',
-      body: data instanceof FormData ? data : data ? JSON.stringify(data) : undefined,
+      body: data ? JSON.stringify(data) : undefined,
     }),
 
   delete: (endpoint: string, options?: RequestOptions) =>
     apiClient(endpoint, { ...options, method: 'DELETE' }),
-};
-
-export { apiClient }; 
+}; 
