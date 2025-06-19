@@ -40,6 +40,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { api } from "@/lib/api-client"
 
 interface ProfileData {
   id: string;
@@ -273,6 +274,7 @@ export default function UserProfilePage() {
     },
   ]
 
+
   const handleSendFriendRequest = () => {
     setShowConfirmDialog(false)
     setFriendRequestSent(true)
@@ -288,6 +290,7 @@ export default function UserProfilePage() {
       title: "친구 요청 취소",
       description: `${profile?.nickname}님에게 보낸 친구 요청을 취소했습니다.`,
     })
+
   }
 
   if (!profile) {
