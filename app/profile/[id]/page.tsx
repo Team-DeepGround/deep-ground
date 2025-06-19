@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
@@ -9,6 +9,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { api } from "@/lib/api-client"
 import {
   CalendarIcon,
   MessageSquare,
@@ -20,6 +24,12 @@ import {
   UserPlus,
   Check,
   X,
+  Edit,
+  Briefcase,
+  MapPin,
+  GraduationCap,
+  Users,
+  ThumbsUp,
 } from "lucide-react"
 import Link from "next/link"
 import {
@@ -30,38 +40,173 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { api } from "@/lib/api-client"
+
+interface ProfileData {
+  id: string;
+  profileImage?: string;
+  nickname: string;
+  email: string;
+  introduction?: string;
+  job?: string;
+  company?: string;
+  liveIn?: string;
+  education?: string;
+  techStack: string[];
+  githubUrl?: string;
+  linkedInUrl?: string;
+  websiteUrl?: string;
+  twitterUrl?: string;
+  isFriend?: boolean;
+}
+
+interface Activity {
+  id: number;
+  type: "study_join" | "question" | "study_create";
+  title: string;
+  content: string;
+  date: string;
+}
+
+interface Study {
+  id: number;
+  title: string;
+  description: string;
+  members: number;
+  maxMembers: number;
+  dates: string;
+  isOnline: boolean;
+  tags: string[];
+  location: string | null;
+}
+
+interface Question {
+  id: number;
+  title: string;
+  commentCount: number;
+  likeCount: number;
+  date: string;
+  isResolved: boolean;
+}
 
 export default function UserProfilePage() {
-  const { id } = useParams()
+  const params = useParams();
+  // Ensure 'id' is always a string, handling potential string array from params.
+  const userIdFromParams = Array.isArray(params.id) ? params.id[0] : params.id;
+  const id = userIdFromParams as string; // Assert as string, as it's a required route param
+
   const router = useRouter()
   const { toast } = useToast()
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState("profile")
   const [friendRequestSent, setFriendRequestSent] = useState(false)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
-
-  // 임시 프로필 데이터 - 실제로는 API에서 가져와야 함
-  const [profile, setProfile] = useState({
+  const [isEditing, setIsEditing] = useState(false)
+  const [profile, setProfile] = useState<ProfileData | null>(null)
+  const [formData, setFormData] = useState<ProfileData>({
     id: id,
-    nickname: "개발자" + id,
-    email: `user${id}@example.com`,
-    bio: "풀스택 개발자입니다. React, Next.js, Node.js를 주로 사용합니다.",
-    techStack: ["React", "Next.js", "Node.js", "TypeScript"],
-    links: {
-      github: "https://github.com/username",
-      linkedin: "https://linkedin.com/in/username",
-      website: "https://mywebsite.com",
-      twitter: "https://twitter.com/username",
-    },
-    location: "서울특별시",
-    jobTitle: "프론트엔드 개발자",
-    company: "테크 스타트업",
-    education: "컴퓨터공학 학사",
-    isFriend: false,
+    profileImage: "",
+    nickname: "",
+    email: "",
+    introduction: "",
+    job: "",
+    company: "",
+    liveIn: "",
+    education: "",
+    techStack: [],
+    githubUrl: "",
+    linkedInUrl: "",
+    websiteUrl: "",
+    twitterUrl: ""
   })
+  const [techStackInput, setTechStackInput] = useState("")
 
-  // 사용자 활동 데이터
-  const activities = [
+  useEffect(() => {
+    loadProfile()
+  }, [id, user?.id])
+
+  const loadProfile = async () => {
+    try {
+      let endpoint = '';
+      if (user && String(user.id) === id) {
+        endpoint = '/members/profile';
+      } else {
+        endpoint = `/members/${id}`;
+      }
+      const response = await api.get(endpoint)
+      if (response?.result) {
+        setProfile(response.result)
+        setFormData(response.result)
+      }
+    } catch (error) {
+      console.error('프로필 로드 실패:', error)
+      toast({
+        title: "프로필 로드 실패",
+        description: "프로필 정보를 불러오는데 실패했습니다.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleEdit = () => {
+    setIsEditing(true)
+  }
+
+  const handleCancelEdit = () => {
+    setIsEditing(false)
+    if (profile) {
+      setFormData(profile)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsEditing(false)
+
+    try {
+      const response = await api.put('/members/profile', formData)
+      
+      if (response?.status === 0) {
+        toast({
+          title: "프로필 수정 완료",
+          description: "프로필이 성공적으로 수정되었습니다.",
+        })
+        setProfile(response.result)
+      } else {
+        toast({
+          title: "프로필 수정 실패",
+          description: response?.message || "알 수 없는 오류가 발생했습니다.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error('프로필 수정 실패:', error)
+      toast({
+        title: "프로필 수정 실패",
+        description: "프로필 수정 중 네트워크 오류가 발생했습니다.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleTechStackAdd = () => {
+    if (techStackInput.trim() && !formData.techStack.includes(techStackInput.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        techStack: [...prev.techStack, techStackInput.trim()]
+      }))
+      setTechStackInput("")
+    }
+  }
+
+  const handleTechStackRemove = (tech: string) => {
+    setFormData(prev => ({
+      ...prev,
+      techStack: prev.techStack.filter(t => t !== tech)
+    }))
+  }
+
+  const activities: Activity[] = [
     {
       id: 1,
       type: "study_join",
@@ -85,8 +230,7 @@ export default function UserProfilePage() {
     },
   ]
 
-  // 참여 중인 스터디
-  const joinedStudies = [
+  const joinedStudies: Study[] = [
     {
       id: 1,
       title: "React와 Next.js 마스터하기",
@@ -111,8 +255,7 @@ export default function UserProfilePage() {
     },
   ]
 
-  // 작성한 질문
-  const questions = [
+  const questions: Question[] = [
     {
       id: 2,
       title: "Spring Security와 JWT 인증 구현 방법",
@@ -131,27 +274,32 @@ export default function UserProfilePage() {
     },
   ]
 
-  // 친구 요청 보내기
+
   const handleSendFriendRequest = () => {
     setShowConfirmDialog(false)
     setFriendRequestSent(true)
     toast({
       title: "친구 요청 전송",
-      description: `${profile.nickname}님에게 친구 요청을 보냈습니다.`,
+      description: `${profile?.nickname}님에게 친구 요청을 보냈습니다.`,
     })
   }
 
-  // 친구 요청 취소
   const handleCancelFriendRequest = () => {
     setFriendRequestSent(false)
     toast({
       title: "친구 요청 취소",
-      description: `${profile.nickname}님에게 보낸 친구 요청을 취소했습니다.`,
+      description: `${profile?.nickname}님에게 보낸 친구 요청을 취소했습니다.`,
     })
+
   }
 
-  // 스터디 카드 컴포넌트
-  const StudyCard = ({ study }) => (
+  if (!profile) {
+    return <div className="container mx-auto py-8 text-center">프로필 로드 중...</div>;
+  }
+
+  const isMyProfile = user && String(user.id) === id;
+
+  const StudyCard = ({ study }: { study: Study }) => (
     <Card className="hover:bg-accent/50 transition-colors">
       <CardContent className="p-4">
         <div className="flex justify-between items-start gap-4">
@@ -199,6 +347,35 @@ export default function UserProfilePage() {
     </Card>
   )
 
+  const ActivityCard = ({ activity }: { activity: Activity }) => (
+    <Card className="hover:bg-accent/50 transition-colors">
+      <CardContent className="p-4">
+        <h3 className="font-medium text-lg">{activity.title}</h3>
+        <p className="text-sm text-muted-foreground mt-1">{activity.content}</p>
+        <p className="text-xs text-muted-foreground mt-2">{new Date(activity.date).toLocaleDateString()}</p>
+      </CardContent>
+    </Card>
+  );
+
+  const QuestionCard = ({ question }: { question: Question }) => (
+    <Card className="hover:bg-accent/50 transition-colors">
+      <CardContent className="p-4">
+        <h3 className="font-medium text-lg flex items-center">
+          {question.title}
+          {question.isResolved && <Badge variant="outline" className="ml-2">해결됨</Badge>}
+        </h3>
+        <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
+          <span className="flex items-center"><MessageSquare className="h-3.5 w-3.5 mr-1" /> {question.commentCount}</span>
+          <span className="flex items-center"><ThumbsUp className="h-3.5 w-3.5 mr-1" /> {question.likeCount}</span>
+          <span>{new Date(question.date).toLocaleDateString()}</span>
+        </div>
+        <Button size="sm" className="mt-4" onClick={() => router.push(`/questions/${question.id}`)}>
+          자세히 보기
+        </Button>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
@@ -209,336 +386,294 @@ export default function UserProfilePage() {
               <TabsTrigger value="studies">스터디</TabsTrigger>
               <TabsTrigger value="questions">질문</TabsTrigger>
             </TabsList>
+            {isMyProfile && !isEditing && (
+              <Button onClick={handleEdit}>
+                <Edit className="mr-2 h-4 w-4" />
+                프로필 수정
+              </Button>
+            )}
           </div>
 
           <TabsContent value="profile">
-            {/* 프로필 헤더 */}
-            <div className="flex flex-col md:flex-row gap-6 items-start mb-8">
-              <div className="relative">
-                <Avatar className="h-24 w-24">
-                  <AvatarImage src="/placeholder.svg?height=96&width=96" alt={profile.nickname} />
-                  <AvatarFallback>{profile.nickname[0]}</AvatarFallback>
-                </Avatar>
-              </div>
-              <div className="flex-1">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            {isEditing ? (
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-4">
                   <div>
-                    <h1 className="text-3xl font-bold">{profile.nickname}</h1>
-                    <p className="text-muted-foreground">{profile.email}</p>
+                    <Label htmlFor="profileImage">프로필 이미지 URL</Label>
+                    <Input
+                      id="profileImage"
+                      value={formData.profileImage}
+                      onChange={(e) => setFormData(prev => ({ ...prev, profileImage: e.target.value }))}
+                    />
                   </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" asChild>
-                      <Link href={`/messages/${profile.id}`}>
-                        <MessageSquare className="mr-2 h-4 w-4" />
-                        메시지 보내기
+                  <div>
+                    <Label htmlFor="nickname">닉네임</Label>
+                    <Input
+                      id="nickname"
+                      value={formData.nickname}
+                      onChange={(e) => setFormData(prev => ({ ...prev, nickname: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="introduction">자기소개</Label>
+                    <Textarea
+                      id="introduction"
+                      value={formData.introduction}
+                      onChange={(e) => setFormData(prev => ({ ...prev, introduction: e.target.value }))}
+                      rows={4}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="job">직업</Label>
+                    <Input
+                      id="job"
+                      value={formData.job}
+                      onChange={(e) => setFormData(prev => ({ ...prev, job: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="company">회사</Label>
+                    <Input
+                      id="company"
+                      value={formData.company}
+                      onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="liveIn">거주지</Label>
+                    <Input
+                      id="liveIn"
+                      value={formData.liveIn}
+                      onChange={(e) => setFormData(prev => ({ ...prev, liveIn: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="education">학력</Label>
+                    <Input
+                      id="education"
+                      value={formData.education}
+                      onChange={(e) => setFormData(prev => ({ ...prev, education: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label>기술 스택</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={techStackInput}
+                        onChange={(e) => setTechStackInput(e.target.value)}
+                        placeholder="기술 스택 입력"
+                      />
+                      <Button type="button" onClick={handleTechStackAdd}>
+                        추가
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {formData.techStack.map((tech, index) => (
+                        <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                          <span>{tech}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleTechStackRemove(tech)}
+                            className="ml-1 text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            ×
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="githubUrl">GitHub URL</Label>
+                    <Input
+                      id="githubUrl"
+                      value={formData.githubUrl}
+                      onChange={(e) => setFormData(prev => ({ ...prev, githubUrl: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="linkedInUrl">LinkedIn URL</Label>
+                    <Input
+                      id="linkedInUrl"
+                      value={formData.linkedInUrl}
+                      onChange={(e) => setFormData(prev => ({ ...prev, linkedInUrl: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="websiteUrl">개인 웹사이트 URL</Label>
+                    <Input
+                      id="websiteUrl"
+                      value={formData.websiteUrl}
+                      onChange={(e) => setFormData(prev => ({ ...prev, websiteUrl: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="twitterUrl">Twitter URL</Label>
+                    <Input
+                      id="twitterUrl"
+                      value={formData.twitterUrl}
+                      onChange={(e) => setFormData(prev => ({ ...prev, twitterUrl: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <Button type="submit" className="flex-1" disabled={false}>
+                    프로필 저장
+                  </Button>
+                  <Button type="button" variant="outline" className="flex-1" onClick={handleCancelEdit}>
+                    취소
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <div className="flex flex-col md:flex-row gap-6 items-start mb-8">
+                <div className="relative">
+                  <Avatar className="h-24 w-24">
+                    <AvatarImage src={profile.profileImage || "/placeholder.svg?height=96&width=96"} alt={profile.nickname} />
+                    <AvatarFallback>{profile.nickname[0]}</AvatarFallback>
+                  </Avatar>
+                </div>
+                <div className="flex-1">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <h1 className="text-3xl font-bold">{profile.nickname}</h1>
+                      <p className="text-muted-foreground">{profile.email}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" asChild>
+                        <Link href={`/messages/${profile.id}`}>
+                          <MessageSquare className="mr-2 h-4 w-4" />
+                          메시지 보내기
+                        </Link>
+                      </Button>
+                      {!profile.isFriend && !friendRequestSent && !isMyProfile ? (
+                        <Button onClick={() => setShowConfirmDialog(true)}>
+                          <UserPlus className="mr-2 h-4 w-4" />
+                          친구 추가
+                        </Button>
+                      ) : friendRequestSent ? (
+                        <Button variant="outline" onClick={handleCancelFriendRequest}>
+                          <X className="mr-2 h-4 w-4" />
+                          요청 취소
+                        </Button>
+                      ) : (
+                        profile.isFriend && !isMyProfile && (
+                          <Button variant="secondary" disabled>
+                            <Check className="mr-2 h-4 w-4" />
+                            친구
+                          </Button>
+                        )
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground mt-4">{profile.introduction}</p>
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-2 mt-4">
+                    {profile.job && (
+                      <p className="text-sm text-muted-foreground flex items-center">
+                        <Briefcase className="h-4 w-4 mr-2" />
+                        {profile.job} {profile.company && `(${profile.company})`}
+                      </p>
+                    )}
+                    {profile.liveIn && (
+                      <p className="text-sm text-muted-foreground flex items-center">
+                        <MapPin className="h-4 w-4 mr-2" />
+                        {profile.liveIn}
+                      </p>
+                    )}
+                    {profile.education && (
+                      <p className="text-sm text-muted-foreground flex items-center">
+                        <GraduationCap className="h-4 w-4 mr-2" />
+                        {profile.education}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {profile.techStack.map((tech, index) => (
+                      <Badge key={index} variant="secondary">
+                        {tech}
+                      </Badge>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-4 mt-4">
+                    {profile.githubUrl && (
+                      <Link href={profile.githubUrl} target="_blank" rel="noopener noreferrer">
+                        <Button variant="ghost" size="icon">
+                          <Github className="h-5 w-5" />
+                        </Button>
                       </Link>
-                    </Button>
-                    {!profile.isFriend && !friendRequestSent ? (
-                      <Button onClick={() => setShowConfirmDialog(true)}>
-                        <UserPlus className="mr-2 h-4 w-4" />
-                        친구 추가
-                      </Button>
-                    ) : friendRequestSent ? (
-                      <Button variant="outline" onClick={handleCancelFriendRequest}>
-                        <X className="mr-2 h-4 w-4" />
-                        요청 취소
-                      </Button>
-                    ) : (
-                      <Button variant="secondary" disabled>
-                        <Check className="mr-2 h-4 w-4" />
-                        친구 요청됨
-                      </Button>
+                    )}
+                    {profile.linkedInUrl && (
+                      <Link href={profile.linkedInUrl} target="_blank" rel="noopener noreferrer">
+                        <Button variant="ghost" size="icon">
+                          <Linkedin className="h-5 w-5" />
+                        </Button>
+                      </Link>
+                    )}
+                    {profile.websiteUrl && (
+                      <Link href={profile.websiteUrl} target="_blank" rel="noopener noreferrer">
+                        <Button variant="ghost" size="icon">
+                          <Globe className="h-5 w-5" />
+                        </Button>
+                      </Link>
+                    )}
+                    {profile.twitterUrl && (
+                      <Link href={profile.twitterUrl} target="_blank" rel="noopener noreferrer">
+                        <Button variant="ghost" size="icon">
+                          <Twitter className="h-5 w-5" />
+                        </Button>
+                      </Link>
                     )}
                   </div>
                 </div>
-                <div className="mt-4 space-y-2">
-                  <p>{profile.bio}</p>
-
-                  {profile.jobTitle && profile.company && (
-                    <p className="text-sm text-muted-foreground flex items-center gap-1">
-                      <Briefcase className="h-4 w-4" />
-                      {profile.jobTitle} at {profile.company}
-                    </p>
-                  )}
-
-                  {profile.location && (
-                    <p className="text-sm text-muted-foreground flex items-center gap-1">
-                      <MapPin className="h-4 w-4" />
-                      {profile.location}
-                    </p>
-                  )}
-
-                  {profile.education && (
-                    <p className="text-sm text-muted-foreground flex items-center gap-1">
-                      <GraduationCap className="h-4 w-4" />
-                      {profile.education}
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2 mt-4">
-                  {profile.techStack.map((tech) => (
-                    <Badge key={tech} variant="secondary">
-                      {tech}
-                    </Badge>
-                  ))}
-                </div>
-                <div className="flex flex-wrap gap-4 mt-6">
-                  {profile.links.github && (
-                    <Link
-                      href={profile.links.github}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      <Github className="h-5 w-5" />
-                    </Link>
-                  )}
-                  {profile.links.website && (
-                    <Link
-                      href={profile.links.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      <Globe className="h-5 w-5" />
-                    </Link>
-                  )}
-                  {profile.links.linkedin && (
-                    <Link
-                      href={profile.links.linkedin}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      <Linkedin className="h-5 w-5" />
-                    </Link>
-                  )}
-                  {profile.links.twitter && (
-                    <Link
-                      href={profile.links.twitter}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      <Twitter className="h-5 w-5" />
-                    </Link>
-                  )}
-                </div>
               </div>
-            </div>
-
-            {/* 활동 내역 */}
-            <Card>
-              <CardHeader>
-                <CardTitle>최근 활동</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {activities.map((activity) => (
-                    <div key={activity.id} className="flex gap-4">
-                      <div className="mt-1">
-                        {activity.type === "study_join" || activity.type === "study_create" ? (
-                          <BookOpen className="h-5 w-5 text-blue-500" />
-                        ) : activity.type === "question" ? (
-                          <MessageSquare className="h-5 w-5 text-green-500" />
-                        ) : (
-                          <CalendarIcon className="h-5 w-5 text-orange-500" />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex justify-between">
-                          <h3 className="font-medium">{activity.title}</h3>
-                          <span className="text-sm text-muted-foreground">
-                            {new Date(activity.date).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-1">{activity.content}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            )}
           </TabsContent>
 
-          <TabsContent value="studies" className="mt-6">
-            <div className="space-y-6">
-              {/* 참여 중인 스터디 */}
-              <div>
-                <h2 className="text-xl font-bold mb-4">참여 중인 스터디</h2>
-                {joinedStudies.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {joinedStudies.map((study) => (
-                      <StudyCard key={study.id} study={study} />
-                    ))}
-                  </div>
-                ) : (
-                  <Card>
-                    <CardContent className="p-6 text-center">
-                      <p className="text-muted-foreground">아직 참여한 스터디가 없습니다.</p>
-                    </CardContent>
-                  </Card>
-                )}
+          <TabsContent value="studies">
+            <h2 className="text-2xl font-bold mb-4">참여 중인 스터디</h2>
+            {joinedStudies.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {joinedStudies.map((study) => (
+                  <StudyCard key={study.id} study={study} />
+                ))}
               </div>
-            </div>
+            ) : (
+              <p className="text-muted-foreground">참여 중인 스터디가 없습니다.</p>
+            )}
           </TabsContent>
 
-          <TabsContent value="questions" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>작성한 질문</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {questions.map((question) => (
-                    <div key={question.id} className="p-4 border rounded-lg hover:bg-accent transition-colors">
-                      <div className="flex justify-between">
-                        <h3 className="font-medium">
-                          <Link href={`/questions/${question.id}`} className="hover:underline">
-                            {question.title}
-                          </Link>
-                        </h3>
-                        <Badge variant={question.isResolved ? "success" : "outline"}>
-                          {question.isResolved ? "해결됨" : "미해결"}
-                        </Badge>
-                      </div>
-                      <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
-                        <span className="flex items-center">
-                          <MessageSquare className="h-3.5 w-3.5 mr-1" />
-                          {question.commentCount}
-                        </span>
-                        <span className="flex items-center">
-                          <ThumbsUp className="h-3.5 w-3.5 mr-1" />
-                          {question.likeCount}
-                        </span>
-                        <span>{new Date(question.date).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+          <TabsContent value="questions">
+            <h2 className="text-2xl font-bold mb-4">작성한 질문</h2>
+            {questions.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {questions.map((question) => (
+                  <QuestionCard key={question.id} question={question} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground">작성한 질문이 없습니다.</p>
+            )}
           </TabsContent>
         </Tabs>
+
+        <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>친구 요청 확인</DialogTitle>
+              <DialogDescription>
+                {profile.nickname}님에게 친구 요청을 보내시겠습니까?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>취소</Button>
+              <Button onClick={handleSendFriendRequest}>보내기</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
-
-      {/* 친구 요청 확인 다이얼로그 */}
-      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>친구 요청</DialogTitle>
-            <DialogDescription>{profile.nickname}님에게 친구 요청을 보내시겠습니까?</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
-              취소
-            </Button>
-            <Button onClick={handleSendFriendRequest}>요청 보내기</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
-  )
-}
-
-function Briefcase(props) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect width="20" height="14" x="2" y="7" rx="2" ry="2" />
-      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
-    </svg>
-  )
-}
-
-function MapPin(props) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-      <circle cx="12" cy="10" r="3" />
-    </svg>
-  )
-}
-
-function GraduationCap(props) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
-      <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" />
-    </svg>
-  )
-}
-
-function Users(props) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  )
-}
-
-function ThumbsUp(props) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M7 10v12" />
-      <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z" />
-    </svg>
   )
 }
