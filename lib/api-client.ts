@@ -77,30 +77,30 @@ async function apiClient(endpoint: string, options: RequestOptions = {}) {
 }
 
 export const api = {
-  get: <T>(endpoint: string, options?: RequestOptions) =>
+  get: (endpoint: string, options?: RequestOptions) =>
     apiClient(endpoint, { ...options, method: 'GET' }),
 
-  post: <T>(endpoint: string, data?: any, options?: RequestOptions) =>
+  post: (endpoint: string, data?: any, options?: RequestOptions) =>
     apiClient(endpoint, {
       ...options,
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
     }),
 
-  put: <T>(endpoint: string, data?: any, options?: RequestOptions) =>
+  put: (endpoint: string, data?: any, options?: RequestOptions) =>
     apiClient(endpoint, {
       ...options,
       method: 'PUT',
       body: data ? JSON.stringify(data) : undefined,
     }),
 
-  patch: <T>(endpoint: string, data?: any, options?: RequestOptions) =>
+  patch: (endpoint: string, data?: any, options?: RequestOptions) =>
     apiClient(endpoint, {
       ...options,
       method: 'PATCH',
       body: data ? JSON.stringify(data) : undefined,
     }),
 
-  delete: <T>(endpoint: string, options?: RequestOptions) =>
+  delete: (endpoint: string, options?: RequestOptions) =>
     apiClient(endpoint, { ...options, method: 'DELETE' }),
 }; 
