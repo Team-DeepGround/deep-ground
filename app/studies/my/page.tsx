@@ -8,6 +8,7 @@ import { api } from "@/lib/api-client"
 import { StudyList } from "@/components/studies/my/StudyList"
 import { useToast } from "@/components/ui/use-toast"
 import { Separator } from "@/components/ui/separator"
+import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card"
 
 interface MyStudy {
   id: number
@@ -102,7 +103,94 @@ export default function MyStudiesPage() {
   }, [createdStudies, joinedStudies, createdCurrentPage, joinedCurrentPage])
 
   if (isLoading) {
-    return <div>로딩 중...</div>
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-3xl font-bold">내 스터디</h1>
+            <div className="h-10 w-32 bg-muted rounded animate-pulse" />
+          </div>
+
+          <div className="space-y-12">
+            <div>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold">내가 만든 스터디</h2>
+                <div className="h-5 w-12 bg-muted rounded animate-pulse" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {[1, 2, 3, 4].map((i) => (
+                  <Card key={i} className="overflow-hidden">
+                    <CardHeader className="p-4 pb-2">
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="h-5 bg-muted rounded animate-pulse mb-1.5 w-2/3" />
+                          <div className="flex items-center gap-1">
+                            <div className="h-3.5 w-3.5 bg-muted rounded animate-pulse" />
+                            <div className="h-3.5 bg-muted rounded animate-pulse w-20" />
+                          </div>
+                        </div>
+                        <div className="h-5 w-16 bg-muted rounded animate-pulse" />
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <div className="h-3.5 w-3.5 bg-muted rounded animate-pulse" />
+                          <div className="h-3.5 bg-muted rounded animate-pulse w-20" />
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="h-3.5 w-3.5 bg-muted rounded animate-pulse" />
+                          <div className="h-3.5 bg-muted rounded animate-pulse w-12" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            <div className="h-px bg-border" />
+
+            <div>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold">내가 참여한 스터디</h2>
+                <div className="h-5 w-12 bg-muted rounded animate-pulse" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {[1, 2, 3, 4].map((i) => (
+                  <Card key={i} className="overflow-hidden">
+                    <CardHeader className="p-4 pb-2">
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="h-5 bg-muted rounded animate-pulse mb-1.5 w-2/3" />
+                          <div className="flex items-center gap-1">
+                            <div className="h-3.5 w-3.5 bg-muted rounded animate-pulse" />
+                            <div className="h-3.5 bg-muted rounded animate-pulse w-20" />
+                          </div>
+                        </div>
+                        <div className="h-5 w-16 bg-muted rounded animate-pulse" />
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <div className="h-3.5 w-3.5 bg-muted rounded animate-pulse" />
+                          <div className="h-3.5 bg-muted rounded animate-pulse w-20" />
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="h-3.5 w-3.5 bg-muted rounded animate-pulse" />
+                          <div className="h-3.5 bg-muted rounded animate-pulse w-12" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (error) {
