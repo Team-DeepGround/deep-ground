@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Check, X, Circle, ChevronLeft, ChevronRight, EyeOff, Eye, UserCheck, UserX, Star } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { fetchMySchedules, fetchScheduleDetail, updateMemberSchedule, MemberScheduleDetailResponseDto, MemberScheduleCalendarResponseDto } from "@/lib/api/memberSchedule"
 import {
   format,
   startOfWeek,
@@ -38,169 +39,21 @@ const getColorByStudyId = (studyId: number) => {
 interface StudyEvent {
   id: number
   studyId: number
-  studyName: string
+  studyName?: string
   title: string
   date: Date
-  time?: string // "오후 2시 - 오후 4시" 형태
+  time: string // "오후 2시 - 오후 4시" 형태
   color: string
-  location: string
-  description: string
-  attendance: "attending" | "not_attending" | "pending"
-  personalNote: string
-  isImportant: boolean
+  location?: string
+  description?: string
+  attendance?: "attending" | "not_attending" | "pending"
+  personalNote?: string
+  isImportant?: boolean
   organizer: {
     id: number
     name: string
   }
 }
-
-// 샘플 스터디 이벤트 데이터
-const initialEvents: StudyEvent[] = [
-  {
-    id: 1,
-    studyId: 1,
-    studyName: "Node.js 백엔드 스터디",
-    title: "Express.js 심화 학습",
-    date: new Date(2025, 5, 5),
-    time: "오후 2시 - 오후 4시",
-    color: "#90EE90",
-    location: "스터디룸 A",
-    description: "미들웨어와 라우팅 고급 기법 학습",
-    attendance: "pending",
-    personalNote: "",
-    isImportant: false,
-    organizer: {
-      id: 2,
-      name: "김개발",
-    },
-  },
-  {
-    id: 2,
-    studyId: 1,
-    studyName: "Node.js 백엔드 스터디",
-    title: "RESTful API 설계",
-    date: new Date(2025, 5, 12),
-    time: "오후 3시 - 오후 5시",
-    color: "#90EE90",
-    location: "스터디룸 A",
-    description: "REST API 설계 원칙과 실습",
-    attendance: "attending",
-    personalNote: "API 문서화 도구 조사해오기",
-    isImportant: true,
-    organizer: {
-      id: 2,
-      name: "김개발",
-    },
-  },
-  {
-    id: 3,
-    studyId: 2,
-    studyName: "Spring Boot 스터디",
-    title: "JPA 실습",
-    date: new Date(2025, 5, 7),
-    time: "오전 10시 - 오후 12시",
-    color: "#87CEEB",
-    location: "카페 코딩",
-    description: "JPA 연관관계 매핑 실습",
-    attendance: "attending",
-    personalNote: "",
-    isImportant: false,
-    organizer: {
-      id: 3,
-      name: "박스프링",
-    },
-  },
-  {
-    id: 4,
-    studyId: 2,
-    studyName: "Spring Boot 스터디",
-    title: "Spring Security",
-    date: new Date(2025, 5, 14),
-    time: "오후 1시 - 오후 3시",
-    color: "#87CEEB",
-    location: "온라인 (Discord)",
-    description: "JWT 인증과 권한 관리 구현",
-    attendance: "pending",
-    personalNote: "",
-    isImportant: true,
-    organizer: {
-      id: 3,
-      name: "박스프링",
-    },
-  },
-  {
-    id: 5,
-    studyId: 3,
-    studyName: "데이터베이스 스터디",
-    title: "MySQL 성능 최적화",
-    date: new Date(2025, 5, 8),
-    time: "오후 4시 - 오후 6시",
-    color: "#DDA0DD",
-    location: "도서관 스터디룸",
-    description: "인덱스 설계와 쿼리 최적화 기법",
-    attendance: "not_attending",
-    personalNote: "다른 프로젝트 마감과 겹침",
-    isImportant: false,
-    organizer: {
-      id: 4,
-      name: "이디비",
-    },
-  },
-  {
-    id: 6,
-    studyId: 3,
-    studyName: "데이터베이스 스터디",
-    title: "NoSQL vs SQL",
-    date: new Date(2025, 5, 15),
-    time: "오후 4시 - 오후 5시 30분",
-    color: "#DDA0DD",
-    location: "온라인 (Zoom)",
-    description: "MongoDB와 MySQL 비교 분석",
-    attendance: "attending",
-    personalNote: "MongoDB 실습 환경 미리 세팅하기",
-    isImportant: false,
-    organizer: {
-      id: 4,
-      name: "이디비",
-    },
-  },
-  {
-    id: 7,
-    studyId: 4,
-    studyName: "DevOps 스터디",
-    title: "Docker 컨테이너화",
-    date: new Date(2025, 5, 9),
-    time: "오후 2시 - 오후 4시 30분",
-    color: "#FFB6C1",
-    location: "코워킹 스페이스",
-    description: "애플리케이션 Docker 이미지 생성 실습",
-    attendance: "pending",
-    personalNote: "",
-    isImportant: true,
-    organizer: {
-      id: 5,
-      name: "최데브옵스",
-    },
-  },
-  {
-    id: 8,
-    studyId: 4,
-    studyName: "DevOps 스터디",
-    title: "CI/CD 파이프라인",
-    date: new Date(2025, 5, 16),
-    time: "오후 3시 - 오후 5시",
-    color: "#FFB6C1",
-    location: "온라인 (Google Meet)",
-    description: "GitHub Actions를 이용한 자동 배포",
-    attendance: "not_attending",
-    personalNote: "",
-    isImportant: false,
-    organizer: {
-      id: 5,
-      name: "최데브옵스",
-    },
-  },
-]
 
 // 이벤트 팝업 컴포넌트
 interface EventPopupProps {
@@ -469,61 +322,93 @@ function CalendarHeader({
 
 export default function CalendarPage() {
   const { toast } = useToast()
-  // 현재 날짜를 2025년 6월로 설정하여 샘플 데이터와 일치시키기
-  const [currentDate, setCurrentDate] = useState(new Date(2025, 5, 18)) // 2025년 6월 18일로 설정
+  const [currentDate, setCurrentDate] = useState(new Date()) 
   const [selectedEvent, setSelectedEvent] = useState<StudyEvent | null>(null)
   const [popupPosition, setPopupPosition] = useState({ top: 0, left: 0 })
   const [calendarView, setCalendarView] = useState<"day" | "week" | "month">("month")
-  const [events, setEvents] = useState<StudyEvent[]>(initialEvents)
   const [showHiddenEvents, setShowHiddenEvents] = useState(false) // 숨긴 일정 표시 상태
   const calendarRef = useRef<HTMLDivElement>(null)
-
-  // 클릭 이벤트가 캘린더 외부에서 발생했을 때 선택된 이벤트 초기화
+  const [events, setEvents] = useState<StudyEvent[]>([]);
+  
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement
-      if (!target.closest(".event-item") && !target.closest(".event-popup")) {
-        setSelectedEvent(null)
+    const loadSchedules = async () => {
+      try {
+        const scheduleData = await fetchMySchedules()
+
+        const mapped: StudyEvent[] = scheduleData.map(dto => ({
+          id: dto.memberStudyScheduleId,
+          studyId: dto.studyScheduleId, // 백엔드 수정 전까지 studyScheduleId로 대체 사용
+          // studyId: dto.studyId, // 백엔드 수정 후 활성화
+          title: dto.title,
+          date: new Date(dto.startTime),
+          time: `${format(new Date(dto.startTime), "a h:mm")} - ${format(new Date(dto.endTime), "a h:mm")}`,
+          color: getColorByStudyId(dto.studyScheduleId), // 나중에 교체
+          // color: getColorByStudyId(dto.studyId), // 나중에 교체
+          organizer: {
+            id: 0,
+            name: "",
+          },
+        }))
+
+        setEvents(mapped)
+      } catch (e) {
+        console.error("일정 불러오기 실패", e)
       }
     }
 
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
+    loadSchedules()
   }, [])
 
-  // 이벤트 참석 상태 업데이트
-  const updateEventAttendance = (eventId: number, attendance: "attending" | "not_attending" | "pending") => {
-    setEvents((prev) => prev.map((event) => (event.id === eventId ? { ...event, attendance } : event)))
-
-    // 참석 상태 변경 시 토스트 메시지
-    if (attendance === "attending") {
+  const updateEventAttendance = async (
+    eventId: number,
+    attendance: "attending" | "not_attending" | "pending"
+  ) => {
+    // optimistic update
+    setEvents((prev) =>
+      prev.map((event) =>
+        event.id === eventId ? { ...event, attendance } : event
+      )
+    )
+  
+    try {
+      await updateMemberSchedule(eventId, { attendance })
+  
       toast({
-        title: "참석 확정",
-        description: "일정에 참석하기로 했습니다.",
+        title: "참석 정보 업데이트 완료",
+        description:
+          attendance === "attending"
+            ? "일정에 참석하기로 했습니다."
+            : attendance === "not_attending"
+            ? "일정에 참석하지 않기로 했습니다."
+            : "참석 여부를 미정으로 변경했습니다.",
       })
-    } else if (attendance === "not_attending") {
+    } catch (error) {
       toast({
-        title: "불참 확정",
-        description: "일정이 캘린더에서 숨겨집니다. '숨긴 일정 표시' 버튼으로 다시 볼 수 있습니다.",
+        variant: "destructive",
+        title: "참석 정보 업데이트 실패",
+        description: "서버에 반영하지 못했습니다.",
       })
-    } else if (attendance === "pending") {
-      toast({
-        title: "대기 상태로 변경",
-        description: "참석 여부를 다시 결정할 수 있습니다.",
-      })
+      // 실패 시 원래 상태로 롤백
+      setEvents((prev) =>
+        prev.map((event) =>
+          event.id === eventId ? { ...event, attendance: selectedEvent?.attendance || "pending" } : event
+        )
+      )
     }
-
-    // 팝업의 이벤트 정보도 업데이트
+  
+    // 팝업 데이터도 업데이트
     if (selectedEvent && selectedEvent.id === eventId) {
-      setSelectedEvent((prev) => (prev ? { ...prev, attendance } : null))
+      setSelectedEvent((prev) =>
+        prev ? { ...prev, attendance } : null
+      )
     }
   }
 
   // 이벤트 메모 업데이트
-  const updateEventNote = (eventId: number, note: string) => {
+  const updateEventNote = async (eventId: number, note: string) => {
     setEvents((prev) => prev.map((event) => (event.id === eventId ? { ...event, personalNote: note } : event)))
+    await updateMemberSchedule(eventId, { memo: note })
+    
     toast({
       title: "메모 저장 완료",
       description: "일정에 메모가 저장되었습니다.",
@@ -536,8 +421,10 @@ export default function CalendarPage() {
   }
 
   // 이벤트 중요도 업데이트
-  const updateEventImportance = (eventId: number, isImportant: boolean) => {
+  const updateEventImportance = async (eventId: number, isImportant: boolean) => {
     setEvents((prev) => prev.map((event) => (event.id === eventId ? { ...event, isImportant } : event)))
+    await updateMemberSchedule(eventId, { isImportant })
+    
     toast({
       title: isImportant ? "중요일정 설정" : "중요일정 해제",
       description: isImportant ? "일정이 중요일정으로 표시됩니다." : "중요일정 표시가 해제되었습니다.",
@@ -561,7 +448,7 @@ export default function CalendarPage() {
   }
 
   // 이벤트 클릭 핸들러
-  const handleEventClick = (event: StudyEvent, e: React.MouseEvent) => {
+  const handleEventClick = async (event: StudyEvent, e: React.MouseEvent) => {
     e.stopPropagation()
 
     // 팝업 위치 계산
@@ -579,7 +466,34 @@ export default function CalendarPage() {
       left: left,
     })
 
-    setSelectedEvent((prev) => (prev?.id === event.id ? null : event))
+    try {
+      const detail: MemberScheduleDetailResponseDto = await fetchScheduleDetail(event.id)
+  
+      const enrichedEvent: StudyEvent = {
+        ...event,
+        title: detail.title,
+        date: new Date(detail.startTime),
+        time: `${format(new Date(detail.startTime), "a h시", { locale: ko })} - ${format(new Date(detail.endTime), "a h시", { locale: ko })}`,
+        location: detail.location,
+        description: detail.description,
+        attendance: detail.isAvailable === null
+          ? "pending"
+          : detail.isAvailable
+          ? "attending"
+          : "not_attending",
+        isImportant: detail.isImportant ?? false,
+        personalNote: detail.memo ?? "",
+      }
+  
+      setSelectedEvent(enrichedEvent)
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "일정 상세정보 불러오기 실패",
+        description: "서버에서 정보를 가져오지 못했습니다.",
+      })
+      setSelectedEvent(event) // fallback
+    }
   }
 
   // 참석/불참석 버튼 클릭 핸들러
