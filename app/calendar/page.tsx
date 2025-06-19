@@ -1,369 +1,701 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import type React from "react"
+
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Calendar } from "@/components/ui/calendar"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Card, CardContent } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, CalendarIcon, Clock, Users, MapPin, CheckCircle, XIcon } from "lucide-react"
+import { Check, X, Circle, ChevronLeft, ChevronRight, EyeOff, Eye, UserCheck, UserX, Star } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { Badge } from "@/components/ui/badge"
-import { Switch } from "@/components/ui/switch"
-import { format, startOfWeek, endOfWeek, eachDayOfInterval, startOfMonth, endOfMonth } from "date-fns"
+import {
+  format,
+  startOfWeek,
+  endOfWeek,
+  eachDayOfInterval,
+  startOfMonth,
+  endOfMonth,
+  isSameDay,
+  addDays,
+  getDay,
+  addMonths,
+  addWeeks,
+} from "date-fns"
 import { ko } from "date-fns/locale"
 
-// 임시 일정 데이터 - 더 많은 더미 데이터 추가
-const events = [
+const colorPalette = ["#FFB6C1", "#87CEFA", "#90EE90", "#FFD700", "#DDA0DD"]
+const studyColorMap = new Map<number, string>()
+
+const getColorByStudyId = (studyId: number) => {
+  if (!studyColorMap.has(studyId)) {
+    const color = colorPalette[studyColorMap.size % colorPalette.length]
+    studyColorMap.set(studyId, color)
+  }
+  return studyColorMap.get(studyId)!
+}
+
+// 스터디 이벤트 타입 정의
+interface StudyEvent {
+  id: number
+  studyId: number
+  studyName: string
+  title: string
+  date: Date
+  time?: string // "오후 2시 - 오후 4시" 형태
+  color: string
+  location: string
+  description: string
+  attendance: "attending" | "not_attending" | "pending"
+  personalNote: string
+  isImportant: boolean
+  organizer: {
+    id: number
+    name: string
+  }
+}
+
+// 샘플 스터디 이벤트 데이터
+const initialEvents: StudyEvent[] = [
   {
     id: 1,
-    title: "React 스터디 모임",
-    date: "2025-04-15",
-    startTime: "19:00",
-    endTime: "21:00",
-    description: "React 훅스와 상태 관리에 대해 논의합니다.",
-    studyGroup: "React와 Next.js 마스터하기",
-    location: "온라인 (Zoom)",
-    isImportant: true,
-    isCompleted: false,
+    studyId: 1,
+    studyName: "Node.js 백엔드 스터디",
+    title: "Express.js 심화 학습",
+    date: new Date(2025, 5, 5),
+    time: "오후 2시 - 오후 4시",
+    color: "#90EE90",
+    location: "스터디룸 A",
+    description: "미들웨어와 라우팅 고급 기법 학습",
+    attendance: "pending",
+    personalNote: "",
+    isImportant: false,
+    organizer: {
+      id: 2,
+      name: "김개발",
+    },
   },
   {
     id: 2,
-    title: "알고리즘 문제 풀이",
-    date: "2025-04-18",
-    startTime: "20:00",
-    endTime: "22:00",
-    description: "그래프 알고리즘 관련 문제를 함께 풀어봅니다.",
-    studyGroup: "알고리즘 문제 풀이 스터디",
-    location: "온라인 (Discord)",
-    isImportant: false,
-    isCompleted: true,
+    studyId: 1,
+    studyName: "Node.js 백엔드 스터디",
+    title: "RESTful API 설계",
+    date: new Date(2025, 5, 12),
+    time: "오후 3시 - 오후 5시",
+    color: "#90EE90",
+    location: "스터디룸 A",
+    description: "REST API 설계 원칙과 실습",
+    attendance: "attending",
+    personalNote: "API 문서화 도구 조사해오기",
+    isImportant: true,
+    organizer: {
+      id: 2,
+      name: "김개발",
+    },
   },
   {
     id: 3,
-    title: "Spring Security 실습",
-    date: "2025-04-20",
-    startTime: "14:00",
-    endTime: "17:00",
-    description: "JWT 인증 구현 실습을 진행합니다.",
-    studyGroup: "백엔드 개발자를 위한 Spring Boot",
-    location: "서울 강남구 스터디 카페",
-    isImportant: true,
-    isCompleted: false,
+    studyId: 2,
+    studyName: "Spring Boot 스터디",
+    title: "JPA 실습",
+    date: new Date(2025, 5, 7),
+    time: "오전 10시 - 오후 12시",
+    color: "#87CEEB",
+    location: "카페 코딩",
+    description: "JPA 연관관계 매핑 실습",
+    attendance: "attending",
+    personalNote: "",
+    isImportant: false,
+    organizer: {
+      id: 3,
+      name: "박스프링",
+    },
   },
   {
     id: 4,
-    title: "Docker 컨테이너 실습",
-    date: "2025-04-22",
-    startTime: "19:30",
-    endTime: "21:30",
-    description: "Docker 컨테이너 네트워크 설정에 대해 학습합니다.",
-    studyGroup: "Docker와 Kubernetes 실전 활용",
-    location: "온라인 (Google Meet)",
-    isImportant: false,
-    isCompleted: false,
+    studyId: 2,
+    studyName: "Spring Boot 스터디",
+    title: "Spring Security",
+    date: new Date(2025, 5, 14),
+    time: "오후 1시 - 오후 3시",
+    color: "#87CEEB",
+    location: "온라인 (Discord)",
+    description: "JWT 인증과 권한 관리 구현",
+    attendance: "pending",
+    personalNote: "",
+    isImportant: true,
+    organizer: {
+      id: 3,
+      name: "박스프링",
+    },
   },
   {
     id: 5,
-    title: "JavaScript 심화 학습",
-    date: "2025-04-16",
-    startTime: "18:30",
-    endTime: "20:30",
-    description: "클로저와 프로토타입에 대해 학습합니다.",
-    studyGroup: "모던 자바스크립트 심화 학습",
-    location: "온라인 (Zoom)",
+    studyId: 3,
+    studyName: "데이터베이스 스터디",
+    title: "MySQL 성능 최적화",
+    date: new Date(2025, 5, 8),
+    time: "오후 4시 - 오후 6시",
+    color: "#DDA0DD",
+    location: "도서관 스터디룸",
+    description: "인덱스 설계와 쿼리 최적화 기법",
+    attendance: "not_attending",
+    personalNote: "다른 프로젝트 마감과 겹침",
     isImportant: false,
-    isCompleted: false,
+    organizer: {
+      id: 4,
+      name: "이디비",
+    },
   },
   {
     id: 6,
-    title: "머신러닝 기초",
-    date: "2025-04-17",
-    startTime: "19:00",
-    endTime: "21:00",
-    description: "머신러닝 기초 개념과 파이썬 라이브러리를 학습합니다.",
-    studyGroup: "머신러닝 기초부터 실전까지",
-    location: "온라인 (Google Meet)",
-    isImportant: true,
-    isCompleted: false,
+    studyId: 3,
+    studyName: "데이터베이스 스터디",
+    title: "NoSQL vs SQL",
+    date: new Date(2025, 5, 15),
+    time: "오후 4시 - 오후 5시 30분",
+    color: "#DDA0DD",
+    location: "온라인 (Zoom)",
+    description: "MongoDB와 MySQL 비교 분석",
+    attendance: "attending",
+    personalNote: "MongoDB 실습 환경 미리 세팅하기",
+    isImportant: false,
+    organizer: {
+      id: 4,
+      name: "이디비",
+    },
   },
   {
     id: 7,
-    title: "TypeScript 타입 시스템",
-    date: "2025-04-19",
-    startTime: "20:00",
-    endTime: "22:00",
-    description: "TypeScript의 고급 타입 시스템에 대해 학습합니다.",
-    studyGroup: "모던 자바스크립트 심화 학습",
-    location: "온라인 (Discord)",
-    isImportant: false,
-    isCompleted: false,
+    studyId: 4,
+    studyName: "DevOps 스터디",
+    title: "Docker 컨테이너화",
+    date: new Date(2025, 5, 9),
+    time: "오후 2시 - 오후 4시 30분",
+    color: "#FFB6C1",
+    location: "코워킹 스페이스",
+    description: "애플리케이션 Docker 이미지 생성 실습",
+    attendance: "pending",
+    personalNote: "",
+    isImportant: true,
+    organizer: {
+      id: 5,
+      name: "최데브옵스",
+    },
   },
-  // 추가 더미 데이터
   {
     id: 8,
-    title: "GraphQL API 설계",
-    date: "2025-04-23",
-    startTime: "18:00",
-    endTime: "20:00",
-    description: "GraphQL 스키마 설계와 쿼리 최적화에 대해 논의합니다.",
-    studyGroup: "백엔드 개발자를 위한 API 설계",
-    location: "온라인 (Zoom)",
-    isImportant: true,
-    isCompleted: false,
-  },
-  {
-    id: 9,
-    title: "React Native 기초",
-    date: "2025-04-24",
-    startTime: "19:00",
-    endTime: "21:00",
-    description: "React Native 환경 설정과 기본 컴포넌트에 대해 학습합니다.",
-    studyGroup: "모바일 앱 개발 스터디",
+    studyId: 4,
+    studyName: "DevOps 스터디",
+    title: "CI/CD 파이프라인",
+    date: new Date(2025, 5, 16),
+    time: "오후 3시 - 오후 5시",
+    color: "#FFB6C1",
     location: "온라인 (Google Meet)",
+    description: "GitHub Actions를 이용한 자동 배포",
+    attendance: "not_attending",
+    personalNote: "",
     isImportant: false,
-    isCompleted: false,
-  },
-  {
-    id: 10,
-    title: "데이터베이스 설계 원칙",
-    date: "2025-04-25",
-    startTime: "20:00",
-    endTime: "22:00",
-    description: "관계형 데이터베이스 설계 원칙과 정규화에 대해 학습합니다.",
-    studyGroup: "데이터베이스 마스터 스터디",
-    location: "서울 강남구 스터디 카페",
-    isImportant: true,
-    isCompleted: false,
-  },
-  {
-    id: 11,
-    title: "CI/CD 파이프라인 구축",
-    date: "2025-04-26",
-    startTime: "18:30",
-    endTime: "20:30",
-    description: "GitHub Actions를 활용한 CI/CD 파이프라인 구축 방법을 학습합니다.",
-    studyGroup: "DevOps 실전 스터디",
-    location: "온라인 (Discord)",
-    isImportant: false,
-    isCompleted: false,
-  },
-  {
-    id: 12,
-    title: "웹 접근성 향상 기법",
-    date: "2025-04-27",
-    startTime: "14:00",
-    endTime: "16:00",
-    description: "웹 접근성 표준과 ARIA 속성 활용법에 대해 학습합니다.",
-    studyGroup: "프론트엔드 개발자 모임",
-    location: "온라인 (Zoom)",
-    isImportant: false,
-    isCompleted: false,
+    organizer: {
+      id: 5,
+      name: "최데브옵스",
+    },
   },
 ]
 
-// 임시 스터디 그룹 데이터
-const studyGroups = [
-  { id: 1, name: "React와 Next.js 마스터하기" },
-  { id: 2, name: "알고리즘 문제 풀이 스터디" },
-  { id: 3, name: "백엔드 개발자를 위한 Spring Boot" },
-  { id: 4, name: "Docker와 Kubernetes 실전 활용" },
-  { id: 5, name: "모던 자바스크립트 심화 학습" },
-  { id: 6, name: "머신러닝 기초부터 실전까지" },
-  { id: 7, name: "백엔드 개발자를 위한 API 설계" },
-  { id: 8, name: "모바일 앱 개발 스터디" },
-  { id: 9, name: "데이터베이스 마스터 스터디" },
-  { id: 10, name: "DevOps 실전 스터디" },
-  { id: 11, name: "프론트엔드 개발자 모임" },
-]
+// 이벤트 팝업 컴포넌트
+interface EventPopupProps {
+  event: StudyEvent
+  position: { top: number; left: number }
+  onClose: () => void
+  onAttendanceChange: (eventId: number, attendance: "attending" | "not_attending" | "pending") => void
+  onNoteChange: (eventId: number, note: string) => void
+  onImportanceChange: (eventId: number, isImportant: boolean) => void
+}
+
+function EventPopup({
+  event,
+  position,
+  onClose,
+  onAttendanceChange,
+  onNoteChange,
+  onImportanceChange,
+}: EventPopupProps) {
+  const [note, setNote] = useState(event.personalNote || "")
+
+  const handleNoteChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setNote(e.target.value)
+  }
+
+  const handleNoteSave = () => {
+    onNoteChange(event.id, note)
+  }
+
+  const handleAttendanceChange = (attendance: "attending" | "not_attending" | "pending") => {
+    onAttendanceChange(event.id, attendance)
+  }
+
+  return (
+    <div
+      className="absolute bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 w-72 z-50 event-popup"
+      style={{ top: `${position.top}px`, left: `${position.left}px` }}
+    >
+      <div className="flex justify-between items-start mb-3">
+        <div className="flex items-center">
+          <Circle className="w-3 h-3 mr-2 fill-current" style={{ color: event.color }} />
+          <span className="text-xs text-blue-500 dark:text-blue-400">{event.studyName}</span>
+        </div>
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      <h3 className="text-base font-medium mb-1 text-gray-900 dark:text-gray-100">{event.title}</h3>
+
+      {event.date && (
+        <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+          {format(event.date, "yyyy.MM.dd(E)", { locale: ko })} {event.time}
+        </div>
+      )}
+
+      {event.location && <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">{event.location}</div>}
+
+      {event.description && <div className="text-sm mb-3 text-gray-700 dark:text-gray-300">{event.description}</div>}
+
+      {/* 참석 여부 선택 섹션 */}
+      <div className="mb-4 border-t border-gray-200 dark:border-gray-700 pt-3">
+        <h4 className="text-sm font-medium mb-2 text-gray-900 dark:text-gray-100">참석 여부</h4>
+        <div className="flex space-x-2">
+          <Button
+            size="sm"
+            variant={event.attendance === "attending" ? "default" : "outline"}
+            className={`flex items-center gap-1 ${
+              event.attendance === "attending" ? "bg-green-500 hover:bg-green-600" : ""
+            }`}
+            onClick={() => handleAttendanceChange("attending")}
+          >
+            <UserCheck className="w-4 h-4" />
+            참석
+          </Button>
+          <Button
+            size="sm"
+            variant={event.attendance === "not_attending" ? "default" : "outline"}
+            className={`flex items-center gap-1 ${
+              event.attendance === "not_attending" ? "bg-red-500 hover:bg-red-600" : ""
+            }`}
+            onClick={() => handleAttendanceChange("not_attending")}
+          >
+            <UserX className="w-4 h-4" />
+            불참석
+          </Button>
+          {event.attendance !== "pending" && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex items-center gap-1"
+              onClick={() => handleAttendanceChange("pending")}
+            >
+              <Circle className="w-4 h-4" />
+              대기
+            </Button>
+          )}
+        </div>
+        <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+          {event.attendance === "attending" && "✅ 이 일정에 참석하기로 했습니다."}
+          {event.attendance === "not_attending" && "❌ 이 일정에 참석하지 않기로 했습니다."}
+          {event.attendance === "pending" && "⏳ 참석 여부를 결정해주세요."}
+        </div>
+      </div>
+
+      {/* 중요일정 설정 섹션 */}
+      <div className="mb-4 border-t border-gray-200 dark:border-gray-700 pt-3">
+        <div className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            id={`important-${event.id}`}
+            checked={event.isImportant}
+            onChange={(e) => onImportanceChange(event.id, e.target.checked)}
+            className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700"
+          />
+          <label
+            htmlFor={`important-${event.id}`}
+            className="text-sm font-medium flex items-center gap-1 text-gray-900 dark:text-gray-100"
+          >
+            <Star className="w-4 h-4 text-yellow-500" />
+            중요일정으로 설정
+          </label>
+        </div>
+        {event.isImportant && (
+          <div className="mt-1 text-xs text-yellow-600 dark:text-yellow-400">⭐ 이 일정이 중요일정으로 표시됩니다.</div>
+        )}
+      </div>
+
+      <div className="mb-3">
+        <h4 className="text-xs font-medium mb-1 text-gray-900 dark:text-gray-100">개인 메모</h4>
+        <Textarea
+          className="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-md p-2 mb-2 h-16 text-sm"
+          placeholder="이 일정에 대한 개인 메모를 작성하세요"
+          value={note}
+          onChange={handleNoteChange}
+        />
+        <Button
+          className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-xs"
+          onClick={handleNoteSave}
+        >
+          메모 저장
+        </Button>
+      </div>
+
+      {event.organizer && (
+        <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">스터디장: {event.organizer.name}</div>
+      )}
+    </div>
+  )
+}
+
+// 캘린더 헤더 컴포넌트
+interface CalendarHeaderProps {
+  viewType: "day" | "week" | "month"
+  setViewType: (type: "day" | "week" | "month") => void
+  currentDate: Date
+  setCurrentDate: (date: Date) => void
+  showHiddenEvents: boolean
+  setShowHiddenEvents: (show: boolean) => void
+}
+
+function CalendarHeader({
+  viewType,
+  setViewType,
+  currentDate,
+  setCurrentDate,
+  showHiddenEvents,
+  setShowHiddenEvents,
+}: CalendarHeaderProps) {
+  const formatTitle = () => {
+    if (viewType === "day") {
+      return `${format(currentDate, "yyyy년 M월 d일", { locale: ko })} ${format(currentDate, "EEEE", { locale: ko })}`
+    } else {
+      return `${format(currentDate, "yyyy년 M월", { locale: ko })}`
+    }
+  }
+
+  const handlePrev = () => {
+    if (viewType === "day") {
+      setCurrentDate(addDays(currentDate, -1))
+    } else if (viewType === "week") {
+      setCurrentDate(addWeeks(currentDate, -1))
+    } else {
+      setCurrentDate(addMonths(currentDate, -1))
+    }
+  }
+
+  const handleNext = () => {
+    if (viewType === "day") {
+      setCurrentDate(addDays(currentDate, 1))
+    } else if (viewType === "week") {
+      setCurrentDate(addWeeks(currentDate, 1))
+    } else {
+      setCurrentDate(addMonths(currentDate, 1))
+    }
+  }
+
+  return (
+    <div className="p-4 flex justify-between items-center border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-black">
+      <div className="flex items-center gap-4">
+        <h2 className="text-xl font-medium text-gray-900 dark:text-gray-100">{formatTitle()}</h2>
+        <div className="flex border border-gray-300 dark:border-gray-600 rounded overflow-hidden">
+          <button
+            onClick={handlePrev}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <button
+            onClick={handleNext}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-4">
+        {/* 숨긴 일정 표시 토글 버튼 */}
+        <Button
+          variant={showHiddenEvents ? "default" : "outline"}
+          size="sm"
+          onClick={() => setShowHiddenEvents(!showHiddenEvents)}
+          className="flex items-center gap-2"
+        >
+          {showHiddenEvents ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+          {showHiddenEvents ? "숨긴 일정 숨기기" : "숨긴 일정 표시"}
+        </Button>
+
+        <div className="flex border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden">
+          <button
+            className={`px-4 py-2 ${
+              viewType === "day"
+                ? "bg-blue-500 text-white"
+                : "bg-gray-100 dark:bg-black text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+            }`}
+            onClick={() => setViewType("day")}
+          >
+            일
+          </button>
+          <button
+            className={`px-4 py-2 ${
+              viewType === "week"
+                ? "bg-blue-500 text-white"
+                : "bg-gray-100 dark:bg-black text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+            }`}
+            onClick={() => setViewType("week")}
+          >
+            주
+          </button>
+          <button
+            className={`px-4 py-2 ${
+              viewType === "month"
+                ? "bg-blue-500 text-white"
+                : "bg-gray-100 dark:bg-black text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+            }`}
+            onClick={() => setViewType("month")}
+          >
+            월
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function CalendarPage() {
   const { toast } = useToast()
-  const [date, setDate] = useState<Date | undefined>(undefined)
-  const [selectedEvent, setSelectedEvent] = useState<(typeof events)[0] | null>(null)
-  const [isAddEventOpen, setIsAddEventOpen] = useState(false)
-  const [calendarView, setCalendarView] = useState<"day" | "week" | "month">("month") // 기본값을 month로 변경
+  // 현재 날짜를 2025년 6월로 설정하여 샘플 데이터와 일치시키기
+  const [currentDate, setCurrentDate] = useState(new Date(2025, 5, 18)) // 2025년 6월 18일로 설정
+  const [selectedEvent, setSelectedEvent] = useState<StudyEvent | null>(null)
+  const [popupPosition, setPopupPosition] = useState({ top: 0, left: 0 })
+  const [calendarView, setCalendarView] = useState<"day" | "week" | "month">("month")
+  const [events, setEvents] = useState<StudyEvent[]>(initialEvents)
+  const [showHiddenEvents, setShowHiddenEvents] = useState(false) // 숨긴 일정 표시 상태
+  const calendarRef = useRef<HTMLDivElement>(null)
 
-  // 이벤트 완료 상태 관리
-  const [completedEvents, setCompletedEvents] = useState<Record<number, boolean>>({})
-
-  // 새 일정 상태 부분을 수정합니다 - 개인 일정 추가 기능 제거
-  const [newEvent, setNewEvent] = useState({
-    title: "",
-    date: format(new Date(), "yyyy-MM-dd"),
-    startTime: "09:00",
-    endTime: "10:00",
-    description: "",
-    studyGroup: "",
-    location: "",
-    isImportant: false,
-    isRecurring: false,
-    recurrenceType: "weekly",
-    notes: "",
-    isVisible: true,
-  })
-
-  // 이벤트 메모 및 가시성 상태 관리
-  const [eventNotes, setEventNotes] = useState<Record<number, string>>({})
-  const [eventVisibility, setEventVisibility] = useState<Record<number, boolean>>({})
-
-  // 주간 뷰를 위한 날짜 범위 계산
-  const weekStart = date ? startOfWeek(date, { weekStartsOn: 1 }) : undefined
-  const weekEnd = date ? endOfWeek(date, { weekStartsOn: 1 }) : undefined
-  const weekDays = weekStart && weekEnd ? eachDayOfInterval({ start: weekStart, end: weekEnd }) : []
-
-  // 월간 뷰를 위한 날짜 범위 계산
-  const monthStart = date ? startOfMonth(date) : undefined
-  const monthEnd = date ? endOfMonth(date) : undefined
-  const monthDays = monthStart && monthEnd ? eachDayOfInterval({ start: monthStart, end: monthEnd }) : []
-
-  // 주간 이벤트 필터링
-  const weekEvents =
-    weekStart && weekEnd
-      ? events.filter((event) => {
-          const eventDate = new Date(event.date)
-          return eventDate >= weekStart && eventDate <= weekEnd
-        })
-      : []
-
-  // 월간 이벤트 필터링
-  const monthEvents =
-    monthStart && monthEnd
-      ? events.filter((event) => {
-          const eventDate = new Date(event.date)
-          return eventDate >= monthStart && eventDate <= monthEnd
-        })
-      : []
-
-  // 컴포넌트 초기화 시 이벤트 가시성 및 완료 상태 설정
+  // 클릭 이벤트가 캘린더 외부에서 발생했을 때 선택된 이벤트 초기화
   useEffect(() => {
-    // 브라우저 환경에서만 실행
-    if (typeof window !== "undefined") {
-      const initialVisibility: Record<number, boolean> = {}
-      const initialCompletedState: Record<number, boolean> = {}
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      if (!target.closest(".event-item") && !target.closest(".event-popup")) {
+        setSelectedEvent(null)
+      }
+    }
 
-      events.forEach((event) => {
-        initialVisibility[event.id] = true
-        initialCompletedState[event.id] = event.isCompleted || false
-      })
-
-      setEventVisibility(initialVisibility)
-      setCompletedEvents(initialCompletedState)
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
     }
   }, [])
 
-  // 컴포넌트 마운트 시 날짜 초기화
-  useEffect(() => {
-    setDate(new Date())
-  }, [])
+  // 이벤트 참석 상태 업데이트
+  const updateEventAttendance = (eventId: number, attendance: "attending" | "not_attending" | "pending") => {
+    setEvents((prev) => prev.map((event) => (event.id === eventId ? { ...event, attendance } : event)))
 
-  // 이벤트 가시성 토글 함수
-  const toggleEventVisibility = (eventId: number) => {
-    setEventVisibility((prev) => ({
-      ...prev,
-      [eventId]: !prev[eventId],
-    }))
+    // 참석 상태 변경 시 토스트 메시지
+    if (attendance === "attending") {
+      toast({
+        title: "참석 확정",
+        description: "일정에 참석하기로 했습니다.",
+      })
+    } else if (attendance === "not_attending") {
+      toast({
+        title: "불참 확정",
+        description: "일정이 캘린더에서 숨겨집니다. '숨긴 일정 표시' 버튼으로 다시 볼 수 있습니다.",
+      })
+    } else if (attendance === "pending") {
+      toast({
+        title: "대기 상태로 변경",
+        description: "참석 여부를 다시 결정할 수 있습니다.",
+      })
+    }
 
-    toast({
-      title: "일정 표시 설정 변경",
-      description: !eventVisibility[eventId] ? "일정이 강조 표시됩니다." : "일정이 흐리게 표시됩니다.",
-    })
+    // 팝업의 이벤트 정보도 업데이트
+    if (selectedEvent && selectedEvent.id === eventId) {
+      setSelectedEvent((prev) => (prev ? { ...prev, attendance } : null))
+    }
   }
 
-  // 이벤트 완료 상태 토글 함수
-  const toggleEventCompletion = (eventId: number) => {
-    setCompletedEvents((prev) => ({
-      ...prev,
-      [eventId]: !prev[eventId],
-    }))
-
-    toast({
-      title: completedEvents[eventId] ? "일정 미완료 처리" : "일정 완료 처리",
-      description: completedEvents[eventId] ? "일정을 미완료 상태로 변경했습니다." : "일정을 완료 상태로 변경했습니다.",
-    })
-  }
-
-  // 이벤트 메모 업데이트 함수
-  const updateEventNotes = (eventId: number, notes: string) => {
-    setEventNotes((prev) => ({
-      ...prev,
-      [eventId]: notes,
-    }))
-
+  // 이벤트 메모 업데이트
+  const updateEventNote = (eventId: number, note: string) => {
+    setEvents((prev) => prev.map((event) => (event.id === eventId ? { ...event, personalNote: note } : event)))
     toast({
       title: "메모 저장 완료",
       description: "일정에 메모가 저장되었습니다.",
     })
+
+    // 팝업의 이벤트 정보도 업데이트
+    if (selectedEvent && selectedEvent.id === eventId) {
+      setSelectedEvent((prev) => (prev ? { ...prev, personalNote: note } : null))
+    }
   }
 
-  // 선택된 날짜의 이벤트 필터링
-  const selectedDateEvents = date ? events.filter((event) => event.date === format(date, "yyyy-MM-dd")) : []
-
-  // 필터링된 이벤트 - 가시성 설정 적용
-  // const filteredSelectedDateEvents = selectedDateEvents.filter((event) => eventVisibility[event.id] !== false)
-  // const filteredWeekEvents = weekEvents.filter((event) => eventVisibility[event.id] !== false)
-  // const filteredMonthEvents = monthEvents.filter((event) => eventVisibility[event.id] !== false)
-
-  // 대신 모든 이벤트를 사용하고 스타일로 구분:
-  const filteredSelectedDateEvents = selectedDateEvents
-  const filteredWeekEvents = weekEvents
-  const filteredMonthEvents = monthEvents
-
-  const handleAddEvent = () => {
-    // 필수 필드 검증
-    if (!newEvent.title || !newEvent.date || !newEvent.startTime || !newEvent.endTime || !newEvent.studyGroup) {
-      toast({
-        title: "필수 정보 누락",
-        description: "제목, 날짜, 시간, 스터디 그룹은 필수 입력 항목입니다.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    // 시간 검증
-    if (newEvent.startTime >= newEvent.endTime) {
-      toast({
-        title: "시간 오류",
-        description: "종료 시간은 시작 시간보다 이후여야 합니다.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    // 일정 추가 성공 (실제로는 API 호출)
+  // 이벤트 중요도 업데이트
+  const updateEventImportance = (eventId: number, isImportant: boolean) => {
+    setEvents((prev) => prev.map((event) => (event.id === eventId ? { ...event, isImportant } : event)))
     toast({
-      title: "일정 추가 성공",
-      description: "일정이 성공적으로 추가되었습니다.",
+      title: isImportant ? "중요일정 설정" : "중요일정 해제",
+      description: isImportant ? "일정이 중요일정으로 표시됩니다." : "중요일정 표시가 해제되었습니다.",
     })
 
-    // 다이얼로그 닫기 및 폼 초기화
-    setIsAddEventOpen(false)
-    setNewEvent({
-      title: "",
-      date: format(new Date(), "yyyy-MM-dd"),
-      startTime: "09:00",
-      endTime: "10:00",
-      description: "",
-      studyGroup: "",
-      location: "",
-      isImportant: false,
-      isRecurring: false,
-      recurrenceType: "weekly",
-      notes: "",
-      isVisible: true,
+    // 팝업의 이벤트 정보도 업데이트
+    if (selectedEvent && selectedEvent.id === eventId) {
+      setSelectedEvent((prev) => (prev ? { ...prev, isImportant } : null))
+    }
+  }
+
+  // 표시할 이벤트 필터링 함수 (수정됨)
+  const getFilteredEvents = (allEvents: StudyEvent[]) => {
+    if (showHiddenEvents) {
+      // 숨긴 일정 표시 모드: 모든 일정 표시 (참석, 대기, 불참 모두)
+      return allEvents
+    } else {
+      // 일반 모드: 참석 또는 대기 중인 일정만 표시 (불참 일정은 숨김)
+      return allEvents.filter((event) => event.attendance === "attending" || event.attendance === "pending")
+    }
+  }
+
+  // 이벤트 클릭 핸들러
+  const handleEventClick = (event: StudyEvent, e: React.MouseEvent) => {
+    e.stopPropagation()
+
+    // 팝업 위치 계산
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    const calendarRect = calendarRef.current?.getBoundingClientRect() || { top: 0, left: 0, width: window.innerWidth }
+
+    // 팝업이 오른쪽으로 넘어가지 않도록 조정
+    let left = rect.left - calendarRect.left + rect.width + 10
+    if (left + 288 > (calendarRect.width || window.innerWidth)) {
+      left = rect.left - calendarRect.left - 288 - 10
+    }
+
+    setPopupPosition({
+      top: rect.top - calendarRect.top,
+      left: left,
     })
+
+    setSelectedEvent((prev) => (prev?.id === event.id ? null : event))
+  }
+
+  // 참석/불참석 버튼 클릭 핸들러
+  const handleAttendanceClick = (event: StudyEvent, attendance: "attending" | "not_attending", e: React.MouseEvent) => {
+    e.stopPropagation()
+    updateEventAttendance(event.id, attendance)
+  }
+
+  // 주간 뷰를 위한 날짜 범위 계산
+  const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 })
+  const weekEnd = endOfWeek(currentDate, { weekStartsOn: 0 })
+  const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd })
+
+  // 월간 뷰를 위한 날짜 범위 계산
+  const monthStart = startOfMonth(currentDate)
+  const monthEnd = endOfMonth(currentDate)
+
+  // 월간 캘린더 날짜 계산
+  const getMonthCalendarDays = () => {
+    const startDate = addDays(monthStart, -getDay(monthStart))
+    const endDate = addDays(monthEnd, 6 - getDay(monthEnd))
+    return eachDayOfInterval({ start: startDate, end: endDate })
+  }
+
+  const monthCalendarDays = getMonthCalendarDays()
+
+  // 선택된 날짜의 이벤트 필터링
+  const selectedDateEvents = getFilteredEvents(events.filter((event) => isSameDay(event.date, currentDate)))
+
+  // 특정 날짜의 이벤트 가져오기
+  const getEventsForDate = (targetDate: Date) => {
+    return getFilteredEvents(events.filter((event) => isSameDay(event.date, targetDate)))
+  }
+
+  // 시간 파싱 함수 - 시작시간과 끝시간을 분리
+  const parseTimeRange = (timeString?: string) => {
+    if (!timeString) return { startHour: -1, endHour: -1, startMinute: 0, endMinute: 0 }
+
+    // "오후 2시 - 오후 4시" 또는 "오후 4시 - 오후 5시 30분" 형태 파싱
+    const timeRangeMatch = timeString.match(
+      /(오전|오후)\s*(\d+)시(?:\s*(\d+)분)?\s*-\s*(오전|오후)\s*(\d+)시(?:\s*(\d+)분)?/,
+    )
+
+    if (!timeRangeMatch) return { startHour: -1, endHour: -1, startMinute: 0, endMinute: 0 }
+
+    const [, startPeriod, startHourStr, startMinuteStr, endPeriod, endHourStr, endMinuteStr] = timeRangeMatch
+
+    let startHour = Number.parseInt(startHourStr)
+    let endHour = Number.parseInt(endHourStr)
+    const startMinute = startMinuteStr ? Number.parseInt(startMinuteStr) : 0
+    const endMinute = endMinuteStr ? Number.parseInt(endMinuteStr) : 0
+
+    // 24시간 형식으로 변환
+    if (startPeriod === "오후" && startHour !== 12) startHour += 12
+    if (startPeriod === "오전" && startHour === 12) startHour = 0
+    if (endPeriod === "오후" && endHour !== 12) endHour += 12
+    if (endPeriod === "오전" && endHour === 12) endHour = 0
+
+    return { startHour, endHour, startMinute, endMinute }
+  }
+
+  // 시간 변환 함수 (기존 호환성을 위해 유지)
+  const convertTimeToHour = (timeString?: string) => {
+    const { startHour } = parseTimeRange(timeString)
+    return startHour
+  }
+
+  // 이벤트가 특정 시간에 겹치는지 확인
+  const isEventInHour = (event: StudyEvent, hour: number) => {
+    const { startHour, endHour } = parseTimeRange(event.time)
+    return startHour <= hour && hour < endHour
+  }
+
+  // 이벤트가 특정 시간에 시작하는지 확인 (중복 렌더링 방지)
+  const isEventStartInHour = (event: StudyEvent, hour: number) => {
+    const { startHour } = parseTimeRange(event.time)
+    return startHour === hour
+  }
+
+  // 이벤트 높이 계산 (분 단위로)
+  const getEventHeight = (event: StudyEvent) => {
+    const { startHour, endHour, startMinute, endMinute } = parseTimeRange(event.time)
+    if (startHour === -1 || endHour === -1) return 60 // 기본 1시간
+
+    const startTotalMinutes = startHour * 60 + startMinute
+    const endTotalMinutes = endHour * 60 + endMinute
+    const durationMinutes = endTotalMinutes - startTotalMinutes
+
+    // 1분당 1px로 계산 (최소 30px)
+    return Math.max(durationMinutes, 30)
+  }
+
+  // 주간 뷰용 이벤트 높이 계산 (시간 슬롯 높이에 맞춤)
+  const getEventHeightForWeekView = (event: StudyEvent) => {
+    const { startHour, endHour, startMinute, endMinute } = parseTimeRange(event.time)
+    if (startHour === -1 || endHour === -1) return 80 // 기본 1시간 (80px)
+
+    const startTotalMinutes = startHour * 60 + startMinute
+    const endTotalMinutes = endHour * 60 + endMinute
+    const durationMinutes = endTotalMinutes - startTotalMinutes
+
+    // 주간 뷰에서는 1시간당 80px로 계산
+    const heightPerHour = 80
+    const height = (durationMinutes / 60) * heightPerHour
+
+    return Math.max(height, 20) // 최소 20px
+  }
+
+  // 이벤트 시작 위치 계산 (시간 슬롯 내에서의 위치)
+  const getEventTopOffset = (event: StudyEvent, baseHour: number) => {
+    const { startHour, startMinute } = parseTimeRange(event.time)
+    if (startHour === -1) return 0
+
+    // 해당 시간 슬롯 내에서의 분 단위 오프셋
+    const minuteOffset = startHour === baseHour ? startMinute : 0
+    return minuteOffset // 1분당 1px
   }
 
   // 시간대 생성 (30분 간격)
@@ -374,27 +706,43 @@ export default function CalendarPage() {
   })
 
   // 이벤트 시간 위치 계산
-  const getEventPosition = (startTime: string) => {
-    const [hours, minutes] = startTime.split(":").map(Number)
-    const totalMinutes = hours * 60 + minutes
+  const getEventPosition = (timeString?: string) => {
+    if (!timeString) return 0
+
+    // "오후 2시" 형태를 24시간 형태로 변환
+    const match = timeString.match(/(오전|오후)\s*(\d+)시/)
+    if (!match) return 0
+
+    const isPM = match[1] === "오후"
+    let hour = Number.parseInt(match[2])
+
+    if (isPM && hour !== 12) hour += 12
+    if (!isPM && hour === 12) hour = 0
+
+    const totalMinutes = hour * 60
     const startMinutes = 8 * 60 // 8시부터 시작
     return ((totalMinutes - startMinutes) / 30) * 40 // 각 슬롯 높이 40px
   }
 
-  // 이벤트 높이 계산
-  const getEventHeight = (startTime: string, endTime: string) => {
-    const [startHours, startMinutes] = startTime.split(":").map(Number)
-    const [endHours, endMinutes] = endTime.split(":").map(Number)
-    const startTotalMinutes = startHours * 60 + startMinutes
-    const endTotalMinutes = endHours * 60 + endMinutes
-    const durationMinutes = endTotalMinutes - startTotalMinutes
-    return (durationMinutes / 30) * 40 // 각 슬롯 높이 40px
+  // 이벤트 스타일 결정 함수 (수정됨)
+  const getEventStyle = (event: StudyEvent) => {
+    if (event.attendance === "attending") {
+      // 참석 확정: 선명하게 표시
+      return ""
+    } else if (event.attendance === "pending") {
+      // 아직 선택하지 않음: 흐릿하게 표시
+      return "opacity-50"
+    } else if (event.attendance === "not_attending") {
+      // 불참 확정: 더 흐릿하게 표시 (숨긴 일정 표시 모드에서만 보임)
+      return "opacity-30"
+    }
+    return ""
   }
 
-  // 스터디장 여부 확인 (실제로는 API에서 가져와야 함)
-  const isStudyLeader = (studyGroupId: number): boolean => {
-    // 임시로 1, 3번 스터디의 리더라고 가정
-    return [1, 3].includes(studyGroupId)
+  // 참석/불참석 버튼 표시 여부 결정 (수정됨)
+  const shouldShowAttendanceButtons = (event: StudyEvent) => {
+    // pending 상태이거나, not_attending 상태에서 숨긴 일정 표시 모드일 때만 버튼 표시
+    return event.attendance === "pending" || (event.attendance === "not_attending" && showHiddenEvents)
   }
 
   // 클라이언트 사이드 렌더링 확인
@@ -406,648 +754,316 @@ export default function CalendarPage() {
   // 클라이언트 사이드에서만 렌더링
   if (!isClient) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 bg-white dark:bg-black">
         <div className="flex justify-center items-center h-[400px]">
-          <p className="text-muted-foreground">캘린더를 불러오는 중...</p>
+          <p className="text-gray-600 dark:text-gray-400">캘린더를 불러오는 중...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 bg-white dark:bg-black min-h-screen">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold">스터디 캘린더</h1>
-          <p className="text-muted-foreground mt-1">스터디 일정을 관리하세요</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">스터디 캘린더</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">내가 참여하는 스터디 일정을 확인하세요</p>
         </div>
-        {/* 일정 추가 버튼 부분을 수정합니다 - 스터디장만 추가 가능하도록 */}
-        <Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />팀 일정 추가
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>새 팀 일정 추가</DialogTitle>
-              <DialogDescription>스터디 리더만 팀 일정을 추가할 수 있습니다.</DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="studyGroup">스터디 그룹</Label>
-                <Select
-                  value={newEvent.studyGroup}
-                  onValueChange={(value) => {
-                    const studyGroup = studyGroups.find((g) => g.name === value)
-                    setNewEvent({
-                      ...newEvent,
-                      studyGroup: value,
-                      // 선택한 스터디 그룹의 ID 저장
-                      teamId: studyGroup ? studyGroup.id.toString() : "",
-                    })
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="스터디 선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {studyGroups
-                      .filter((group) => isStudyLeader(group.id)) // 스터디장인 그룹만 필터링
-                      .map((group) => (
-                        <SelectItem key={group.id} value={group.name}>
-                          {group.name}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-                {!studyGroups.some((group) => isStudyLeader(group.id)) && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    스터디 리더인 그룹이 없습니다. 스터디 리더만 팀 일정을 추가할 수 있습니다.
-                  </p>
-                )}
-              </div>
-
-              {newEvent.studyGroup &&
-                isStudyLeader(studyGroups.find((g) => g.name === newEvent.studyGroup)?.id || 0) && (
-                  <>
-                    <div className="grid gap-2">
-                      <Label htmlFor="title">일정 제목</Label>
-                      <Input
-                        id="title"
-                        placeholder="일정 제목을 입력하세요"
-                        value={newEvent.title}
-                        onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="grid gap-2">
-                        <Label htmlFor="date">날짜</Label>
-                        <Input
-                          id="date"
-                          type="date"
-                          value={newEvent.date}
-                          onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="grid gap-2">
-                        <Label htmlFor="startTime">시작 시간</Label>
-                        <Input
-                          id="startTime"
-                          type="time"
-                          value={newEvent.startTime}
-                          onChange={(e) => setNewEvent({ ...newEvent, startTime: e.target.value })}
-                        />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="endTime">종료 시간</Label>
-                        <Input
-                          id="endTime"
-                          type="time"
-                          value={newEvent.endTime}
-                          onChange={(e) => setNewEvent({ ...newEvent, endTime: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="location">장소</Label>
-                      <Input
-                        id="location"
-                        placeholder="온라인 또는 오프라인 장소를 입력하세요"
-                        value={newEvent.location}
-                        onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="description">설명</Label>
-                      <Textarea
-                        id="description"
-                        placeholder="일정에 대한 설명을 입력하세요"
-                        value={newEvent.description}
-                        onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="isImportant" className="cursor-pointer">
-                        중요 일정으로 표시
-                      </Label>
-                      <Switch
-                        id="isImportant"
-                        checked={newEvent.isImportant}
-                        onCheckedChange={(checked) => setNewEvent({ ...newEvent, isImportant: checked })}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="isRecurring" className="cursor-pointer">
-                        반복 일정
-                      </Label>
-                      <Switch
-                        id="isRecurring"
-                        checked={newEvent.isRecurring}
-                        onCheckedChange={(checked) => setNewEvent({ ...newEvent, isRecurring: checked })}
-                      />
-                    </div>
-                    {newEvent.isRecurring && (
-                      <div className="grid gap-2">
-                        <Label htmlFor="recurrenceType">반복 주기</Label>
-                        <Select
-                          value={newEvent.recurrenceType}
-                          onValueChange={(value) => setNewEvent({ ...newEvent, recurrenceType: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="반복 주기 선택" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="daily">매일</SelectItem>
-                            <SelectItem value="weekly">매주</SelectItem>
-                            <SelectItem value="biweekly">격주</SelectItem>
-                            <SelectItem value="monthly">매월</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </>
-                )}
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddEventOpen(false)}>
-                취소
-              </Button>
-              <Button
-                onClick={handleAddEvent}
-                disabled={
-                  !newEvent.studyGroup ||
-                  !isStudyLeader(studyGroups.find((g) => g.name === newEvent.studyGroup)?.id || 0)
-                }
-              >
-                일정 추가
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-[350px_1fr] gap-6">
-        {/* 캘린더 */}
-        <Card>
-          <CardHeader>
-            <CardTitle>날짜 선택</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Calendar mode="single" selected={date} onSelect={setDate} className="rounded-md border" locale={ko} />
+      {/* 메인 캘린더만 전체 화면에 표시 */}
+      <div className="w-full" ref={calendarRef}>
+        <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-700">
+          <CalendarHeader
+            viewType={calendarView}
+            setViewType={setCalendarView}
+            currentDate={currentDate}
+            setCurrentDate={setCurrentDate}
+            showHiddenEvents={showHiddenEvents}
+            setShowHiddenEvents={setShowHiddenEvents}
+          />
+
+          <CardContent className="p-0">
+            {/* 일별 뷰 - 시간 길이에 맞는 높이 적용 */}
+            {calendarView === "day" && (
+              <div className="bg-white dark:bg-black">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                    {format(currentDate, "yyyy년 M월 d일", { locale: ko })}{" "}
+                    {format(currentDate, "EEEE", { locale: ko })}
+                  </h3>
+                  <p className="text-gray-500 dark:text-gray-400">하루 종일</p>
+                </div>
+
+                <div>
+                  {Array.from({ length: 16 }, (_, i) => i + 7).map((hour) => {
+                    const hourEvents = selectedDateEvents.filter((event) => isEventStartInHour(event, hour))
+                    const isCurrentHour = isSameDay(currentDate, new Date()) && new Date().getHours() === hour
+
+                    return (
+                      <div
+                        key={hour}
+                        className="grid grid-cols-[80px_1fr] border-b border-gray-200 dark:border-gray-700 relative"
+                      >
+                        <div className="py-4 text-right pr-4 text-gray-500 dark:text-gray-400">
+                          {hour < 12 ? "오전" : "오후"} {hour <= 12 ? hour : hour - 12}시
+                        </div>
+                        <div className="py-4 min-h-[60px] relative">
+                          {hourEvents.map((event) => {
+                            const eventHeight = getEventHeight(event)
+                            const topOffset = getEventTopOffset(event, hour)
+
+                            return (
+                              <div
+                                key={event.id}
+                                className="absolute left-1 right-1"
+                                style={{
+                                  top: `${topOffset}px`,
+                                  height: `${eventHeight}px`,
+                                }}
+                              >
+                                {shouldShowAttendanceButtons(event) && (
+                                  <div className="absolute -top-1 -right-1 z-10 flex space-x-1">
+                                    <button
+                                      className="w-5 h-5 rounded-full bg-green-500 text-white flex items-center justify-center"
+                                      onClick={(e) => handleAttendanceClick(event, "attending", e)}
+                                    >
+                                      <Check className="w-3 h-3" />
+                                    </button>
+                                    <button
+                                      className="w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center"
+                                      onClick={(e) => handleAttendanceClick(event, "not_attending", e)}
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                )}
+                                <div
+                                  className={`p-2 rounded-sm cursor-pointer event-item h-full flex flex-col justify-center ${getEventStyle(event)}`}
+                                  style={{ backgroundColor: event.color }}
+                                  onClick={(e) => handleEventClick(event, e)}
+                                >
+                                  <div className="font-medium text-sm flex items-center gap-1">
+                                    {event.isImportant && <Star className="w-3 h-3 text-yellow-500 fill-current" />}
+                                    {event.title}
+                                  </div>
+                                  <div className="text-xs opacity-80">{event.time}</div>
+                                </div>
+                              </div>
+                            )
+                          })}
+
+                          {isCurrentHour && (
+                            <div
+                              className="absolute left-0 right-0 border-t-2 border-red-500 z-10"
+                              style={{ top: `${(new Date().getMinutes() / 60) * 100}%` }}
+                            >
+                              <div className="absolute -top-3 -left-1 bg-red-500 text-white text-xs rounded-sm px-1 py-0.5">
+                                {format(new Date(), "HH:mm")}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 주간 뷰 - 시간 길이에 맞는 높이 적용 */}
+            {calendarView === "week" && (
+              <div className="bg-white dark:bg-black">
+                {/* 헤더 - 날짜 표시 */}
+                <div className="grid grid-cols-[100px_1fr] border-b border-gray-200 dark:border-gray-700">
+                  <div className="py-4 text-center text-gray-500 dark:text-gray-400 font-medium">시간</div>
+                  <div className="grid grid-cols-7">
+                    {weekDays.map((day, i) => {
+                      const isToday = isSameDay(day, new Date())
+                      return (
+                        <div
+                          key={i}
+                          className={`py-4 text-center border-l border-gray-100 dark:border-gray-700 ${
+                            isToday
+                              ? "text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-gray-300/20"
+                              : "text-gray-900 dark:text-gray-100"
+                          }`}
+                        >
+                          <div className="text-base font-medium">{format(day, "d일", { locale: ko })}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            ({format(day, "EEE", { locale: ko })})
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* 시간대별 그리드 */}
+                <div>
+                  {Array.from({ length: 13 }, (_, i) => i + 8).map((hour) => (
+                    <div
+                      key={hour}
+                      className="grid grid-cols-[100px_1fr] border-b border-gray-100 dark:border-gray-700"
+                    >
+                      <div className="py-4 text-right pr-4 text-gray-500 dark:text-gray-400 font-medium bg-gray-50 dark:bg-black">
+                        {hour < 12 ? "오전" : "오후"} {hour <= 12 ? hour : hour - 12}시
+                      </div>
+                      <div className="grid grid-cols-7">
+                        {weekDays.map((day, i) => {
+                          const dayEvents = getEventsForDate(day).filter((event) => isEventStartInHour(event, hour))
+
+                          return (
+                            <div
+                              key={i}
+                              className="border-l border-gray-100 dark:border-gray-700 min-h-[80px] relative"
+                            >
+                              {dayEvents.map((event) => {
+                                const eventHeight = getEventHeightForWeekView(event) // 주간 뷰용 높이 계산 사용
+                                const topOffset = getEventTopOffset(event, hour)
+
+                                return (
+                                  <div
+                                    key={event.id}
+                                    className="absolute left-1 right-1"
+                                    style={{
+                                      top: `${topOffset}px`,
+                                      height: `${eventHeight}px`,
+                                    }}
+                                  >
+                                    {shouldShowAttendanceButtons(event) && (
+                                      <div className="absolute -top-1 -right-1 z-10 flex space-x-1">
+                                        <button
+                                          className="w-4 h-4 rounded-full bg-green-500 text-white flex items-center justify-center"
+                                          onClick={(e) => handleAttendanceClick(event, "attending", e)}
+                                        >
+                                          <Check className="w-2 h-2" />
+                                        </button>
+                                        <button
+                                          className="w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center"
+                                          onClick={(e) => handleAttendanceClick(event, "not_attending", e)}
+                                        >
+                                          <X className="w-2 h-2" />
+                                        </button>
+                                      </div>
+                                    )}
+                                    <div
+                                      className={`p-1 text-xs rounded-sm cursor-pointer event-item h-full flex flex-col justify-center ${getEventStyle(event)}`}
+                                      style={{ backgroundColor: event.color }}
+                                      onClick={(e) => handleEventClick(event, e)}
+                                      title={`${event.title} (${event.time})`}
+                                    >
+                                      <div className="font-medium truncate flex items-center gap-1">
+                                        {event.isImportant && <Star className="w-2 h-2 text-yellow-500 fill-current" />}
+                                        {event.title}
+                                      </div>
+                                      {eventHeight > 40 && (
+                                        <div className="text-xs opacity-80 truncate">{event.time}</div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 월별 뷰 */}
+            {calendarView === "month" && (
+              <div className="bg-white dark:bg-black">
+                <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700">
+                  {["일", "월", "화", "수", "목", "금", "토"].map((day, index) => (
+                    <div key={index} className="py-2 text-center font-medium text-gray-900 dark:text-gray-100">
+                      {day}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-7 auto-rows-fr">
+                  {monthCalendarDays.map((day, i) => {
+                    const dayEvents = getEventsForDate(day)
+                    const isCurrentMonth = day >= monthStart && day <= monthEnd
+                    const isToday = isSameDay(day, new Date())
+
+                    return (
+                      <div
+                        key={i}
+                        className={`min-h-[100px] border-b border-r border-gray-200 dark:border-gray-700 p-1 ${
+                          !isCurrentMonth ? "text-gray-400 dark:text-gray-600 bg-gray-50 dark:bg-gray-900" : ""
+                        }`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div
+                            className={`w-7 h-7 flex items-center justify-center rounded-full ${
+                              isToday ? "bg-blue-500 text-white" : "text-gray-900 dark:text-gray-100"
+                            }`}
+                          >
+                            {format(day, "d")}
+                          </div>
+                        </div>
+
+                        <div className="mt-1 space-y-1">
+                          {dayEvents.map((event) => {
+                            return (
+                              <div key={event.id} className="relative">
+                                {shouldShowAttendanceButtons(event) && (
+                                  <div className="absolute -top-1 -right-1 z-10 flex space-x-1">
+                                    <button
+                                      className="w-5 h-5 rounded-full bg-green-500 text-white flex items-center justify-center"
+                                      onClick={(e) => handleAttendanceClick(event, "attending", e)}
+                                    >
+                                      <Check className="w-3 h-3" />
+                                    </button>
+                                    <button
+                                      className="w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center"
+                                      onClick={(e) => handleAttendanceClick(event, "not_attending", e)}
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                )}
+                                <div
+                                  className={`text-xs py-1 px-2 rounded-sm truncate cursor-pointer event-item ${getEventStyle(event)}`}
+                                  style={{ backgroundColor: event.color }}
+                                  onClick={(e) => handleEventClick(event, e)}
+                                >
+                                  <div className="flex items-center gap-1">
+                                    {event.isImportant && <Star className="w-3 h-3 text-yellow-500 fill-current" />}
+                                    <span className="truncate">{event.title}</span>
+                                  </div>
+                                  {event.time && <div className="text-xs">{event.time}</div>}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* 일정 목록 */}
-        <div className="space-y-6">
-          <Tabs
-            defaultValue="month"
-            value={calendarView}
-            onValueChange={(value) => setCalendarView(value as "day" | "week" | "month")}
-          >
-            <TabsList>
-              <TabsTrigger value="day">일</TabsTrigger>
-              <TabsTrigger value="week">주</TabsTrigger>
-              <TabsTrigger value="month">월</TabsTrigger>
-            </TabsList>
-
-            {/* 일별 뷰에서도 필터링된 이벤트 사용하도록 수정 */}
-            <TabsContent value="day" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>{date ? format(date, "PPP (eee)", { locale: ko }) : "선택된 날짜 없음"}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {filteredSelectedDateEvents.length > 0 ? (
-                    <div className="space-y-4">
-                      {filteredSelectedDateEvents.map((event) => (
-                        <div
-                          key={event.id}
-                          className={`p-4 rounded-lg border cursor-pointer hover:bg-accent ${
-                            eventVisibility[event.id] === false ? "opacity-40 bg-gray-100" : ""
-                          }`}
-                          onClick={() => setSelectedEvent(event)}
-                        >
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <h3 className="font-semibold">{event.title}</h3>
-                                {event.isImportant && <Badge variant="destructive">중요</Badge>}
-                              </div>
-                              <p className="text-sm text-muted-foreground mt-1">{event.studyGroup}</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className={`${completedEvents[event.id] ? "text-green-500" : "text-muted-foreground"}`}
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  toggleEventCompletion(event.id)
-                                }}
-                              >
-                                <CheckCircle className="h-5 w-5" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-muted-foreground"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  toggleEventVisibility(event.id)
-                                }}
-                              >
-                                <XIcon className="h-5 w-5" />
-                              </Button>
-                            </div>
-                          </div>
-                          <div className="mt-2 flex items-center gap-4 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-3.5 w-3.5" />
-                              <span>
-                                {event.startTime} - {event.endTime}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <MapPin className="h-3.5 w-3.5" />
-                              <span>{event.location}</span>
-                            </div>
-                          </div>
-                          {eventNotes[event.id] && (
-                            <div className="mt-2 p-2 bg-muted/50 rounded text-sm">
-                              <p className="text-xs font-medium mb-1">내 메모:</p>
-                              <p className="text-muted-foreground">{eventNotes[event.id]}</p>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <CalendarIcon className="mx-auto h-12 w-12 text-muted-foreground" />
-                      <h3 className="mt-4 text-lg font-semibold">일정 없음</h3>
-                      <p className="text-muted-foreground">선택한 날짜에 예정된 일정이 없습니다.</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* 주간 캘린더 뷰 부분을 수정합니다 - 시간과 날짜 선 정렬 및 스크롤 시 구분선 유지 */}
-            <TabsContent value="week" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>
-                    {weekStart ? format(weekStart, "yyyy년 MM월 dd일", { locale: ko }) : ""} -{" "}
-                    {weekEnd ? format(weekEnd, "MM월 dd일", { locale: ko }) : ""}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-7 gap-2 mb-4">
-                    {weekDays.map((day) => (
-                      <div key={day.toString()} className="text-center">
-                        <div className="font-medium">{format(day, "EEE", { locale: ko })}</div>
-                        <div
-                          className={`text-sm rounded-full w-8 h-8 flex items-center justify-center mx-auto ${
-                            format(day, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd")
-                              ? "bg-primary text-primary-foreground"
-                              : ""
-                          }`}
-                        >
-                          {format(day, "d")}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="relative border rounded-md mt-4">
-                    {/* 날짜 헤더 */}
-                    <div className="grid grid-cols-[64px_1fr_1fr_1fr_1fr_1fr_1fr_1fr] border-b">
-                      <div className="p-2 text-center border-r"></div>
-                      {weekDays.map((day) => (
-                        <div
-                          key={day.toString()}
-                          className="p-2 text-center border-r last:border-r-0"
-                          onClick={() => setDate(day)}
-                        >
-                          <div className="text-sm font-medium">{format(day, "M/d")}</div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="relative overflow-auto" style={{ height: "600px" }}>
-                      <div
-                        className="grid grid-cols-[64px_1fr_1fr_1fr_1fr_1fr_1fr_1fr] min-w-full"
-                        style={{ height: "1280px" }}
-                      >
-                        {/* 시간 표시 - 고정 위치 */}
-                        <div className="sticky left-0 top-0 bottom-0 z-20 bg-background border-r h-full">
-                          {timeSlots.map((time, index) => (
-                            <div
-                              key={time}
-                              className="h-10 text-xs text-muted-foreground px-2 flex items-center border-t border-dashed border-muted"
-                              style={{ height: "40px" }}
-                            >
-                              {time}
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* 요일 컬럼 */}
-                        {weekDays.map((day, dayIndex) => (
-                          <div key={day.toString()} className="relative" style={{ height: "1280px" }}>
-                            {/* 시간 그리드 라인 */}
-                            {timeSlots.map((time, index) => (
-                              <div
-                                key={`grid-${day}-${time}`}
-                                className="absolute left-0 right-0 border-t border-dashed border-muted"
-                                style={{ top: `${index * 40}px`, height: "1px", width: "100%" }}
-                              />
-                            ))}
-
-                            {/* 세로 구분선 */}
-                            {dayIndex < 6 && (
-                              <div
-                                className="absolute top-0 bottom-0 right-0 border-r border-muted"
-                                style={{ height: "100%" }}
-                              />
-                            )}
-
-                            {/* 해당 요일의 이벤트 */}
-                            {filteredWeekEvents
-                              .filter((event) => event.date === format(day, "yyyy-MM-dd"))
-                              .map((event) => (
-                                <div
-                                  key={event.id}
-                                  className={`absolute rounded-md p-2 text-xs overflow-hidden cursor-pointer border ${
-                                    eventVisibility[event.id] === false
-                                      ? "bg-gray-100 border-gray-200 text-gray-400"
-                                      : event.isImportant
-                                        ? "bg-red-100 border-red-300"
-                                        : "bg-blue-100 border-blue-300"
-                                  }`}
-                                  style={{
-                                    top: `${getEventPosition(event.startTime)}px`,
-                                    height: `${getEventHeight(event.startTime, event.endTime)}px`,
-                                    left: "4px",
-                                    right: "4px",
-                                    zIndex: 5,
-                                  }}
-                                  onClick={() => setSelectedEvent(event)}
-                                >
-                                  <div className="flex justify-between items-start">
-                                    <div className="font-medium truncate">{event.title}</div>
-                                    <div className="flex gap-1">
-                                      <button
-                                        className={`h-4 w-4 ${completedEvents[event.id] ? "text-green-500" : "text-muted-foreground/50"}`}
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          toggleEventCompletion(event.id)
-                                        }}
-                                      >
-                                        <CheckCircle className="h-4 w-4" />
-                                      </button>
-                                      <button
-                                        className="h-4 w-4 text-muted-foreground/50"
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          toggleEventVisibility(event.id)
-                                        }}
-                                      >
-                                        <XIcon className="h-4 w-4" />
-                                      </button>
-                                    </div>
-                                  </div>
-                                  <div className="truncate">
-                                    {event.startTime} - {event.endTime}
-                                  </div>
-                                </div>
-                              ))}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* 월별 뷰에서도 필터링된 이벤트 사용하도록 수정 */}
-            <TabsContent value="month" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>{date ? format(date, "yyyy년 MM월", { locale: ko }) : "선택된 월 없음"}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-7 gap-1">
-                    {["월", "화", "수", "목", "금", "토", "일"].map((day) => (
-                      <div key={day} className="text-center font-medium p-2">
-                        {day}
-                      </div>
-                    ))}
-
-                    {/* 월 시작 전 빈 셀 채우기 */}
-                    {Array.from({ length: getMonthStartOffset(monthStart as Date) }).map((_, index) => (
-                      <div key={`empty-start-${index}`} className="p-2 min-h-[100px]" />
-                    ))}
-
-                    {/* 월 날짜 */}
-                    {monthDays.map((day) => (
-                      <div
-                        key={day.toString()}
-                        className={`p-2 border rounded-md min-h-[100px] ${
-                          format(day, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd") ? "bg-accent/30" : ""
-                        } ${
-                          date && format(day, "yyyy-MM-dd") === format(date, "yyyy-MM-dd") ? "ring-2 ring-primary" : ""
-                        }`}
-                        onClick={() => setDate(day)}
-                      >
-                        <div className="text-right mb-1">{format(day, "d")}</div>
-                        <div className="space-y-1">
-                          {filteredMonthEvents
-                            .filter((event) => event.date === format(day, "yyyy-MM-dd"))
-                            .slice(0, 3)
-                            .map((event) => (
-                              <div
-                                key={event.id}
-                                className={`text-xs p-1 rounded truncate flex justify-between items-center ${
-                                  eventVisibility[event.id] === false
-                                    ? "bg-gray-100 text-gray-400"
-                                    : event.isImportant
-                                      ? "bg-red-100"
-                                      : "bg-blue-100"
-                                }`}
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setSelectedEvent(event)
-                                }}
-                              >
-                                <span className="truncate">{event.title}</span>
-                                <div className="flex gap-1 flex-shrink-0">
-                                  <button
-                                    className={`h-3 w-3 ${completedEvents[event.id] ? "text-green-500" : "text-muted-foreground/50"}`}
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      toggleEventCompletion(event.id)
-                                    }}
-                                  >
-                                    <CheckCircle className="h-3 w-3" />
-                                  </button>
-                                  <button
-                                    className="h-3 w-3 text-muted-foreground/50"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      toggleEventVisibility(event.id)
-                                    }}
-                                  >
-                                    <XIcon className="h-3 w-3" />
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          {filteredMonthEvents.filter((event) => event.date === format(day, "yyyy-MM-dd")).length >
-                            3 && (
-                            <div className="text-xs text-muted-foreground text-center">
-                              +
-                              {filteredMonthEvents.filter((event) => event.date === format(day, "yyyy-MM-dd")).length -
-                                3}{" "}
-                              더보기
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-
-                    {/* 월 끝 후 빈 셀 채우기 */}
-                    {Array.from({ length: getMonthEndOffset(monthEnd as Date) }).map((_, index) => (
-                      <div key={`empty-end-${index}`} className="p-2 min-h-[100px]" />
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
+        {/* 이벤트 팝업 */}
+        {selectedEvent && (
+          <EventPopup
+            event={selectedEvent}
+            position={popupPosition}
+            onClose={() => setSelectedEvent(null)}
+            onAttendanceChange={updateEventAttendance}
+            onNoteChange={updateEventNote}
+            onImportanceChange={updateEventImportance}
+          />
+        )}
       </div>
-
-      {/* 일정 상세 정보 다이얼로그 */}
-      <Dialog open={!!selectedEvent} onOpenChange={(open) => !open && setSelectedEvent(null)}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {selectedEvent?.title}
-              {selectedEvent?.isImportant && <Badge variant="destructive">중요</Badge>}
-            </DialogTitle>
-            <DialogDescription>{selectedEvent?.studyGroup}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="flex items-center gap-2">
-              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-              <span>{selectedEvent?.date}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <span>
-                {selectedEvent?.startTime} - {selectedEvent?.endTime}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-muted-foreground" />
-              <span>{selectedEvent?.location}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              <span>{selectedEvent?.studyGroup}</span>
-            </div>
-            {selectedEvent?.description && (
-              <div className="pt-2 border-t">
-                <h4 className="text-sm font-medium mb-2">설명</h4>
-                <p className="text-sm text-muted-foreground">{selectedEvent.description}</p>
-              </div>
-            )}
-
-            {/* 메모 및 가시성 설정 */}
-            <div className="pt-2 border-t">
-              <h4 className="text-sm font-medium mb-2">내 메모</h4>
-              <Textarea
-                placeholder="이 일정에 대한 개인 메모를 입력하세요"
-                value={selectedEvent ? eventNotes[selectedEvent.id] || "" : ""}
-                onChange={(e) => {
-                  if (selectedEvent) {
-                    setEventNotes((prev) => ({
-                      ...prev,
-                      [selectedEvent.id]: e.target.value,
-                    }))
-                  }
-                }}
-                rows={3}
-                className="mb-2"
-              />
-
-              <div className="flex items-center justify-between mt-4">
-                <Label htmlFor="eventVisibility" className="text-sm">
-                  일정 표시 여부
-                </Label>
-                <Switch
-                  id="eventVisibility"
-                  checked={selectedEvent ? eventVisibility[selectedEvent.id] !== false : true}
-                  onCheckedChange={(checked) => {
-                    if (selectedEvent) {
-                      toggleEventVisibility(selectedEvent.id)
-                    }
-                  }}
-                />
-              </div>
-
-              <div className="flex items-center justify-between mt-4">
-                <Label htmlFor="eventCompletion" className="text-sm">
-                  일정 완료 여부
-                </Label>
-                <Switch
-                  id="eventCompletion"
-                  checked={selectedEvent ? completedEvents[selectedEvent.id] === true : false}
-                  onCheckedChange={(checked) => {
-                    if (selectedEvent) {
-                      toggleEventCompletion(selectedEvent.id)
-                    }
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedEvent(null)}>
-              닫기
-            </Button>
-            {selectedEvent && (
-              <Button
-                onClick={() => {
-                  if (selectedEvent) {
-                    updateEventNotes(selectedEvent.id, eventNotes[selectedEvent.id] || "")
-                  }
-                  setSelectedEvent(null)
-                }}
-              >
-                저장
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
-}
-
-// 월 시작 요일 오프셋 계산 (월요일 시작)
-function getMonthStartOffset(date: Date) {
-  const day = date.getDay()
-  return day === 0 ? 6 : day - 1
-}
-
-// 월 끝 요일 오프셋 계산 (월요일 시작)
-function getMonthEndOffset(date: Date) {
-  const day = date.getDay()
-  return day === 0 ? 0 : 7 - day
 }
