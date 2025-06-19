@@ -61,8 +61,8 @@ async function apiClient(endpoint: string, options: RequestOptions = {}) {
       status: response.status,
       data
     });
-
-    if (!response.ok) {
+    
+    if (!response.ok && response.status !== 302) {
       if (response.status === 401) {
         // 401 에러 발생 시 로그인 페이지로 리다이렉트
         window.location.href = '/login';

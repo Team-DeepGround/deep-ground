@@ -13,7 +13,7 @@ import { X } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
 import FileUpload from "@/components/file-upload"
-import { Checkbox } from "@/components/ui/checkbox"
+import { Checkbox } from "@/components/ui/checkbox
 import { api } from "@/lib/api-client"
 
 export default function CreateQuestionPage() {
@@ -27,60 +27,7 @@ export default function CreateQuestionPage() {
   const [uploadedImages, setUploadedImages] = useState<File[]>([])
 
   // 미리 정의된 태그 목록 추가
-  const predefinedTags = [
-    "JavaScript",
-    "TypeScript",
-    "React",
-    "Next.js",
-    "Vue.js",
-    "Angular",
-    "Node.js",
-    "Express",
-    "NestJS",
-    "Spring",
-    "Django",
-    "Flask",
-    "Java",
-    "Python",
-    "C#",
-    "Go",
-    "Rust",
-    "PHP",
-    "Ruby",
-    "HTML",
-    "CSS",
-    "Tailwind",
-    "Bootstrap",
-    "SASS",
-    "GraphQL",
-    "REST API",
-    "SQL",
-    "NoSQL",
-    "MongoDB",
-    "PostgreSQL",
-    "MySQL",
-    "AWS",
-    "Azure",
-    "GCP",
-    "Docker",
-    "Kubernetes",
-    "CI/CD",
-    "Git",
-    "GitHub",
-    "GitLab",
-    "Testing",
-    "TDD",
-    "DevOps",
-    "Algorithm",
-    "Data Structure",
-    "Machine Learning",
-    "AI",
-    "Frontend",
-    "Backend",
-    "Database",
-    "Mobile",
-    "Web",
-  ]
+  const predefinedTags = AVAILABLE_TECH_TAGS
 
   const handleTagToggle = (tag: string) => {
     if (tags.includes(tag)) {

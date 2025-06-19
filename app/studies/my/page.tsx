@@ -1,195 +1,255 @@
 "use client"
+
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Calendar, Users, MapPin, Plus } from "lucide-react"
-import { useAuth } from "@/hooks/use-auth"
-import Link from "next/link"
+import { Plus } from "lucide-react"
+import { api } from "@/lib/api-client"
+import { StudyList } from "@/components/studies/my/StudyList"
+import { useToast } from "@/components/ui/use-toast"
+import { Separator } from "@/components/ui/separator"
+import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card"
+
+interface MyStudy {
+  id: number
+  title: string
+  createdAt: string
+  groupStatus: "RECRUITING" | "IN_PROGRESS" | "COMPLETED"
+}
+
+interface JoinedStudy {
+  studyGroupId: number
+  title: string
+  createdBy: string
+  participatedAt: string
+}
+
+const ITEMS_PER_PAGE = 8
 
 export default function MyStudiesPage() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { toast } = useToast()
+  const [createdStudies, setCreatedStudies] = useState<MyStudy[]>([])
+  const [joinedStudies, setJoinedStudies] = useState<MyStudy[]>([])
+  const [createdCurrentPage, setCreatedCurrentPage] = useState(1)
+  const [joinedCurrentPage, setJoinedCurrentPage] = useState(1)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // 내가 만든 스터디
-  const createdStudies = [
-    {
-      id: 2,
-      title: "알고리즘 문제 풀이 스터디",
-      description: "매주 알고리즘 문제를 함께 풀고 리뷰하는 스터디입니다.",
-      members: 8,
-      maxMembers: 10,
-      dates: "2023.05.15 ~ 2023.07.15",
-      isOnline: true,
-      tags: ["Algorithm", "Data Structure", "Problem Solving"],
-      location: null,
-    },
-    {
-      id: 5,
-      title: "모던 자바스크립트 심화 학습",
-      description: "ES6+ 기능과 최신 자바스크립트 패턴을 학습하는 스터디입니다.",
-      members: 5,
-      maxMembers: 12,
-      dates: "2023.07.01 ~ 2023.08.31",
-      isOnline: false,
-      tags: ["JavaScript", "ES6", "Frontend"],
-      location: "서울 송파구",
-    },
-  ]
+  // 데이터 가져오기
+  useEffect(() => {
+    const fetchStudies = async () => {
+      try {
+        setError(null)
+        const createdResponse = await api.get("/study-group/my")
+        if (createdResponse.status === 200 && createdResponse.result) {
+          setCreatedStudies(createdResponse.result)
+        } else if (createdResponse.status === 401) {
+          toast({
+            title: "로그인이 필요합니다",
+            description: "스터디 목록을 보려면 로그인해주세요.",
+            variant: "destructive",
+          })
+          router.push("/auth/login")
+          return
+        }
 
-  // 참여 중인 스터디
-  const joinedStudies = [
-    {
-      id: 1,
-      title: "React와 Next.js 마스터하기",
-      description: "React와 Next.js의 기본부터 고급 기능까지 함께 학습하는 스터디입니다.",
-      members: 6,
-      maxMembers: 8,
-      dates: "2023.05.01 ~ 2023.06.30",
-      isOnline: true,
-      tags: ["React", "Next.js", "Frontend"],
-      location: null,
-    },
-    {
-      id: 3,
-      title: "백엔드 개발자를 위한 Spring Boot",
-      description: "Spring Boot를 활용한 백엔드 개발 스터디입니다.",
-      members: 4,
-      maxMembers: 6,
-      dates: "2023.06.01 ~ 2023.08.31",
-      isOnline: false,
-      tags: ["Java", "Spring Boot", "Backend"],
-      location: "서울 강남구",
-    },
-  ]
+        const joinedResponse = await api.get("/study-group/joined")
+        if (joinedResponse.status === 200 && joinedResponse.result) {
+          // 참여한 스터디 데이터 형식 변환
+          const formattedJoinedStudies: MyStudy[] = joinedResponse.result.map((study: JoinedStudy) => ({
+            id: study.studyGroupId,
+            title: study.title,
+            createdAt: study.participatedAt,
+            groupStatus: "IN_PROGRESS" as const // 참여한 스터디는 진행중 상태로 표시
+          }))
+          setJoinedStudies(formattedJoinedStudies)
+        } else if (joinedResponse.status === 401) {
+          toast({
+            title: "로그인이 필요합니다",
+            description: "스터디 목록을 보려면 로그인해주세요.",
+            variant: "destructive",
+          })
+          router.push("/auth/login")
+          return
+        }
+      } catch (error) {
+        console.error("Failed to fetch studies:", error)
+        setError("스터디 목록을 불러오는데 실패했습니다")
+        toast({
+          title: "스터디 목록을 불러오는데 실패했습니다",
+          description: "잠시 후 다시 시도해주세요.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-  // 스터디 카드 컴포넌트
-  const StudyCard = ({ study, isCreated = false }) => (
-    <Card className="hover:bg-accent/50 transition-colors">
-      <CardContent className="p-4">
-        <div className="flex justify-between items-start gap-4">
-          <div className="flex-1 min-w-0">
-            <h3 className="font-medium text-lg truncate">{study.title}</h3>
-            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{study.description}</p>
+    fetchStudies()
+  }, [router, toast])
+
+  // 페이지 번호 리셋
+  useEffect(() => {
+    const createdTotalPages = Math.ceil(createdStudies.length / ITEMS_PER_PAGE)
+    const joinedTotalPages = Math.ceil(joinedStudies.length / ITEMS_PER_PAGE)
+
+    if (createdCurrentPage > createdTotalPages && createdTotalPages > 0) {
+      setCreatedCurrentPage(1)
+    }
+    if (joinedCurrentPage > joinedTotalPages && joinedTotalPages > 0) {
+      setJoinedCurrentPage(1)
+    }
+  }, [createdStudies, joinedStudies, createdCurrentPage, joinedCurrentPage])
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-3xl font-bold">내 스터디</h1>
+            <div className="h-10 w-32 bg-muted rounded animate-pulse" />
           </div>
-          <Badge variant={study.isOnline ? "default" : "outline"} className="whitespace-nowrap flex-shrink-0">
-            {study.isOnline ? "온라인" : "오프라인"}
-          </Badge>
-        </div>
 
-        <div className="flex flex-wrap gap-1.5 mt-3">
-          {study.tags.map((tag) => (
-            <Badge key={tag} variant="secondary" className="font-normal">
-              {tag}
-            </Badge>
-          ))}
-        </div>
+          <div className="space-y-12">
+            <div>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold">내가 만든 스터디</h2>
+                <div className="h-5 w-12 bg-muted rounded animate-pulse" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {[1, 2, 3, 4].map((i) => (
+                  <Card key={i} className="overflow-hidden">
+                    <CardHeader className="p-4 pb-2">
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="h-5 bg-muted rounded animate-pulse mb-1.5 w-2/3" />
+                          <div className="flex items-center gap-1">
+                            <div className="h-3.5 w-3.5 bg-muted rounded animate-pulse" />
+                            <div className="h-3.5 bg-muted rounded animate-pulse w-20" />
+                          </div>
+                        </div>
+                        <div className="h-5 w-16 bg-muted rounded animate-pulse" />
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <div className="h-3.5 w-3.5 bg-muted rounded animate-pulse" />
+                          <div className="h-3.5 bg-muted rounded animate-pulse w-20" />
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="h-3.5 w-3.5 bg-muted rounded animate-pulse" />
+                          <div className="h-3.5 bg-muted rounded animate-pulse w-12" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
 
-        <div className="flex flex-wrap items-center justify-between mt-4 gap-2">
-          <div className="flex flex-wrap items-center gap-4">
-            <p className="text-sm text-muted-foreground flex items-center">
-              <Calendar className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
-              <span className="truncate">{study.dates}</span>
-            </p>
-            <p className="text-sm text-muted-foreground flex items-center">
-              <Users className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
-              <span>
-                {study.members}/{study.maxMembers}명
-              </span>
-            </p>
-            {study.location && (
-              <p className="text-sm text-muted-foreground flex items-center">
-                <MapPin className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
-                <span className="truncate">{study.location}</span>
-              </p>
-            )}
+            <div className="h-px bg-border" />
+
+            <div>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold">내가 참여한 스터디</h2>
+                <div className="h-5 w-12 bg-muted rounded animate-pulse" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {[1, 2, 3, 4].map((i) => (
+                  <Card key={i} className="overflow-hidden">
+                    <CardHeader className="p-4 pb-2">
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="h-5 bg-muted rounded animate-pulse mb-1.5 w-2/3" />
+                          <div className="flex items-center gap-1">
+                            <div className="h-3.5 w-3.5 bg-muted rounded animate-pulse" />
+                            <div className="h-3.5 bg-muted rounded animate-pulse w-20" />
+                          </div>
+                        </div>
+                        <div className="h-5 w-16 bg-muted rounded animate-pulse" />
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <div className="h-3.5 w-3.5 bg-muted rounded animate-pulse" />
+                          <div className="h-3.5 bg-muted rounded animate-pulse w-20" />
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="h-3.5 w-3.5 bg-muted rounded animate-pulse" />
+                          <div className="h-3.5 bg-muted rounded animate-pulse w-12" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
           </div>
-          <Button
-            size="sm"
-            className="flex-shrink-0"
-            onClick={() => {
-              if (isCreated) {
-                router.push(`/studies/manage/${study.id}`)
-              } else {
-                router.push(`/studies/${study.id}`)
-              }
-            }}
-          >
-            {isCreated ? "관리하기" : "상세보기"}
-          </Button>
         </div>
-      </CardContent>
-    </Card>
-  )
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-5xl mx-auto text-center">
+          <h2 className="text-2xl font-bold text-red-500 mb-4">{error}</h2>
+          <Button onClick={() => window.location.reload()}>다시 시도</Button>
+        </div>
+      </div>
+    )
+  }
+
+  const createdTotalPages = Math.ceil(createdStudies.length / ITEMS_PER_PAGE)
+  const joinedTotalPages = Math.ceil(joinedStudies.length / ITEMS_PER_PAGE)
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-5xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold">내 스터디</h1>
-          <Button asChild>
-            <Link href="/studies/create">
-              <Plus className="mr-2 h-4 w-4" />
-              스터디 개설하기
-            </Link>
+          <Button onClick={() => router.push("/studies/create")}>
+            <Plus className="mr-2 h-4 w-4" />
+            스터디 만들기
           </Button>
         </div>
 
-        <div className="space-y-10">
+        <div className="space-y-12">
           {/* 내가 만든 스터디 */}
           <div>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">내가 만든 스터디</h2>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold">내가 만든 스터디</h2>
               <span className="text-sm text-muted-foreground">{createdStudies.length}개</span>
             </div>
-
-            {createdStudies.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {createdStudies.map((study) => (
-                  <StudyCard key={study.id} study={study} isCreated={true} />
-                ))}
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <p className="text-muted-foreground">아직 만든 스터디가 없습니다.</p>
-                  <Button className="mt-4" asChild>
-                    <Link href="/studies/create">스터디 개설하기</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
+            <StudyList 
+              studies={createdStudies}
+              emptyMessage="아직 만든 스터디가 없습니다."
+              isCreated
+              currentPage={createdCurrentPage}
+              totalPages={createdTotalPages}
+              onPageChange={setCreatedCurrentPage}
+            />
           </div>
+
+          <Separator className="my-8" />
 
           {/* 내가 참여한 스터디 */}
           <div>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">내가 참여한 스터디</h2>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold">내가 참여한 스터디</h2>
               <span className="text-sm text-muted-foreground">{joinedStudies.length}개</span>
             </div>
-
-            {joinedStudies.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {joinedStudies.map((study) => (
-                  <StudyCard key={study.id} study={study} />
-                ))}
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <p className="text-muted-foreground">아직 참여한 스터디가 없습니다.</p>
-                  <Button className="mt-4" asChild>
-                    <Link href="/studies">스터디 찾아보기</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          <div className="flex justify-center mt-6">
-            <Button asChild variant="outline">
-              <Link href="/studies">다른 스터디 찾기</Link>
-            </Button>
+            <StudyList 
+              studies={joinedStudies}
+              emptyMessage="아직 참여한 스터디가 없습니다."
+              currentPage={joinedCurrentPage}
+              totalPages={joinedTotalPages}
+              onPageChange={setJoinedCurrentPage}
+            />
           </div>
         </div>
       </div>
