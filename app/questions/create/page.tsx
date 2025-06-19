@@ -14,7 +14,6 @@ import { useToast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
 import FileUpload from "@/components/file-upload"
 import { Checkbox } from "@/components/ui/checkbox"
-import { apiClient } from "@/lib/api-client"
 import { api } from "@/lib/api-client"
 
 export default function CreateQuestionPage() {
@@ -144,7 +143,7 @@ export default function CreateQuestionPage() {
     uploadedImages.forEach(file => formData.append("image", file))
 
     try {
-      await apiClient("/questions", {
+      await api.post("/questions", {
         method: "POST",
         body: formData,
         headers: {},
