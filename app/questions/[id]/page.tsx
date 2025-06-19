@@ -37,40 +37,41 @@ export default function QuestionDetailPage() {
   // 답변 데이터 상태
   const [answers, setAnswers] = useState<any[]>([])
 
-  useEffect(() => {
-    async function fetchQuestion() {
-      setLoading(true)
-      try {
-        const res = await api.get(`/questions/${params.id}`)
-        // 백엔드 응답이 { result: { question: { ... }, answers: [...] } } 또는 { result: { ... } } 형태일 수 있으니 유연하게 처리
-        const q = res.result?.question || res.result;
-        setQuestion(q)
-        // 답변 데이터도 함께 받아오기
-        if (res.result?.answers) {
-          setAnswers(res.result.answers)
-        } else if (q?.answers) {
-          setAnswers(q.answers)
-        } else {
-          setAnswers([])
-        }
-        // 디버깅: 유저와 질문 작성자 정보 콘솔 출력
-        console.log('user:', user)
-        console.log('question:', q)
-        console.log('question.author:', q?.author)
-        console.log('question.memberId:', q?.memberId)
-        console.log('question.email:', q?.email)
-        console.log('question.nickname:', q?.nickname)
-        console.log('question.author.name:', q?.author?.name)
-        console.log('user.name:', user?.name)
-        console.log('user.email:', user?.email)
-        console.log('user.id:', user?.id)
-      } catch (e) {
-        setQuestion(null)
+  const fetchQuestion = async () => {
+    setLoading(true)
+    try {
+      const res = await api.get(`/questions/${params.id}`)
+      const q = res.result?.question || res.result
+      setQuestion(q)
+      if (res.result?.answers) {
+        console.log('답변 데이터:', res.result.answers)
+        setAnswers(res.result.answers)
+      } else if (q?.answers) {
+        console.log('답변 데이터:', q.answers)
+        setAnswers(q.answers)
+      } else {
         setAnswers([])
-      } finally {
-        setLoading(false)
       }
+      // 디버깅: 유저와 질문 작성자 정보 콘솔 출력
+      console.log('user:', user)
+      console.log('question:', q)
+      console.log('question.author:', q?.author)
+      console.log('question.memberId:', q?.memberId)
+      console.log('question.email:', q?.email)
+      console.log('question.nickname:', q?.nickname)
+      console.log('question.author.name:', q?.author?.name)
+      console.log('user.name:', user?.name)
+      console.log('user.email:', user?.email)
+      console.log('user.id:', user?.id)
+    } catch (e) {
+      setQuestion(null)
+      setAnswers([])
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     if (params.id) fetchQuestion()
   }, [params.id])
 
@@ -87,7 +88,7 @@ export default function QuestionDetailPage() {
     setUploadedImages((prev) => prev.filter((_, i) => i !== index))
   }
 
-  const handleSubmitAnswer = () => {
+  const handleSubmitAnswer = async () => {
     if (!answerContent.trim()) {
       toast({
         title: "답변 내용 필요",
@@ -106,18 +107,36 @@ export default function QuestionDetailPage() {
       return
     }
 
-    // 답변 등록 로직 (실제로는 API 호출)
-    toast({
-      title: "답변 등록 성공",
-      description:
-        uploadedImages.length > 0
-          ? `답변과 ${uploadedImages.length}개의 이미지가 성공적으로 등록되었습니다.`
-          : "답변이 성공적으로 등록되었습니다.",
-    })
+    // FormData 생성
+    const formData = new FormData()
+    formData.append("answerContent", answerContent)
+    formData.append("questionId", params.id as string)
+    uploadedImages.forEach(file => formData.append("images", file))
 
-    // 입력 초기화
-    setAnswerContent("")
-    setUploadedImages([])
+    try {
+      await api.post(`/answers`, formData)
+
+      toast({
+        title: "답변 등록 성공",
+        description:
+          uploadedImages.length > 0
+            ? `답변과 ${uploadedImages.length}개의 이미지가 성공적으로 등록되었습니다.`
+            : "답변이 성공적으로 등록되었습니다.",
+      })
+
+      // 입력 초기화
+      setAnswerContent("")
+      setUploadedImages([])
+
+      // 답변 목록 새로고침
+      fetchQuestion()
+    } catch (error: any) {
+      toast({
+        title: "답변 등록 실패",
+        description: error?.message || "답변 등록 중 오류가 발생했습니다.",
+        variant: "destructive",
+      })
+    }
   }
 
   // handleLikeAnswer 함수 추가 (다른 핸들러 함수들 근처에)
@@ -176,6 +195,8 @@ export default function QuestionDetailPage() {
       description: "답변에 댓글이 등록되었습니다.",
     })
   }
+
+  if (loading) return <div className="text-center py-20">질문을 불러오는 중...</div>
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -297,11 +318,11 @@ export default function QuestionDetailPage() {
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
                     <Avatar>
-                      <AvatarImage src={answer.author.avatar || "/placeholder.svg"} alt={answer.author.name} />
-                      <AvatarFallback>{answer.author.name[0]}</AvatarFallback>
+                      <AvatarImage src="/placeholder.svg" alt={`User ${answer.memberId}`} />
+                      <AvatarFallback>{answer.memberId}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <div className="font-medium">{answer.author.name}</div>
+                      <div className="font-medium">User {answer.memberId}</div>
                       <div className="text-xs text-muted-foreground">
                         {answer.createdAt ? new Date(answer.createdAt).toISOString().slice(0, 10) : ''}
                       </div>
@@ -328,9 +349,8 @@ export default function QuestionDetailPage() {
               </CardHeader>
               <CardContent className="pt-0">
                 <div className="prose max-w-none">
-                  <p className="whitespace-pre-line">{answer.content}</p>
+                  <p className="whitespace-pre-line">{answer.answerContent}</p>
 
-                  {/* 답변 이미지 */}
                   {answer.images && answer.images.length > 0 && (
                     <div className="mt-4 space-y-4">
                       {answer.images.map((image: any, idx: number) => (
@@ -352,32 +372,61 @@ export default function QuestionDetailPage() {
                   <Button
                     variant="ghost"
                     size="sm"
+                    onClick={() => router.push(`/answers/${answer.answerId}/edit`)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={async () => {
+                      if (window.confirm('정말로 이 답변을 삭제하시겠습니까?')) {
+                        try {
+                          await api.delete(`/answers/${answer.answerId}`)
+                          toast({
+                            title: "답변 삭제 성공",
+                            description: "답변이 성공적으로 삭제되었습니다.",
+                          })
+                          fetchQuestion()
+                        } catch (error: any) {
+                          toast({
+                            title: "답변 삭제 실패",
+                            description: error?.message || "답변 삭제 중 오류가 발생했습니다.",
+                            variant: "destructive"
+                          })
+                        }
+                      }
+                    }}
+                  >
+                    <Trash className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => setShowCommentInput(showCommentInput === answer.id ? null : answer.id)}
                   >
                     댓글 달기
                   </Button>
                 </div>
 
-                {/* 댓글 목록 */}
                 {(answerCommentsData[answer.id]?.length > 0 || showCommentInput === answer.id) && (
                   <div className="w-full border-t pt-4 mt-2">
                     <h4 className="text-sm font-medium mb-3">댓글</h4>
 
-                    {/* 기존 댓글 표시 */}
                     {answerCommentsData[answer.id]?.length > 0 && (
                       <div className="space-y-3 mb-4">
                         {answerCommentsData[answer.id].map((comment: any, idx: number) => (
                           <div key={(comment.id ?? idx) + '-' + idx} className="flex gap-2">
                             <Avatar className="h-6 w-6">
                               <AvatarImage
-                                src={comment.author.avatar || "/placeholder.svg"}
-                                alt={comment.author.name}
+                                src={comment.member?.avatar || "/placeholder.svg"}
+                                alt={comment.member?.nickname || "알 수 없음"}
                               />
-                              <AvatarFallback>{comment.author.name[0]}</AvatarFallback>
+                              <AvatarFallback>{comment.member?.nickname?.[0] || "?"}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
-                                <span className="text-xs font-medium">{comment.author.name}</span>
+                                <span className="text-xs font-medium">{comment.member?.nickname || "알 수 없음"}</span>
                                 <span className="text-xs text-muted-foreground">
                                   {comment.createdAt ? new Date(comment.createdAt).toISOString().slice(0, 10) : ''}
                                 </span>
@@ -389,7 +438,6 @@ export default function QuestionDetailPage() {
                       </div>
                     )}
 
-                    {/* 댓글 입력 폼 */}
                     {showCommentInput === answer.id && (
                       <div className="flex gap-2">
                         <Textarea
@@ -429,11 +477,11 @@ export default function QuestionDetailPage() {
             />
 
             <div className="space-y-2">
-              <Label htmlFor="answer-images" className="...">이미지 첨부</Label>
+              <Label htmlFor="answer-images">이미지 첨부</Label>
               <FileUpload
                 onFileSelect={handleImageUpload}
                 accept="image/*"
-                maxSize={5} // 5MB
+                maxSize={5}
                 multiple={true}
                 buttonText="이미지 선택"
               />
