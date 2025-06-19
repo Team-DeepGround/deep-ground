@@ -37,42 +37,41 @@ export default function QuestionDetailPage() {
   // 답변 데이터 상태
   const [answers, setAnswers] = useState<any[]>([])
 
-  useEffect(() => {
-    async function fetchQuestion() {
-      setLoading(true)
-      try {
-        const res = await api.get(`/questions/${params.id}`)
-        // 백엔드 응답이 { result: { question: { ... }, answers: [...] } } 또는 { result: { ... } } 형태일 수 있으니 유연하게 처리
-        const q = res.result?.question || res.result
-        setQuestion(q)
-        // 답변 데이터도 함께 받아오기
-        if (res.result?.answers) {
-          console.log('답변 데이터:', res.result.answers)
-          setAnswers(res.result.answers)
-        } else if (q?.answers) {
-          console.log('답변 데이터:', q.answers)
-          setAnswers(q.answers)
-        } else {
-          setAnswers([])
-        }
-        // 디버깅: 유저와 질문 작성자 정보 콘솔 출력
-        console.log('user:', user)
-        console.log('question:', q)
-        console.log('question.author:', q?.author)
-        console.log('question.memberId:', q?.memberId)
-        console.log('question.email:', q?.email)
-        console.log('question.nickname:', q?.nickname)
-        console.log('question.author.name:', q?.author?.name)
-        console.log('user.name:', user?.name)
-        console.log('user.email:', user?.email)
-        console.log('user.id:', user?.id)
-      } catch (e) {
-        setQuestion(null)
+  const fetchQuestion = async () => {
+    setLoading(true)
+    try {
+      const res = await api.get(`/questions/${params.id}`)
+      const q = res.result?.question || res.result
+      setQuestion(q)
+      if (res.result?.answers) {
+        console.log('답변 데이터:', res.result.answers)
+        setAnswers(res.result.answers)
+      } else if (q?.answers) {
+        console.log('답변 데이터:', q.answers)
+        setAnswers(q.answers)
+      } else {
         setAnswers([])
-      } finally {
-        setLoading(false)
       }
+      // 디버깅: 유저와 질문 작성자 정보 콘솔 출력
+      console.log('user:', user)
+      console.log('question:', q)
+      console.log('question.author:', q?.author)
+      console.log('question.memberId:', q?.memberId)
+      console.log('question.email:', q?.email)
+      console.log('question.nickname:', q?.nickname)
+      console.log('question.author.name:', q?.author?.name)
+      console.log('user.name:', user?.name)
+      console.log('user.email:', user?.email)
+      console.log('user.id:', user?.id)
+    } catch (e) {
+      setQuestion(null)
+      setAnswers([])
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     if (params.id) fetchQuestion()
   }, [params.id])
 
@@ -130,15 +129,7 @@ export default function QuestionDetailPage() {
       setUploadedImages([])
 
       // 답변 목록 새로고침
-      const res = await api.get(`/questions/${params.id}`)
-      const q = res.result?.question || res.result
-      if (res.result?.answers) {
-        setAnswers(res.result.answers)
-      } else if (q?.answers) {
-        setAnswers(q.answers)
-      } else {
-        setAnswers([])
-      }
+      fetchQuestion()
     } catch (error: any) {
       toast({
         title: "답변 등록 실패",
@@ -204,6 +195,8 @@ export default function QuestionDetailPage() {
       description: "답변에 댓글이 등록되었습니다.",
     })
   }
+
+  if (loading) return <div className="text-center py-20">질문을 불러오는 중...</div>
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -358,7 +351,6 @@ export default function QuestionDetailPage() {
                 <div className="prose max-w-none">
                   <p className="whitespace-pre-line">{answer.answerContent}</p>
 
-                  {/* 답변 이미지 */}
                   {answer.images && answer.images.length > 0 && (
                     <div className="mt-4 space-y-4">
                       {answer.images.map((image: any, idx: number) => (
@@ -387,13 +379,22 @@ export default function QuestionDetailPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => {
+                    onClick={async () => {
                       if (window.confirm('정말로 이 답변을 삭제하시겠습니까?')) {
-                        // TODO: 답변 삭제 API 호출
-                        toast({
-                          title: "답변 삭제",
-                          description: "답변이 삭제되었습니다.",
-                        })
+                        try {
+                          await api.delete(`/answers/${answer.answerId}`)
+                          toast({
+                            title: "답변 삭제 성공",
+                            description: "답변이 성공적으로 삭제되었습니다.",
+                          })
+                          fetchQuestion()
+                        } catch (error: any) {
+                          toast({
+                            title: "답변 삭제 실패",
+                            description: error?.message || "답변 삭제 중 오류가 발생했습니다.",
+                            variant: "destructive"
+                          })
+                        }
                       }
                     }}
                   >
@@ -408,12 +409,10 @@ export default function QuestionDetailPage() {
                   </Button>
                 </div>
 
-                {/* 댓글 목록 */}
                 {(answerCommentsData[answer.id]?.length > 0 || showCommentInput === answer.id) && (
                   <div className="w-full border-t pt-4 mt-2">
                     <h4 className="text-sm font-medium mb-3">댓글</h4>
 
-                    {/* 기존 댓글 표시 */}
                     {answerCommentsData[answer.id]?.length > 0 && (
                       <div className="space-y-3 mb-4">
                         {answerCommentsData[answer.id].map((comment: any, idx: number) => (
@@ -439,7 +438,6 @@ export default function QuestionDetailPage() {
                       </div>
                     )}
 
-                    {/* 댓글 입력 폼 */}
                     {showCommentInput === answer.id && (
                       <div className="flex gap-2">
                         <Textarea
@@ -479,11 +477,11 @@ export default function QuestionDetailPage() {
             />
 
             <div className="space-y-2">
-              <Label htmlFor="answer-images" className="...">이미지 첨부</Label>
+              <Label htmlFor="answer-images">이미지 첨부</Label>
               <FileUpload
                 onFileSelect={handleImageUpload}
                 accept="image/*"
-                maxSize={5} // 5MB
+                maxSize={5}
                 multiple={true}
                 buttonText="이미지 선택"
               />

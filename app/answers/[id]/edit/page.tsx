@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter, useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,23 +20,26 @@ export default function EditAnswerPage() {
   const [uploadedImages, setUploadedImages] = useState<File[]>([])
   const [existingImages, setExistingImages] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [questionId, setQuestionId] = useState<number | null>(null)
+  const answerId = params.id
 
   useEffect(() => {
     async function fetchAnswer() {
       setLoading(true)
       try {
-        const res = await api.get(`/answers/${params.id}`)
+        const res = await api.get(`/answers/${answerId}`)
         const answer = res.result
         setContent(answer.answerContent || "")
         setExistingImages(answer.mediaUrls || [])
+        setQuestionId(answer.questionId || null)
       } catch (e) {
         toast({ title: "답변 불러오기 실패", description: "답변 정보를 불러올 수 없습니다.", variant: "destructive" })
       } finally {
         setLoading(false)
       }
     }
-    if (params.id) fetchAnswer()
-  }, [params.id])
+    if (answerId) fetchAnswer()
+  }, [answerId])
 
   const handleImageUpload = (file: File) => {
     setUploadedImages((prev) => [...prev, file])
@@ -64,11 +67,12 @@ export default function EditAnswerPage() {
 
     const formData = new FormData()
     formData.append("answerContent", content)
-    uploadedImages.forEach(file => formData.append("images", file))
-    formData.append("remainImageIds", JSON.stringify(existingImages.map(img => img.id)))
+    uploadedImages.forEach(file => formData.append("mediaFiles", file))
+    if (questionId) formData.append("questionId", questionId.toString())
+    if (answerId) formData.append("answerId", answerId.toString())
 
     try {
-      await api.put(`/answers/${params.id}`, formData)
+      await api.put(`/answers/${answerId}`, formData)
       toast({ title: "답변 수정 성공", description: "답변이 성공적으로 수정되었습니다." })
       router.back()
     } catch (error: any) {
