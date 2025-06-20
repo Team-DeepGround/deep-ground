@@ -25,9 +25,10 @@ interface FeedPostProps {
   onRefresh: () => void
 }
 
-export function FeedPost({ post, onRefresh }: FeedPostProps) {
+export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
   const { toast } = useToast()
   const { user } = useAuth()
+  const [post, setPost] = useState(initialPost)
   const [showComments, setShowComments] = useState(false)
   const [showShareDialog, setShowShareDialog] = useState(false)
 
@@ -36,16 +37,31 @@ export function FeedPost({ post, onRefresh }: FeedPostProps) {
     if (liked) {
       await unlikeFeed(feedId)
       toast({ title: "좋아요 취소", description: "게시물에 좋아요를 취소했습니다." })
+      setPost((prev) => ({
+        ...prev,
+        liked: false,
+        likeCount: prev.likeCount - 1
+      }))
     } else {
       await likeFeed(feedId)
       toast({ title: "좋아요", description: "게시물에 좋아요를 표시했습니다." })
+      setPost((prev) => ({
+        ...prev,
+        liked: true,
+        likeCount: prev.likeCount + 1
+      }))
     }
-    onRefresh()
   }
 
   // 공유 다이얼로그 열기
   const handleShareClick = () => {
     setShowShareDialog(true)
+  }
+
+  // 공유 성공 시 전체 피드 리프레시
+  const handleShareSuccess = () => {
+    setShowShareDialog(false)
+    onRefresh()
   }
 
   // 댓글 토글
@@ -205,7 +221,7 @@ export function FeedPost({ post, onRefresh }: FeedPostProps) {
         isOpen={showShareDialog}
         onClose={() => setShowShareDialog(false)}
         originalFeed={post}
-        onSuccess={onRefresh}
+        onSuccess={handleShareSuccess}
       />
     </>
   )
