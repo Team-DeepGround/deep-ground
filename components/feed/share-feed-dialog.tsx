@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
-import { shareFeed } from "@/lib/api-client"
-import { FetchFeedResponse } from "@/lib/api-types"
+import { shareFeed } from "@/lib/api/feed"
+import { FetchFeedResponse } from "@/lib/api/feed"
 
 interface ShareFeedDialogProps {
   isOpen: boolean
