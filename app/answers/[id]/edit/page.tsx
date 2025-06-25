@@ -64,15 +64,26 @@ export default function EditAnswerPage() {
       toast({ title: "이미지 개수 초과", description: "이미지는 최대 5개까지 첨부할 수 있습니다.", variant: "destructive" })
       return
     }
+    if (!questionId) {
+      toast({ title: "질문 ID 없음", description: "질문 정보를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.", variant: "destructive" });
+      return;
+    }
 
     const formData = new FormData()
     formData.append("answerContent", content)
     uploadedImages.forEach(file => formData.append("mediaFiles", file))
-    if (questionId) formData.append("questionId", questionId.toString())
     if (answerId) formData.append("answerId", answerId.toString())
 
     try {
-      await api.put(`/answers/${answerId}`, formData)
+      const accessToken = localStorage.getItem("auth_token");
+      await fetch(`http://localhost:3000/api/v1/answers/${answerId}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          // Content-Type은 명시하지 않음 (FormData는 브라우저가 자동 세팅)
+        },
+        body: formData,
+      });
       toast({ title: "답변 수정 성공", description: "답변이 성공적으로 수정되었습니다." })
       router.back()
     } catch (error: any) {

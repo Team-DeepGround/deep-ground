@@ -36,6 +36,7 @@ export default function QuestionDetailPage() {
 
   // 답변 데이터 상태
   const [answers, setAnswers] = useState<any[]>([])
+  const [answerLikeLoading, setAnswerLikeLoading] = useState<Record<number, boolean>>({})
 
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
@@ -46,14 +47,23 @@ export default function QuestionDetailPage() {
       const res = await api.get(`/questions/${params.id}`)
       const q = res.result?.question || res.result
       setQuestion(q)
-      if (res.result?.answers) {
-        console.log('답변 데이터:', res.result.answers)
-        setAnswers(res.result.answers)
-      } else if (q?.answers) {
-        console.log('답변 데이터:', q.answers)
+      if (q?.answers) {
         setAnswers(q.answers)
+        console.log('answers:', q.answers) // 디버깅용
+        console.log('user.id:', user?.id) // 디버깅용
+        
+        // localStorage에서 내가 좋아요 누른 답변 목록 불러오기
+        const storedLikedAnswers = localStorage.getItem(`likedAnswers_${params.id}`);
+        if (storedLikedAnswers) {
+          const likedAnswerIds = JSON.parse(storedLikedAnswers);
+          setLikedAnswers(likedAnswerIds);
+          console.log('localStorage에서 불러온 likedAnswers:', likedAnswerIds);
+        } else {
+          setLikedAnswers([]);
+        }
       } else {
         setAnswers([])
+        setLikedAnswers([])
       }
       // 디버깅: 유저와 질문 작성자 정보 콘솔 출력
       console.log('user:', user)
@@ -69,6 +79,7 @@ export default function QuestionDetailPage() {
     } catch (e) {
       setQuestion(null)
       setAnswers([])
+      setLikedAnswers([])
     } finally {
       setLoading(false)
     }
@@ -85,23 +96,21 @@ export default function QuestionDetailPage() {
     }
   }, [question]);
 
-  const handleImageUpload = (files: File[]) => {
-    // 여러 파일 중 중복 아닌 것만 추가
-    const newFiles = files.filter(file => !uploadedImages.some(f => f.name === file.name && f.size === file.size))
-    if (newFiles.length < files.length) {
+  const handleImageUpload = (file: File) => {
+    // 중복 체크
+    if (uploadedImages.some(f => f.name === file.name && f.size === file.size)) {
       toast({
         title: "중복 이미지",
-        description: "이미 첨부된 이미지는 제외되었습니다.",
+        description: "이미 첨부된 이미지입니다.",
         variant: "destructive",
       })
+      return
     }
-    setUploadedImages((prev) => [...prev, ...newFiles])
-    if (newFiles.length > 0) {
-      toast({
-        title: "이미지 업로드",
-        description: `${newFiles.length}개의 이미지가 추가되었습니다.`,
-      })
-    }
+    setUploadedImages((prev) => [...prev, file])
+    toast({
+      title: "이미지 업로드",
+      description: "이미지가 추가되었습니다.",
+    })
   }
 
   const removeImage = (index: number) => {
@@ -134,7 +143,15 @@ export default function QuestionDetailPage() {
     uploadedImages.forEach(file => formData.append("images", file))
 
     try {
-      await api.post(`/answers`, formData)
+      const accessToken = localStorage.getItem("auth_token");
+      await fetch("http://localhost:3000/api/v1/answers", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          // Content-Type은 명시하지 않음 (FormData는 브라우저가 자동 세팅)
+        },
+        body: formData,
+      });
 
       toast({
         title: "답변 등록 성공",
@@ -159,22 +176,55 @@ export default function QuestionDetailPage() {
     }
   }
 
-  // handleLikeAnswer 함수 추가 (다른 핸들러 함수들 근처에)
-  const handleLikeAnswer = (answerId: number) => {
-    if (likedAnswers.includes(answerId)) {
-      setLikedAnswers(likedAnswers.filter((id) => id !== answerId))
-      toast({
-        title: "좋아요 취소",
-        description: "답변에 대한 좋아요를 취소했습니다.",
-      })
-    } else {
-      setLikedAnswers([...likedAnswers, answerId])
-      toast({
-        title: "좋아요",
-        description: "답변에 좋아요를 표시했습니다.",
-      })
+  // 답변 좋아요 토글 함수
+  const handleLikeAnswer = async (answerId: number) => {
+    if (answerLikeLoading[answerId]) return;
+    const authToken = localStorage.getItem("auth_token");
+    if (!authToken) {
+      toast({ title: "로그인이 필요합니다.", variant: "destructive" });
+      return;
     }
-  }
+    setAnswerLikeLoading(prev => ({ ...prev, [answerId]: true }));
+
+    try {
+      const isCurrentlyLiked = likedAnswers.includes(answerId);
+      let response;
+      if (isCurrentlyLiked) {
+        response = await fetch(`http://localhost:3000/api/v1/answers/like/${answerId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${authToken}` },
+        });
+        if (response.ok) {
+          const newLikedAnswers = likedAnswers.filter(id => id !== answerId);
+          setLikedAnswers(newLikedAnswers);
+          // localStorage에서 제거
+          localStorage.setItem(`likedAnswers_${params.id}`, JSON.stringify(newLikedAnswers));
+        }
+      } else {
+        response = await fetch(`http://localhost:3000/api/v1/answers/like/${answerId}`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${authToken}` },
+        });
+        if (response.ok) {
+          const newLikedAnswers = [...likedAnswers, answerId];
+          setLikedAnswers(newLikedAnswers);
+          // localStorage에 추가
+          localStorage.setItem(`likedAnswers_${params.id}`, JSON.stringify(newLikedAnswers));
+        }
+      }
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+    } catch (error: any) {
+      toast({
+        title: "좋아요 처리 실패",
+        description: error?.message || "좋아요 처리 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    } finally {
+      setAnswerLikeLoading(prev => ({ ...prev, [answerId]: false }));
+    }
+  };
 
   // 답변에 댓글 추가 함수
   const handleAddComment = (answerId: number) => {
@@ -224,21 +274,40 @@ export default function QuestionDetailPage() {
     }
     try {
       if (!liked) {
-        await fetch(`http://localhost:3000/api/v1/questions/${params.id}/like`, {
+        const response = await fetch(`http://localhost:3000/api/v1/questions/${params.id}/like`, {
           method: "POST",
           headers: { Authorization: `Bearer ${authToken}` },
         });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         toast({ title: "좋아요", description: "질문에 좋아요를 표시했습니다." });
       } else {
-        await fetch(`http://localhost:3000/api/v1/questions/${params.id}/like`, {
+        const response = await fetch(`http://localhost:3000/api/v1/questions/${params.id}/like`, {
           method: "DELETE",
           headers: { Authorization: `Bearer ${authToken}` },
         });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         toast({ title: "좋아요 취소", description: "질문에 대한 좋아요를 취소했습니다." });
       }
-      fetchQuestion(); // 서버에서 최신 상태로 동기화
-    } catch (e) {
-      toast({ title: "좋아요 처리 실패", description: "좋아요 처리 중 오류가 발생했습니다.", variant: "destructive" });
+
+      // 서버에서 최신 상태 가져와서 동기화
+      const res = await api.get(`/questions/${params.id}`)
+      const q = res.result?.question || res.result
+      setQuestion(q)
+      if (q) {
+        setLikeCount(q.likeCount || 0);
+        setLiked(q.likedByMe || false);
+      }
+    } catch (e: any) {
+      console.error('질문 좋아요 처리 에러:', e);
+      toast({ title: "좋아요 처리 실패", description: e?.message || "좋아요 처리 중 오류가 발생했습니다.", variant: "destructive" });
     }
   }
 
@@ -259,7 +328,7 @@ export default function QuestionDetailPage() {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   {question?.techStacks.map((tag: any, idx: number) => (
-                    <Badge key={tag + '-' + idx} variant="secondary" className="font-normal">
+                    <Badge key={tag ? String(tag) : idx} variant="secondary" className="font-normal">
                       {tag}
                     </Badge>
                   ))}
@@ -276,7 +345,17 @@ export default function QuestionDetailPage() {
                   <span>{question?.createdAt ? new Date(question.createdAt).toISOString().slice(0, 10) : ''}</span>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center">
+                {/* 좋아요 버튼 */}
+                <Button
+                  variant={liked ? "default" : "outline"}
+                  size="sm"
+                  className={`flex items-center gap-1 ${liked ? "bg-primary/10 text-primary" : ""}`}
+                  onClick={handleLikeQuestion}
+                  aria-label={liked ? "좋아요 취소" : "좋아요"}
+                >
+                  <ThumbsUp className={`h-4 w-4 ${liked ? "fill-primary" : ""}`} />
+                </Button>
                 {/* 연필(수정) 버튼 항상 노출 */}
                 <Button
                   variant="outline"
@@ -337,7 +416,7 @@ export default function QuestionDetailPage() {
               {question?.mediaUrls && question.mediaUrls.length > 0 && (
                 <div className="mt-4 space-y-4">
                   {question.mediaUrls.map((url: string, idx: number) => (
-                    <div key={idx} className="rounded-md overflow-hidden">
+                    <div key={url || idx} className="rounded-md overflow-hidden">
                       <img src={url || "/placeholder.svg"} alt={`질문 이미지 ${idx + 1}`} className="max-w-full h-auto" />
                     </div>
                   ))}
@@ -363,7 +442,7 @@ export default function QuestionDetailPage() {
         {/* 답변 목록 */}
         <div className="space-y-6 mb-8">
           {answers.map((answer) => (
-            <Card key={answer.id} className={answer.isAccepted ? "border-green-500" : ""}>
+            <Card key={answer.answerId ? String(answer.answerId) : JSON.stringify(answer)} className={answer.isAccepted ? "border-green-500" : ""}>
               <CardHeader className="pb-3">
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
@@ -388,11 +467,12 @@ export default function QuestionDetailPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className={`flex items-center gap-1 ${likedAnswers.includes(answer.id) ? "bg-primary/10 text-primary" : ""}`}
-                      onClick={() => handleLikeAnswer(answer.id)}
+                      disabled={answerLikeLoading[answer.answerId]}
+                      className={`flex items-center gap-1 transition-colors duration-150 ${likedAnswers.includes(answer.answerId) ? "text-black" : "text-gray-300"}`}
+                      onClick={() => handleLikeAnswer(answer.answerId)}
+                      aria-label={likedAnswers.includes(answer.answerId) ? "좋아요 취소" : "좋아요"}
                     >
-                      <ThumbsUp className={`h-4 w-4 ${likedAnswers.includes(answer.id) ? "fill-primary" : ""}`} />
-                      <span>{likedAnswers.includes(answer.id) ? answer.likeCount + 1 : answer.likeCount}</span>
+                      <ThumbsUp className={`h-4 w-4 ${likedAnswers.includes(answer.answerId) ? "text-black" : "text-gray-300"}`} />
                     </Button>
                   </div>
                 </div>
@@ -404,7 +484,7 @@ export default function QuestionDetailPage() {
                   {answer.images && answer.images.length > 0 && (
                     <div className="mt-4 space-y-4">
                       {answer.images.map((image: any, idx: number) => (
-                        <div key={(image.id ?? idx) + '-' + idx} className="rounded-md overflow-hidden">
+                        <div key={image.id ? String(image.id) : image.url ? image.url : idx} className="rounded-md overflow-hidden">
                           <img src={image.url || "/placeholder.svg"} alt={image.alt} className="max-w-full h-auto" />
                         </div>
                       ))}
@@ -453,20 +533,20 @@ export default function QuestionDetailPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setShowCommentInput(showCommentInput === answer.id ? null : answer.id)}
+                    onClick={() => setShowCommentInput(showCommentInput === answer.answerId ? null : answer.answerId)}
                   >
                     댓글 달기
                   </Button>
                 </div>
 
-                {(answerCommentsData[answer.id]?.length > 0 || showCommentInput === answer.id) && (
+                {(answerCommentsData[answer.answerId]?.length > 0 || showCommentInput === answer.answerId) && (
                   <div className="w-full border-t pt-4 mt-2">
                     <h4 className="text-sm font-medium mb-3">댓글</h4>
 
-                    {answerCommentsData[answer.id]?.length > 0 && (
+                    {answerCommentsData[answer.answerId]?.length > 0 && (
                       <div className="space-y-3 mb-4">
-                        {answerCommentsData[answer.id].map((comment: any, idx: number) => (
-                          <div key={(comment.id ?? idx) + '-' + idx} className="flex gap-2">
+                        {answerCommentsData[answer.answerId].map((comment: any, idx: number) => (
+                          <div key={comment.id ? String(comment.id) : idx} className="flex gap-2">
                             <Avatar className="h-6 w-6">
                               <AvatarImage
                                 src={comment.member?.avatar || "/placeholder.svg"}
@@ -488,20 +568,20 @@ export default function QuestionDetailPage() {
                       </div>
                     )}
 
-                    {showCommentInput === answer.id && (
+                    {showCommentInput === answer.answerId && (
                       <div className="flex gap-2">
                         <Textarea
                           placeholder="댓글을 입력하세요..."
-                          value={answerComments[answer.id] || ""}
+                          value={answerComments[answer.answerId] || ""}
                           onChange={(e) =>
                             setAnswerComments({
                               ...answerComments,
-                              [answer.id]: e.target.value,
+                              [answer.answerId]: e.target.value,
                             })
                           }
                           className="text-sm min-h-[60px] resize-none"
                         />
-                        <Button size="sm" className="self-end" onClick={() => handleAddComment(answer.id)}>
+                        <Button size="sm" className="self-end" onClick={() => handleAddComment(answer.answerId)}>
                           등록
                         </Button>
                       </div>
@@ -529,10 +609,9 @@ export default function QuestionDetailPage() {
             <div className="space-y-2">
               <Label htmlFor="answer-images">이미지 첨부</Label>
               <FileUpload
-                onFilesSelect={handleImageUpload}
+                onFileSelect={handleImageUpload}
                 accept="image/*"
                 maxSize={5}
-                multiple={true}
                 buttonText="이미지 선택"
               />
 
