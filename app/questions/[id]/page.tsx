@@ -37,6 +37,9 @@ export default function QuestionDetailPage() {
   // 답변 데이터 상태
   const [answers, setAnswers] = useState<any[]>([])
 
+  const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+
   const fetchQuestion = async () => {
     setLoading(true)
     try {
@@ -75,13 +78,30 @@ export default function QuestionDetailPage() {
     if (params.id) fetchQuestion()
   }, [params.id])
 
-  const handleImageUpload = (file: File) => {
-    setUploadedImages((prev) => [...prev, file])
+  useEffect(() => {
+    if (question) {
+      setLikeCount(question.likeCount || 0);
+      setLiked(question.likedByMe || false); // 서버에서 내려주는 값 사용
+    }
+  }, [question]);
 
-    toast({
-      title: "이미지 업로드",
-      description: "이미지가 추가되었습니다.",
-    })
+  const handleImageUpload = (files: File[]) => {
+    // 여러 파일 중 중복 아닌 것만 추가
+    const newFiles = files.filter(file => !uploadedImages.some(f => f.name === file.name && f.size === file.size))
+    if (newFiles.length < files.length) {
+      toast({
+        title: "중복 이미지",
+        description: "이미 첨부된 이미지는 제외되었습니다.",
+        variant: "destructive",
+      })
+    }
+    setUploadedImages((prev) => [...prev, ...newFiles])
+    if (newFiles.length > 0) {
+      toast({
+        title: "이미지 업로드",
+        description: `${newFiles.length}개의 이미지가 추가되었습니다.`,
+      })
+    }
   }
 
   const removeImage = (index: number) => {
@@ -196,6 +216,32 @@ export default function QuestionDetailPage() {
     })
   }
 
+  const handleLikeQuestion = async () => {
+    const authToken = localStorage.getItem("auth_token");
+    if (!authToken) {
+      toast({ title: "로그인이 필요합니다.", variant: "destructive" });
+      return;
+    }
+    try {
+      if (!liked) {
+        await fetch(`http://localhost:3000/api/v1/questions/${params.id}/like`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${authToken}` },
+        });
+        toast({ title: "좋아요", description: "질문에 좋아요를 표시했습니다." });
+      } else {
+        await fetch(`http://localhost:3000/api/v1/questions/${params.id}/like`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${authToken}` },
+        });
+        toast({ title: "좋아요 취소", description: "질문에 대한 좋아요를 취소했습니다." });
+      }
+      fetchQuestion(); // 서버에서 최신 상태로 동기화
+    } catch (e) {
+      toast({ title: "좋아요 처리 실패", description: "좋아요 처리 중 오류가 발생했습니다.", variant: "destructive" });
+    }
+  }
+
   if (loading) return <div className="text-center py-20">질문을 불러오는 중...</div>
 
   return (
@@ -231,10 +277,6 @@ export default function QuestionDetailPage() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="flex items-center gap-1">
-                  <ThumbsUp className="h-4 w-4" />
-                  <span>{question?.likeCount}</span>
-                </Button>
                 {/* 연필(수정) 버튼 항상 노출 */}
                 <Button
                   variant="outline"
@@ -275,7 +317,15 @@ export default function QuestionDetailPage() {
                 <AvatarFallback>{question?.author?.name ? question.author.name[0] : "?"}</AvatarFallback>
               </Avatar>
               <div>
-                <div className="font-medium">{question?.author?.name || question?.nickname || question?.memberId || "알 수 없음"}</div>
+                <div className="font-medium">
+                  {question?.author?.name
+                    ? question.author.name
+                    : question?.nickname
+                    ? question.nickname
+                    : question?.memberId
+                    ? `ID: ${question.memberId}`
+                    : "알 수 없음"}
+                </div>
                 <div className="text-xs text-muted-foreground">작성자</div>
               </div>
             </div>
@@ -286,9 +336,9 @@ export default function QuestionDetailPage() {
               {/* 질문 이미지 */}
               {question?.mediaUrls && question.mediaUrls.length > 0 && (
                 <div className="mt-4 space-y-4">
-                  {question.mediaUrls.map((image: any, idx: number) => (
-                    <div key={(image.id ?? idx) + '-' + idx} className="rounded-md overflow-hidden">
-                      <img src={image.url || "/placeholder.svg"} alt={image.alt} className="max-w-full h-auto" />
+                  {question.mediaUrls.map((url: string, idx: number) => (
+                    <div key={idx} className="rounded-md overflow-hidden">
+                      <img src={url || "/placeholder.svg"} alt={`질문 이미지 ${idx + 1}`} className="max-w-full h-auto" />
                     </div>
                   ))}
                 </div>
@@ -479,7 +529,7 @@ export default function QuestionDetailPage() {
             <div className="space-y-2">
               <Label htmlFor="answer-images">이미지 첨부</Label>
               <FileUpload
-                onFileSelect={handleImageUpload}
+                onFilesSelect={handleImageUpload}
                 accept="image/*"
                 maxSize={5}
                 multiple={true}

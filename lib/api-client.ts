@@ -107,4 +107,41 @@ export const api = {
 
   delete: (endpoint: string, options?: RequestOptions) =>
     apiClient(endpoint, { ...options, method: 'DELETE' }),
-}; 
+};
+
+export async function apiClientFormData(endpoint: string, data: any, accessToken: string) {
+  const url = `http://localhost:3000${endpoint}`;
+  const headers = new Headers();
+
+  if (accessToken) {
+    headers.set('Authorization', `Bearer ${accessToken}`);
+  }
+
+  // FormData가 아닐 때만 Content-Type 세팅
+  let body;
+  if (data instanceof FormData) {
+    body = data;
+  } else if (data) {
+    headers.set('Content-Type', 'application/json');
+    body = JSON.stringify(data);
+  }
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers,
+    body,
+  });
+
+  const result = await res.json();
+
+  // 성공 시 status/message/result 구조로 반환
+  if (res.ok) {
+    return {
+      status: 201,
+      message: "질문이 성공적으로 생성되었습니다.",
+      result,
+    };
+  }
+  // 실패 시 백엔드 응답 그대로 반환
+  return result;
+} 

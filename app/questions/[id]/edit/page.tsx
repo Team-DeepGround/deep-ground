@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
 import FileUpload from "@/components/file-upload"
 import { api } from "@/lib/api-client"
+import { apiClientFormData } from "@/lib/api-client"
 
 export default function EditQuestionPage() {
   const router = useRouter()
@@ -57,9 +58,23 @@ export default function EditQuestionPage() {
     }
   }
 
-  const handleImageUpload = (file: File) => {
-    setUploadedImages((prev) => [...prev, file])
-    toast({ title: "이미지 업로드", description: "이미지가 추가되었습니다." })
+  const handleImageUpload = (files: File[]) => {
+    // 여러 파일 중 중복 아닌 것만 추가
+    const newFiles = files.filter(file => !uploadedImages.some(f => f.name === file.name && f.size === file.size))
+    if (newFiles.length < files.length) {
+      toast({
+        title: "중복 이미지",
+        description: "이미 첨부된 이미지는 제외되었습니다.",
+        variant: "destructive",
+      })
+    }
+    setUploadedImages((prev) => [...prev, ...newFiles])
+    if (newFiles.length > 0) {
+      toast({
+        title: "이미지 업로드",
+        description: `${newFiles.length}개의 이미지가 추가되었습니다.`,
+      })
+    }
   }
 
   const removeImage = (index: number) => {
@@ -89,12 +104,25 @@ export default function EditQuestionPage() {
     formData.append("content", content)
     tags.forEach(tag => formData.append("techStacks", tag))
     uploadedImages.forEach(file => formData.append("image", file))
-    // 기존 이미지 중 남겨둘 id만 전달 (삭제된 이미지는 제외)
     formData.append("remainImageIds", JSON.stringify(existingImages.map(img => img.id)))
+    const accessToken = localStorage.getItem("auth_token")
     try {
-      await api.put(`/questions/${params.id}`, formData)
-      toast({ title: "질문 수정 성공", description: "질문이 성공적으로 수정되었습니다." })
-      router.push(`/questions/${params.id}`)
+      // apiClientFormData는 POST만 지원하므로 fetch로 직접 PUT
+      const url = `http://localhost:3000/api/v1/questions/${params.id}`
+      const headers = new Headers()
+      if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`)
+      const res = await fetch(url, {
+        method: "PUT",
+        headers,
+        body: formData,
+      })
+      const data = await res.json()
+      if (res.ok) {
+        toast({ title: "질문 수정 성공", description: "질문이 성공적으로 수정되었습니다." })
+        router.push(`/questions/${params.id}`)
+      } else {
+        toast({ title: "질문 수정 실패", description: data.message || "질문 수정 중 오류가 발생했습니다.", variant: "destructive" })
+      }
     } catch (error: any) {
       toast({ title: "질문 수정 실패", description: error?.message || "질문 수정 중 오류가 발생했습니다.", variant: "destructive" })
     }
@@ -122,7 +150,7 @@ export default function EditQuestionPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="images">이미지 첨부</Label>
-                <FileUpload onFileSelect={handleImageUpload} accept="image/*" maxSize={5} multiple={true} buttonText="이미지 선택" />
+                <FileUpload onFilesSelect={handleImageUpload} accept="image/*" maxSize={5} multiple={true} buttonText="이미지 선택" />
                 {/* 기존 이미지 표시 및 삭제 */}
                 {existingImages.length > 0 && (
                   <div className="mt-4 space-y-2">
