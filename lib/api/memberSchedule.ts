@@ -6,31 +6,21 @@ import type { ApiResponse } from "@/lib/api-types"
 export interface MemberScheduleCalendarResponseDto {
   memberStudyScheduleId: number
   studyScheduleId: number
-  // studyId: number
+  studyGroupId: number
   title: string
+  description: string 
   startTime: string
   endTime: string
-}
-
-// 일정 상세 조회용 타입
-export interface MemberScheduleDetailResponseDto {
-  memberStudyScheduleId: number
-  studyScheduleId: number
-  title: string
-  startTime: string
-  endTime: string
-  description: string
-  location: string
-  isAvailable: boolean
+  isAvailable: boolean | null
   isImportant: boolean
-  memo: string
+  memo?: string
 }
 
 // 로그인한 사용자의 모든 일정 조회
 export async function fetchMySchedules(): Promise<MemberScheduleCalendarResponseDto[]> {
   const token = await auth.getToken()
 
-  const res = await fetch("/api/calendar/my-schedules", {
+  const res = await fetch("/api/v1/calendar/my-schedules", {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -51,35 +41,20 @@ export async function fetchMySchedules(): Promise<MemberScheduleCalendarResponse
   return json.result
 }
 
-// 상세 조회
-export const fetchScheduleDetail = async (
-  memberStudyScheduleId: number
-): Promise<MemberScheduleDetailResponseDto> => {
-  const res = await api.get<ApiResponse<MemberScheduleDetailResponseDto>>(
-    `/calendar/my-schedules/${memberStudyScheduleId}`
-  );
-
-  if (!res.result) {
-    throw new Error("상세 일정을 찾을 수 없습니다.");
-  }
-
-  return res.result;
-}
-
 // 일정 상태 및 메모 수정
 export const updateMemberSchedule = async (
   memberStudyScheduleId: number,
   data: {
-    attendance?: "attending" | "not_attending" | "pending"
+    attendance?: "attending" | "not_attending" | null
     isImportant?: boolean
     memo?: string
-    isAvailable?: boolean
+    isAvailable: boolean | null
   }
-): Promise<MemberScheduleDetailResponseDto> => {
-  const res = await api.patch<ApiResponse<MemberScheduleDetailResponseDto>>(
+): Promise<MemberScheduleCalendarResponseDto> => {
+  const res = await api.patch(
     `/calendar/my-schedules/${memberStudyScheduleId}`,
     data
-  )
+  ) as ApiResponse<MemberScheduleCalendarResponseDto>;
 
   if (!res.result) {
     throw new Error("일정 수정 결과가 없습니다")
