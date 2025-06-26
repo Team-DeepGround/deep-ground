@@ -38,9 +38,6 @@ export default function QuestionDetailPage() {
   const [answers, setAnswers] = useState<any[]>([])
   const [answerLikeLoading, setAnswerLikeLoading] = useState<Record<number, boolean>>({})
 
-  const [liked, setLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(0);
-
   const fetchQuestion = async () => {
     setLoading(true)
     try {
@@ -86,15 +83,32 @@ export default function QuestionDetailPage() {
   }
 
   useEffect(() => {
-    if (params.id) fetchQuestion()
+    if (params.id) {
+      // URL에 refresh=true가 있으면 새로고침 후 제거
+      const urlParams = new URLSearchParams(window.location.search)
+      if (urlParams.get('refresh') === 'true') {
+        fetchQuestion()
+        // refresh 파라미터 제거
+        urlParams.delete('refresh')
+        const newUrl = `${window.location.pathname}${urlParams.toString() ? '?' + urlParams.toString() : ''}`
+        window.history.replaceState({}, '', newUrl)
+      } else {
+        fetchQuestion()
+      }
+    }
   }, [params.id])
 
+  // 페이지 포커스 시 데이터 새로고침 (답변 수정 후 돌아올 때)
   useEffect(() => {
-    if (question) {
-      setLikeCount(question.likeCount || 0);
-      setLiked(question.likedByMe || false); // 서버에서 내려주는 값 사용
+    const handleFocus = () => {
+      if (params.id) {
+        fetchQuestion()
+      }
     }
-  }, [question]);
+
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [params.id])
 
   const handleImageUpload = (file: File) => {
     // 중복 체크
@@ -199,6 +213,12 @@ export default function QuestionDetailPage() {
           setLikedAnswers(newLikedAnswers);
           // localStorage에서 제거
           localStorage.setItem(`likedAnswers_${params.id}`, JSON.stringify(newLikedAnswers));
+          // likeCount 감소
+          setAnswers(prev => prev.map(a =>
+            a.answerId === answerId
+              ? { ...a, likeCount: Math.max(0, (a.likeCount || 1) - 1) }
+              : a
+          ));
         }
       } else {
         response = await fetch(`http://localhost:3000/api/v1/answers/like/${answerId}`, {
@@ -210,6 +230,12 @@ export default function QuestionDetailPage() {
           setLikedAnswers(newLikedAnswers);
           // localStorage에 추가
           localStorage.setItem(`likedAnswers_${params.id}`, JSON.stringify(newLikedAnswers));
+          // likeCount 증가
+          setAnswers(prev => prev.map(a =>
+            a.answerId === answerId
+              ? { ...a, likeCount: (a.likeCount || 0) + 1 }
+              : a
+          ));
         }
       }
       if (!response.ok) {
@@ -266,51 +292,6 @@ export default function QuestionDetailPage() {
     })
   }
 
-  const handleLikeQuestion = async () => {
-    const authToken = localStorage.getItem("auth_token");
-    if (!authToken) {
-      toast({ title: "로그인이 필요합니다.", variant: "destructive" });
-      return;
-    }
-    try {
-      if (!liked) {
-        const response = await fetch(`http://localhost:3000/api/v1/questions/${params.id}/like`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${authToken}` },
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        toast({ title: "좋아요", description: "질문에 좋아요를 표시했습니다." });
-      } else {
-        const response = await fetch(`http://localhost:3000/api/v1/questions/${params.id}/like`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${authToken}` },
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        toast({ title: "좋아요 취소", description: "질문에 대한 좋아요를 취소했습니다." });
-      }
-
-      // 서버에서 최신 상태 가져와서 동기화
-      const res = await api.get(`/questions/${params.id}`)
-      const q = res.result?.question || res.result
-      setQuestion(q)
-      if (q) {
-        setLikeCount(q.likeCount || 0);
-        setLiked(q.likedByMe || false);
-      }
-    } catch (e: any) {
-      console.error('질문 좋아요 처리 에러:', e);
-      toast({ title: "좋아요 처리 실패", description: e?.message || "좋아요 처리 중 오류가 발생했습니다.", variant: "destructive" });
-    }
-  }
-
   if (loading) return <div className="text-center py-20">질문을 불러오는 중...</div>
 
   return (
@@ -346,16 +327,6 @@ export default function QuestionDetailPage() {
                 </div>
               </div>
               <div className="flex gap-2 items-center">
-                {/* 좋아요 버튼 */}
-                <Button
-                  variant={liked ? "default" : "outline"}
-                  size="sm"
-                  className={`flex items-center gap-1 ${liked ? "bg-primary/10 text-primary" : ""}`}
-                  onClick={handleLikeQuestion}
-                  aria-label={liked ? "좋아요 취소" : "좋아요"}
-                >
-                  <ThumbsUp className={`h-4 w-4 ${liked ? "fill-primary" : ""}`} />
-                </Button>
                 {/* 연필(수정) 버튼 항상 노출 */}
                 <Button
                   variant="outline"
@@ -473,6 +444,7 @@ export default function QuestionDetailPage() {
                       aria-label={likedAnswers.includes(answer.answerId) ? "좋아요 취소" : "좋아요"}
                     >
                       <ThumbsUp className={`h-4 w-4 ${likedAnswers.includes(answer.answerId) ? "text-black" : "text-gray-300"}`} />
+                      <span>{typeof answer.likeCount === 'number' ? answer.likeCount : 0}</span>
                     </Button>
                   </div>
                 </div>

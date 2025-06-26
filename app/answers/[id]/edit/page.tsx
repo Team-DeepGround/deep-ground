@@ -71,12 +71,26 @@ export default function EditAnswerPage() {
 
     const formData = new FormData()
     formData.append("answerContent", content)
-    uploadedImages.forEach(file => formData.append("mediaFiles", file))
-    if (answerId) formData.append("answerId", answerId.toString())
+    formData.append("questionId", questionId?.toString() || "")
+    uploadedImages.forEach(file => formData.append("files", file))
+
+    // 디버깅: 전송할 데이터 확인
+    console.log('수정할 답변 ID:', answerId)
+    console.log('질문 ID:', questionId)
+    console.log('답변 내용:', content)
+    console.log('업로드할 이미지 개수:', uploadedImages.length)
+    console.log('기존 이미지 개수:', existingImages.length)
+    
+    // FormData 내용 확인
+    for (let [key, value] of formData.entries()) {
+      console.log('FormData:', key, value)
+    }
 
     try {
       const accessToken = localStorage.getItem("auth_token");
-      await fetch(`http://localhost:3000/api/v1/answers/${answerId}`, {
+      console.log('Access Token:', accessToken ? '존재함' : '없음')
+      
+      const response = await fetch(`http://localhost:3000/api/v1/answers/${answerId}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -84,9 +98,23 @@ export default function EditAnswerPage() {
         },
         body: formData,
       });
+      
+      console.log('응답 상태:', response.status)
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('서버 응답:', errorText)
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`)
+      }
+      
       toast({ title: "답변 수정 성공", description: "답변이 성공적으로 수정되었습니다." })
-      router.back()
+      // 질문 상세 페이지로 돌아가면서 새로고침 신호 전달
+      if (questionId) {
+        router.push(`/questions/${questionId}?refresh=true`)
+      } else {
+        router.back()
+      }
     } catch (error: any) {
+      console.error('답변 수정 에러:', error)
       toast({ title: "답변 수정 실패", description: error?.message || "답변 수정 중 오류가 발생했습니다.", variant: "destructive" })
     }
   }
