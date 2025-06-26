@@ -2,8 +2,8 @@
 
 import type React from "react"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -13,8 +13,9 @@ import { X } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
 import FileUpload from "@/components/file-upload"
-import { Checkbox } from "@/components/ui/checkbox
+import { Checkbox } from "@/components/ui/checkbox"
 import { api } from "@/lib/api-client"
+import { AVAILABLE_TECH_TAGS } from "@/lib/constants/tech-tags"
 
 export default function CreateQuestionPage() {
   const router = useRouter()
@@ -37,15 +38,27 @@ export default function CreateQuestionPage() {
     }
   }
 
-  const handleImageUpload = (file: File) => {
-    setUploadedImages((prev) => [...prev, file])
-
-    toast({
-      title: "이미지 업로드",
-      description: "이미지가 추가되었습니다.",
-    })
+  // 여러 파일 업로드 핸들러 (FileUpload의 onFilesSelect와 연결)
+  const handleImageUpload = (files: File[]) => {
+    // 여러 파일 중 중복 아닌 것만 추가
+    const newFiles = files.filter(file => !uploadedImages.some(f => f.name === file.name && f.size === file.size))
+    if (newFiles.length < files.length) {
+      toast({
+        title: "중복 이미지",
+        description: "이미 첨부된 이미지는 제외되었습니다.",
+        variant: "destructive",
+      })
+    }
+    setUploadedImages((prev) => [...prev, ...newFiles])
+    if (newFiles.length > 0) {
+      toast({
+        title: "이미지 업로드",
+        description: `${newFiles.length}개의 이미지가 추가되었습니다.`,
+      })
+    }
   }
 
+  // 이미지 삭제 함수 복구
   const removeImage = (index: number) => {
     setUploadedImages((prev) => prev.filter((_, i) => i !== index))
   }
@@ -63,7 +76,6 @@ export default function CreateQuestionPage() {
       return
     }
 
-    // 태그 검증
     if (tags.length === 0) {
       toast({
         title: "태그 누락",
@@ -82,31 +94,53 @@ export default function CreateQuestionPage() {
       return
     }
 
-    // FormData 생성
     const formData = new FormData()
     formData.append("title", title)
     formData.append("content", content)
     tags.forEach(tag => formData.append("techStacks", tag))
-    uploadedImages.forEach(file => formData.append("image", file))
+    uploadedImages.forEach(file => formData.append("images", file))
+
+    // 실제 FormData 내용 콘솔 출력 (디버깅용)
+    for (let pair of formData.entries()) {
+      console.log(pair[0], pair[1]);
+    }
+
+    const accessToken = localStorage.getItem("auth_token")
+
+    if (!accessToken) {
+      toast({
+        title: "인증 실패",
+        description: "로그인이 필요합니다.",
+        variant: "destructive",
+      })
+      return
+    }
 
     try {
-      await api.post("/questions", {
+      const fetchOptions: RequestInit = {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: formData,
-        headers: {},
-      })
-      toast({
-        title: "질문 등록 성공",
-        description:
-          uploadedImages.length > 0
-            ? `질문과 ${uploadedImages.length}개의 이미지가 성공적으로 등록되었습니다.`
-            : "질문이 성공적으로 등록되었습니다.",
-      })
-      router.push("/questions")
-    } catch (error: any) {
+      }
+      // Content-Type은 명시하지 않음
+      const res = await fetch("http://localhost:3000/api/v1/questions", fetchOptions)
+      const data = await res.json()
+
+      if (res.ok) {
+        router.push("/questions")
+      } else {
+        toast({
+          title: "질문 등록 실패",
+          description: data.message || "질문 등록 중 오류가 발생했습니다.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
       toast({
         title: "질문 등록 실패",
-        description: error?.message || "질문 등록 중 오류가 발생했습니다.",
+        description: "질문 등록 중 오류가 발생했습니다.",
         variant: "destructive",
       })
     }
@@ -148,7 +182,7 @@ export default function CreateQuestionPage() {
               <div className="space-y-2">
                 <Label htmlFor="images">이미지 첨부</Label>
                 <FileUpload
-                  onFileSelect={handleImageUpload}
+                  onFilesSelect={handleImageUpload}
                   accept="image/*"
                   maxSize={5} // 5MB
                   multiple={true}
