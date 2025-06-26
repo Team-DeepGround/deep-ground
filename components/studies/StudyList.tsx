@@ -27,8 +27,8 @@ interface StudyListProps {
   onLocationFilterChange: (filter: string | null) => void
   sortOrder: string
   onSortOrderChange: (order: string) => void
-  activeTab: "all" | "recruiting" | "upcoming"
-  onActiveTabChange: (tab: "all" | "recruiting" | "upcoming") => void
+  activeTab: "all" | "recruiting" | "ongoing"
+  onActiveTabChange: (tab: "all" | "recruiting" | "ongoing") => void
   currentPage: number
   totalPages: number
   onPageChange: (page: number) => void
@@ -143,7 +143,7 @@ export const StudyList = memo(function StudyList({
               <TabsList className="opacity-50 pointer-events-none">
                 <TabsTrigger value="all">전체</TabsTrigger>
                 <TabsTrigger value="recruiting">모집중</TabsTrigger>
-                <TabsTrigger value="upcoming">예정</TabsTrigger>
+                <TabsTrigger value="ongoing">진행중</TabsTrigger>
               </TabsList>
             </Tabs>
             <Select disabled>
@@ -183,7 +183,7 @@ export const StudyList = memo(function StudyList({
             <TabsList>
               <TabsTrigger value="all">전체</TabsTrigger>
               <TabsTrigger value="recruiting">모집중</TabsTrigger>
-              <TabsTrigger value="upcoming">예정</TabsTrigger>
+              <TabsTrigger value="ongoing">진행중</TabsTrigger>
             </TabsList>
             <Select value={internalSortOrder} onValueChange={handleSortOrderChange}>
               <SelectTrigger className="w-[180px]">
@@ -197,7 +197,7 @@ export const StudyList = memo(function StudyList({
             </Select>
           </div>
 
-          {["all", "recruiting", "upcoming"].map((tab) => (
+          {["all", "recruiting", "ongoing"].map((tab) => (
             <TabsContent key={tab} value={tab} className="mt-6">
               {filteredAndSortedStudies.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

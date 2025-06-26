@@ -81,7 +81,7 @@ export default function StudiesPage() {
   const [locationFilter, setLocationFilter] = useState<string | null>(null)
   const [sortOrder, setSortOrder] = useState<string>("latest")
   const [studyGroups, setStudyGroups] = useState<StudyGroup[]>([])
-  const [activeTab, setActiveTab] = useState<"all" | "recruiting" | "upcoming">("all")
+  const [activeTab, setActiveTab] = useState<"all" | "recruiting" | "ongoing">("all")
 
   // 페이지네이션 관련 상태
   const [currentPage, setCurrentPage] = useState(1)
@@ -104,8 +104,8 @@ export default function StudiesPage() {
     // 탭에 따른 상태 필터링
     if (activeTab === "recruiting") {
       params.groupStatus = "RECRUITING"
-    } else if (activeTab === "upcoming") {
-      params.groupStatus = "UPCOMING"
+    } else if (activeTab === "ongoing") {
+      params.groupStatus = "ONGOING"
     }
 
     if (selectedTags.length > 0) {
@@ -155,7 +155,7 @@ export default function StudiesPage() {
     setSortOrder(order)
   }, [])
 
-  const handleActiveTabChange = useCallback((tab: "all" | "recruiting" | "upcoming") => {
+  const handleActiveTabChange = useCallback((tab: "all" | "recruiting" | "ongoing") => {
     setActiveTab(tab)
     setCurrentPage(1)
   }, [])
