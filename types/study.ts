@@ -30,6 +30,7 @@ export interface StudyGroupDetail {
   comments: Comment[]
   offline: boolean
   sessions: StudySession[]
+  memberStatus: "NOT_APPLIED" | "PENDING" | "APPROVED"
 }
 
 export interface StudySession {

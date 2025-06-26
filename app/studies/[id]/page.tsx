@@ -55,8 +55,6 @@ export default function StudyDetailPage() {
   const { toast } = useToast()
   const { user } = useAuth()
   const [study, setStudy] = useState<StudyGroupDetail | null>(null)
-  const [isParticipating, setIsParticipating] = useState(false)
-  const [hasApplied, setHasApplied] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -82,15 +80,6 @@ export default function StudyDetailPage() {
     fetchStudy()
   }, [params.id, toast])
 
-  useEffect(() => {
-    if (study && user) {
-      const isParticipant = study.participants.some(
-        (participant) => participant === user.name
-      )
-      setIsParticipating(isParticipant)
-    }
-  }, [study, user])
-
   const handleJoinStudy = async () => {
     if (!user) {
       toast({
@@ -109,7 +98,12 @@ export default function StudyDetailPage() {
         title: "스터디 참여 신청이 완료되었습니다",
         description: "스터디장의 승인을 기다려주세요",
       })
-      setHasApplied(true)
+      // 스터디 정보를 다시 불러와서 memberStatus 업데이트
+      const response = await api.get(`/study-group/${params.id}`)
+      setStudy({
+        ...response.result,
+        sessions: dummySessions,
+      })
     } catch (error) {
       toast({
         title: "스터디 참여 신청에 실패했습니다",
@@ -204,8 +198,7 @@ export default function StudyDetailPage() {
       <div className="space-y-6">
         <StudyHeader
           study={study}
-          isParticipating={isParticipating}
-          hasApplied={hasApplied}
+          memberStatus={study.memberStatus}
           onJoinStudy={handleJoinStudy}
           onShare={handleShare}
         />
@@ -248,11 +241,11 @@ export default function StudyDetailPage() {
         <TabsContent value="schedule" className="mt-6">
           <StudySchedule
             sessions={study.sessions}
-            isParticipating={isParticipating}
+            isParticipating={study.memberStatus === "APPROVED"}
             onAddSession={() => {
               toast({
-                title: "준비 중입니다",
-                description: "일정 추가 기능은 곧 제공될 예정입니다.",
+                title: "기능 준비 중",
+                description: "스터디 일정 추가 기능은 곧 제공될 예정입니다.",
               })
             }}
           />
