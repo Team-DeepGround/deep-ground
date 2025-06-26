@@ -218,39 +218,29 @@ export default function QuestionDetailPage() {
           method: "DELETE",
           headers: { Authorization: `Bearer ${authToken}` },
         });
-        if (response.ok) {
-          const newLikedAnswers = likedAnswers.filter(id => id !== answerId);
-          setLikedAnswers(newLikedAnswers);
-          // localStorage에서 제거
-          localStorage.setItem(`likedAnswers_${params.id}`, JSON.stringify(newLikedAnswers));
-          // likeCount 감소
-          setAnswers(prev => prev.map(a =>
-            a.answerId === answerId
-              ? { ...a, likeCount: Math.max(0, (a.likeCount || 1) - 1) }
-              : a
-          ));
-        }
       } else {
         response = await fetch(`http://localhost:3000/api/v1/answers/like/${answerId}`, {
           method: "POST",
           headers: { Authorization: `Bearer ${authToken}` },
         });
-        if (response.ok) {
-          const newLikedAnswers = [...likedAnswers, answerId];
-          setLikedAnswers(newLikedAnswers);
-          // localStorage에 추가
-          localStorage.setItem(`likedAnswers_${params.id}`, JSON.stringify(newLikedAnswers));
-          // likeCount 증가
-          setAnswers(prev => prev.map(a =>
-            a.answerId === answerId
-              ? { ...a, likeCount: (a.likeCount || 0) + 1 }
-              : a
-          ));
-        }
       }
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+
+      // 좋아요 상태(localStorage)는 기존대로 관리
+      let newLikedAnswers;
+      if (isCurrentlyLiked) {
+        newLikedAnswers = likedAnswers.filter(id => id !== answerId);
+      } else {
+        newLikedAnswers = [...likedAnswers, answerId];
+      }
+      setLikedAnswers(newLikedAnswers);
+      localStorage.setItem(`likedAnswers_${params.id}`, JSON.stringify(newLikedAnswers));
+
+      // 서버에서 최신 likeCount를 받아오기 위해 fetchQuestion 호출
+      await fetchQuestion();
+
     } catch (error: any) {
       toast({
         title: "좋아요 처리 실패",
