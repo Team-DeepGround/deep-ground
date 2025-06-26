@@ -3,7 +3,7 @@
 // Create a new file for the question detail page with answer functionality and image upload
 
 // First, let's create the question detail page with image support
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
@@ -15,6 +15,95 @@ import { useAuth } from "@/hooks/use-auth"
 import { ThumbsUp, CheckCircle2, Calendar, ArrowLeft, X, Pencil, Trash } from "lucide-react"
 import FileUpload from "@/components/file-upload"
 import { api } from "@/lib/api-client"
+
+// 이미지 Object URL 캐싱용 커스텀 훅
+function useAuthImageUrls(urls: string[] | undefined) {
+  const [objectUrls, setObjectUrls] = useState<(string | null)[]>([])
+  const prevUrlsRef = useRef<string[]>([])
+
+  useEffect(() => {
+    let isMounted = true
+    if (!urls || urls.length === 0) {
+      setObjectUrls([])
+      return
+    }
+    // 이전 Object URL 해제
+    prevUrlsRef.current.forEach((url) => {
+      if (url && url.startsWith("blob:")) URL.revokeObjectURL(url)
+    })
+    prevUrlsRef.current = []
+
+    const fetchImages = async () => {
+      const accessToken = localStorage.getItem("auth_token")
+      const results = await Promise.all(urls.map(async (url) => {
+        if (url.startsWith("/media/")) {
+          // /media/TOooRK0fhC_haerin.jpg → TOooRK0fhC_haerin.jpg만 추출
+          const pathVar = url.startsWith("/") ? url.substring(1) : url;
+          const fileName = pathVar.replace("media/", "");
+          const fetchUrl = `http://localhost:3000/question/media/${fileName}`;
+          console.log("fetch 요청:", fetchUrl);
+          try {
+            const res = await fetch(fetchUrl, {
+              headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+            })
+            if (!res.ok) return null
+            const blob = await res.blob()
+            const objectUrl = URL.createObjectURL(blob)
+            prevUrlsRef.current.push(objectUrl)
+            return objectUrl
+          } catch {
+            return null
+          }
+        } else if (url.startsWith("/")) {
+          return `http://localhost:3000${url}`
+        } else {
+          return url
+        }
+      }))
+      if (isMounted) setObjectUrls(results)
+    }
+    fetchImages()
+    return () => {
+      isMounted = false
+      prevUrlsRef.current.forEach((url) => {
+        if (url && url.startsWith("blob:")) URL.revokeObjectURL(url)
+      })
+      prevUrlsRef.current = []
+    }
+  }, [urls?.join(",")])
+  return objectUrls
+}
+
+// 인증 헤더가 필요한 이미지 렌더링용 컴포넌트
+function AuthImage({ imageUrl, alt = "이미지" }: { imageUrl: string; alt?: string }) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!imageUrl) return;
+    let isMounted = true;
+    const fetchImage = async () => {
+      const token = localStorage.getItem("auth_token");
+      try {
+        const res = await fetch(`http://localhost:3000${imageUrl}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!res.ok) throw new Error("이미지 로드 실패");
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        if (isMounted) setBlobUrl(url);
+      } catch (e) {
+        if (isMounted) setBlobUrl(null);
+      }
+    };
+    fetchImage();
+    return () => {
+      isMounted = false;
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
+  }, [imageUrl]);
+
+  if (!blobUrl) return <div style={{ width: 100, height: 100, background: "#eee" }}>이미지 없음</div>;
+  return <img src={blobUrl} alt={alt} style={{ maxWidth: "100%" }} />;
+}
 
 export default function QuestionDetailPage() {
   const params = useParams()
@@ -42,11 +131,18 @@ export default function QuestionDetailPage() {
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [editingCommentContent, setEditingCommentContent] = useState<string>("");
 
+  // 질문 이미지 Object URL
+  // const questionImageUrls = useAuthImageUrls(question?.mediaUrl)
+
   const fetchQuestion = async () => {
     setLoading(true)
     try {
-      const res = await api.get(`/questions/${params.id}`)
-      const q = res.result?.question || res.result
+      const accessToken = localStorage.getItem("auth_token")
+      const res = await fetch(`http://localhost:3000/api/v1/questions/${params.id}`,
+        accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : undefined
+      )
+      const data = await res.json()
+      const q = data.result?.question || data.result
       setQuestion(q)
       if (q?.answers) {
         setAnswers(q.answers)
@@ -449,13 +545,16 @@ export default function QuestionDetailPage() {
               <p className="whitespace-pre-line">{question?.content}</p>
 
               {/* 질문 이미지 */}
-              {question?.mediaUrls && question.mediaUrls.length > 0 && (
+              {question.mediaUrl && question.mediaUrl.length > 0 && (
                 <div className="mt-4 space-y-4">
-                  {question.mediaUrls.map((url: string, idx: number) => (
-                    <div key={url || idx} className="rounded-md overflow-hidden">
-                      <img src={url || "/placeholder.svg"} alt={`질문 이미지 ${idx + 1}`} className="max-w-full h-auto" />
-                    </div>
-                  ))}
+                  {question.mediaUrl.map((url: string, idx: number) => {
+                    const fileName = url.replace("/media/", "");
+                    return (
+                      <div key={url || idx} className="rounded-md overflow-hidden">
+                        <AuthImage imageUrl={`/question/media/${fileName}`} alt={`질문 이미지 ${idx + 1}`} />
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -519,13 +618,7 @@ export default function QuestionDetailPage() {
                   <p className="whitespace-pre-line">{answer.answerContent}</p>
 
                   {answer.images && answer.images.length > 0 && (
-                    <div className="mt-4 space-y-4">
-                      {answer.images.map((image: any, idx: number) => (
-                        <div key={image.id ? String(image.id) : image.url ? image.url : idx} className="rounded-md overflow-hidden">
-                          <img src={image.url || "/placeholder.svg"} alt={image.alt} className="max-w-full h-auto" />
-                        </div>
-                      ))}
-                    </div>
+                    <AnswerImagesWithAuth images={answer.images} />
                   )}
                 </div>
               </CardContent>
@@ -722,4 +815,21 @@ function Label({ htmlFor, children, className }: { htmlFor: string; children: Re
       {children}
     </label>
   )
+}
+
+// 답변 이미지용 컴포넌트
+function AnswerImagesWithAuth({ images }: { images: any[] }) {
+  return (
+    <div className="mt-4 space-y-4">
+      {images.map((img, idx) => {
+        // img.url: "/media/파일명"
+        const fileName = img.url.replace("/media/", "");
+        return (
+          <div key={img.url || idx} className="rounded-md overflow-hidden">
+            <AuthImage imageUrl={`/question/media/${fileName}`} alt={img.alt || `답변 이미지 ${idx + 1}`} />
+          </div>
+        );
+      })}
+    </div>
+  );
 }

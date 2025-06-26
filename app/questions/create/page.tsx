@@ -38,6 +38,7 @@ export default function CreateQuestionPage() {
     }
   }
 
+  // 여러 파일 업로드 핸들러 (FileUpload의 onFilesSelect와 연결)
   const handleImageUpload = (files: File[]) => {
     // 여러 파일 중 중복 아닌 것만 추가
     const newFiles = files.filter(file => !uploadedImages.some(f => f.name === file.name && f.size === file.size))
@@ -57,6 +58,7 @@ export default function CreateQuestionPage() {
     }
   }
 
+  // 이미지 삭제 함수 복구
   const removeImage = (index: number) => {
     setUploadedImages((prev) => prev.filter((_, i) => i !== index))
   }
