@@ -38,6 +38,10 @@ export default function QuestionDetailPage() {
   const [answers, setAnswers] = useState<any[]>([])
   const [answerLikeLoading, setAnswerLikeLoading] = useState<Record<number, boolean>>({})
 
+  // 댓글 인라인 수정 상태
+  const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+  const [editingCommentContent, setEditingCommentContent] = useState<string>("");
+
   const fetchQuestion = async () => {
     setLoading(true)
     try {
@@ -46,6 +50,12 @@ export default function QuestionDetailPage() {
       setQuestion(q)
       if (q?.answers) {
         setAnswers(q.answers)
+        // 댓글 데이터 초기화 (List<CommentDTO> comments)
+        const commentsData: Record<number, any[]> = {};
+        q.answers.forEach((answer: any) => {
+          commentsData[answer.answerId] = answer.comments || [];
+        });
+        setAnswerCommentsData(commentsData);
         console.log('answers:', q.answers) // 디버깅용
         console.log('user.id:', user?.id) // 디버깅용
         
@@ -253,7 +263,7 @@ export default function QuestionDetailPage() {
   };
 
   // 답변에 댓글 추가 함수
-  const handleAddComment = (answerId: number) => {
+  const handleAddComment = async (answerId: number) => {
     if (!answerComments[answerId]?.trim()) {
       toast({
         title: "댓글 내용 필요",
@@ -263,34 +273,99 @@ export default function QuestionDetailPage() {
       return
     }
 
-    // 새 댓글 데이터 생성
-    const newComment = {
-      id: Date.now(),
-      content: answerComments[answerId],
-      author: {
-        name: user?.email?.split("@")[0] || "사용자",
-        avatar: "/placeholder.svg?height=40&width=40",
-      },
-      createdAt: new Date().toISOString(),
+    try {
+      const authToken = localStorage.getItem("auth_token");
+      const res = await fetch("http://localhost:3000/api/v1/comments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ answerId, commentContent: answerComments[answerId] }),
+      });
+      if (!res.ok) {
+        throw new Error("댓글 등록 실패");
+      }
+      // 새 댓글 데이터 생성 (실제 서비스에서는 서버에서 내려주는 댓글 객체를 사용해야 함)
+      const newComment = {
+        id: Date.now(),
+        content: answerComments[answerId],
+        member: {
+          nickname: user?.email?.split("@")[0] || "사용자",
+          avatar: "/placeholder.svg?height=40&width=40",
+        },
+        createdAt: new Date().toISOString(),
+      };
+      setAnswerCommentsData({
+        ...answerCommentsData,
+        [answerId]: [...(answerCommentsData[answerId] || []), newComment],
+      });
+      setAnswerComments({
+        ...answerComments,
+        [answerId]: "",
+      });
+      toast({
+        title: "댓글 등록 완료",
+        description: "답변에 댓글이 등록되었습니다.",
+      });
+    } catch (e) {
+      toast({
+        title: "댓글 등록 실패",
+        description: "댓글 등록 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
     }
-
-    // 기존 댓글 데이터에 새 댓글 추가
-    setAnswerCommentsData({
-      ...answerCommentsData,
-      [answerId]: [...(answerCommentsData[answerId] || []), newComment],
-    })
-
-    // 입력 초기화
-    setAnswerComments({
-      ...answerComments,
-      [answerId]: "",
-    })
-
-    toast({
-      title: "댓글 등록 완료",
-      description: "답변에 댓글이 등록되었습니다.",
-    })
   }
+
+  // 댓글 수정 요청
+  const handleEditComment = async (commentId: number, answerId: number) => {
+    try {
+      const authToken = localStorage.getItem("auth_token");
+      const res = await fetch(`http://localhost:3000/api/v1/comments/${commentId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ commentContent: editingCommentContent, answerId }),
+      });
+      if (!res.ok) throw new Error("댓글 수정 실패");
+      // 프론트 상태 갱신
+      setAnswerCommentsData(prev => ({
+        ...prev,
+        [answerId]: prev[answerId].map((c: any) =>
+          c.commentId === commentId ? { ...c, content: editingCommentContent } : c
+        )
+      }));
+      setEditingCommentId(null);
+      setEditingCommentContent("");
+      toast({ title: "댓글 수정 완료", description: "댓글이 수정되었습니다." });
+    } catch (e) {
+      toast({ title: "댓글 수정 실패", description: "댓글 수정 중 오류가 발생했습니다.", variant: "destructive" });
+    }
+  }
+
+  // 댓글 삭제 함수 추가
+  const handleDeleteComment = async (commentId: number, answerId: number) => {
+    try {
+      const authToken = localStorage.getItem("auth_token");
+      const res = await fetch(`http://localhost:3000/api/v1/comments/${commentId}?answerId=${answerId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+      if (!res.ok) throw new Error("댓글 삭제 실패");
+      setAnswerCommentsData(prev => ({
+        ...prev,
+        [answerId]: (prev[answerId] || []).filter((c: any) => String(c.commentId) !== String(commentId))
+      }));
+      await fetchQuestion();
+      toast({ title: "댓글 삭제 완료", description: "댓글이 삭제되었습니다." });
+    } catch (e) {
+      toast({ title: "댓글 삭제 실패", description: "댓글 삭제 중 오류가 발생했습니다.", variant: "destructive" });
+    }
+  };
 
   if (loading) return <div className="text-center py-20">질문을 불러오는 중...</div>
 
@@ -518,22 +593,47 @@ export default function QuestionDetailPage() {
                     {answerCommentsData[answer.answerId]?.length > 0 && (
                       <div className="space-y-3 mb-4">
                         {answerCommentsData[answer.answerId].map((comment: any, idx: number) => (
-                          <div key={comment.id ? String(comment.id) : idx} className="flex gap-2">
+                          <div key={comment.commentId ? String(comment.commentId) : idx} className="flex gap-2 items-center">
                             <Avatar className="h-6 w-6">
                               <AvatarImage
-                                src={comment.member?.avatar || "/placeholder.svg"}
-                                alt={comment.member?.nickname || "알 수 없음"}
+                                src={"/placeholder.svg"}
+                                alt={comment.memberId ? `User ${comment.memberId}` : "알 수 없음"}
                               />
-                              <AvatarFallback>{comment.member?.nickname?.[0] || "?"}</AvatarFallback>
+                              <AvatarFallback>{comment.memberId ? String(comment.memberId)[0] : "?"}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
-                                <span className="text-xs font-medium">{comment.member?.nickname || "알 수 없음"}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {comment.createdAt ? new Date(comment.createdAt).toISOString().slice(0, 10) : ''}
-                                </span>
+                                <span className="text-xs font-medium">{comment.memberId ? `User ${comment.memberId}` : "알 수 없음"}</span>
                               </div>
-                              <p className="text-sm">{comment.content}</p>
+                              {editingCommentId === comment.commentId ? (
+                                <div className="flex gap-2 items-center mt-1">
+                                  <Textarea
+                                    value={editingCommentContent}
+                                    onChange={e => setEditingCommentContent(e.target.value)}
+                                    className="text-sm min-h-[32px] resize-none"
+                                  />
+                                  <Button size="sm" onClick={() => handleEditComment(comment.commentId, answer.answerId)}>저장</Button>
+                                  <Button size="sm" variant="outline" onClick={() => setEditingCommentId(null)}>취소</Button>
+                                </div>
+                              ) : (
+                                <p className="text-sm">{comment.content}</p>
+                              )}
+                            </div>
+                            {/* 댓글 수정/삭제 버튼 */}
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" aria-label="댓글 수정" onClick={() => {
+                                setEditingCommentId(comment.commentId);
+                                setEditingCommentContent(comment.content);
+                              }}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" aria-label="댓글 삭제" onClick={() => {
+                                if (window.confirm('정말로 이 댓글을 삭제하시겠습니까?')) {
+                                  handleDeleteComment(comment.commentId, answer.answerId);
+                                }
+                              }}>
+                                <Trash className="h-4 w-4" />
+                              </Button>
                             </div>
                           </div>
                         ))}
