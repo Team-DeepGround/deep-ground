@@ -22,6 +22,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { api } from "@/lib/api-client"
 import { auth } from "@/lib/auth"
 import { useAuth } from "@/components/auth-provider"
+import { AVAILABLE_TECH_TAGS, toServerTechTag } from "@/lib/constants/tech-tags"
 
 interface CreateStudyGroupRequest {
   title: string;
@@ -76,61 +77,7 @@ export default function CreateStudyPage() {
   const [recruitEndDate, setRecruitEndDate] = useState<Date>()
 
   // 기술 태그 선택 방식으로 변경
-  const availableTags = [
-    "JavaScript",
-    "TypeScript",
-    "React",
-    "Next.js",
-    "Vue.js",
-    "Angular",
-    "Node.js",
-    "Express",
-    "NestJS",
-    "Spring",
-    "Django",
-    "Flask",
-    "Java",
-    "Python",
-    "C#",
-    "Go",
-    "Rust",
-    "PHP",
-    "Ruby",
-    "HTML",
-    "CSS",
-    "Tailwind",
-    "Bootstrap",
-    "SASS",
-    "GraphQL",
-    "REST API",
-    "SQL",
-    "NoSQL",
-    "MongoDB",
-    "PostgreSQL",
-    "MySQL",
-    "AWS",
-    "Azure",
-    "GCP",
-    "Docker",
-    "Kubernetes",
-    "CI/CD",
-    "Git",
-    "GitHub",
-    "GitLab",
-    "Testing",
-    "TDD",
-    "DevOps",
-    "Algorithm",
-    "Data Structure",
-    "Machine Learning",
-    "AI",
-    "Blockchain",
-    "Mobile",
-    "React Native",
-    "Flutter",
-    "iOS",
-    "Android",
-  ]
+  const availableTags = AVAILABLE_TECH_TAGS
   const [selectedTags, setSelectedTags] = useState<string[]>([])
 
   const handleTagToggle = (tag: string) => {
@@ -221,7 +168,7 @@ export default function CreateStudyPage() {
         groupMemberCount: parseInt(maxMembers),
         isOffline: !isOnline,
         studyLocation: location,
-        techTags: selectedTags.map(tag => tag.toUpperCase()),
+        techTags: selectedTags.map(toServerTechTag),
       }
 
       await api.post('/study-group', requestData)

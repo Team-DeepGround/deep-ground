@@ -1,5 +1,5 @@
-import {toast} from 'sonner';
-import {auth} from '@/lib/auth';
+import { toast } from 'sonner';
+import { auth } from '@/lib/auth';
 
 // 상대 경로로 변경
 const API_BASE_URL = '/api/v1';
@@ -16,7 +16,7 @@ interface RequestOptions extends RequestInit {
 }
 
 async function apiClient(endpoint: string, options: RequestOptions = {}) {
-    const {params, ...fetchOptions} = options;
+    const { params, ...fetchOptions } = options;
 
     // Construct URL with query parameters
     let url = `${API_BASE_URL}${endpoint}`;
@@ -62,7 +62,11 @@ async function apiClient(endpoint: string, options: RequestOptions = {}) {
             data
         });
 
-        if (!response.ok) {
+        if (!response.ok && response.status !== 302) {
+            if (response.status === 401) {
+                // 401 에러 발생 시 로그인 페이지로 리다이렉트
+                window.location.href = '/login';
+            }
             throw new ApiError(response.status, data.message || 'API 요청 실패');
         }
 
@@ -78,7 +82,7 @@ async function apiClient(endpoint: string, options: RequestOptions = {}) {
 
 export const api = {
     get: (endpoint: string, options?: RequestOptions) =>
-        apiClient(endpoint, {...options, method: 'GET'}),
+        apiClient(endpoint, { ...options, method: 'GET' }),
 
     post: (endpoint: string, data?: any, options?: RequestOptions) =>
         apiClient(endpoint, {
@@ -102,7 +106,7 @@ export const api = {
         }),
 
     delete: (endpoint: string, options?: RequestOptions) =>
-        apiClient(endpoint, {...options, method: 'DELETE'}),
+        apiClient(endpoint, { ...options, method: 'DELETE' }),
 
     // 파일 업로드 전용 메서드
     upload: (endpoint: string, formData: FormData, options?: RequestOptions) =>
@@ -111,4 +115,41 @@ export const api = {
             method: 'POST',
             body: formData,
         }),
-}; 
+};
+
+export async function apiClientFormData(endpoint: string, data: any, accessToken: string) {
+    const url = `http://localhost:3000${endpoint}`;
+    const headers = new Headers();
+
+    if (accessToken) {
+        headers.set('Authorization', `Bearer ${accessToken}`);
+    }
+
+    // FormData가 아닐 때만 Content-Type 세팅
+    let body;
+    if (data instanceof FormData) {
+        body = data;
+    } else if (data) {
+        headers.set('Content-Type', 'application/json');
+        body = JSON.stringify(data);
+    }
+
+    const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body,
+    });
+
+    const result = await res.json();
+
+    // 성공 시 status/message/result 구조로 반환
+    if (res.ok) {
+        return {
+            status: 201,
+            message: "질문이 성공적으로 생성되었습니다.",
+            result,
+        };
+    }
+    // 실패 시 백엔드 응답 그대로 반환
+    return result;
+} 

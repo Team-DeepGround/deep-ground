@@ -2,8 +2,8 @@
 
 import type React from "react"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -14,6 +14,8 @@ import { useToast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
 import FileUpload from "@/components/file-upload"
 import { Checkbox } from "@/components/ui/checkbox"
+import { api } from "@/lib/api-client"
+import { AVAILABLE_TECH_TAGS } from "@/lib/constants/tech-tags"
 
 export default function CreateQuestionPage() {
   const router = useRouter()
@@ -26,60 +28,7 @@ export default function CreateQuestionPage() {
   const [uploadedImages, setUploadedImages] = useState<File[]>([])
 
   // 미리 정의된 태그 목록 추가
-  const predefinedTags = [
-    "JavaScript",
-    "TypeScript",
-    "React",
-    "Next.js",
-    "Vue.js",
-    "Angular",
-    "Node.js",
-    "Express",
-    "NestJS",
-    "Spring",
-    "Django",
-    "Flask",
-    "Java",
-    "Python",
-    "C#",
-    "Go",
-    "Rust",
-    "PHP",
-    "Ruby",
-    "HTML",
-    "CSS",
-    "Tailwind",
-    "Bootstrap",
-    "SASS",
-    "GraphQL",
-    "REST API",
-    "SQL",
-    "NoSQL",
-    "MongoDB",
-    "PostgreSQL",
-    "MySQL",
-    "AWS",
-    "Azure",
-    "GCP",
-    "Docker",
-    "Kubernetes",
-    "CI/CD",
-    "Git",
-    "GitHub",
-    "GitLab",
-    "Testing",
-    "TDD",
-    "DevOps",
-    "Algorithm",
-    "Data Structure",
-    "Machine Learning",
-    "AI",
-    "Frontend",
-    "Backend",
-    "Database",
-    "Mobile",
-    "Web",
-  ]
+  const predefinedTags = AVAILABLE_TECH_TAGS
 
   const handleTagToggle = (tag: string) => {
     if (tags.includes(tag)) {
@@ -89,20 +38,32 @@ export default function CreateQuestionPage() {
     }
   }
 
-  const handleImageUpload = (file: File) => {
-    setUploadedImages((prev) => [...prev, file])
-
-    toast({
-      title: "이미지 업로드",
-      description: "이미지가 추가되었습니다.",
-    })
+  // 여러 파일 업로드 핸들러 (FileUpload의 onFilesSelect와 연결)
+  const handleImageUpload = (files: File[]) => {
+    // 여러 파일 중 중복 아닌 것만 추가
+    const newFiles = files.filter(file => !uploadedImages.some(f => f.name === file.name && f.size === file.size))
+    if (newFiles.length < files.length) {
+      toast({
+        title: "중복 이미지",
+        description: "이미 첨부된 이미지는 제외되었습니다.",
+        variant: "destructive",
+      })
+    }
+    setUploadedImages((prev) => [...prev, ...newFiles])
+    if (newFiles.length > 0) {
+      toast({
+        title: "이미지 업로드",
+        description: `${newFiles.length}개의 이미지가 추가되었습니다.`,
+      })
+    }
   }
 
+  // 이미지 삭제 함수 복구
   const removeImage = (index: number) => {
     setUploadedImages((prev) => prev.filter((_, i) => i !== index))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     // 필수 필드 검증
@@ -115,7 +76,6 @@ export default function CreateQuestionPage() {
       return
     }
 
-    // 태그 검증
     if (tags.length === 0) {
       toast({
         title: "태그 누락",
@@ -134,17 +94,56 @@ export default function CreateQuestionPage() {
       return
     }
 
-    // 질문 생성 성공 (실제로는 API 호출)
-    toast({
-      title: "질문 등록 성공",
-      description:
-        uploadedImages.length > 0
-          ? `질문과 ${uploadedImages.length}개의 이미지가 성공적으로 등록되었습니다.`
-          : "질문이 성공적으로 등록되었습니다.",
-    })
+    const formData = new FormData()
+    formData.append("title", title)
+    formData.append("content", content)
+    tags.forEach(tag => formData.append("techStacks", tag))
+    uploadedImages.forEach(file => formData.append("images", file))
 
-    // 질문 목록 페이지로 이동
-    router.push("/questions")
+    // 실제 FormData 내용 콘솔 출력 (디버깅용)
+    for (let pair of formData.entries()) {
+      console.log(pair[0], pair[1]);
+    }
+
+    const accessToken = localStorage.getItem("auth_token")
+
+    if (!accessToken) {
+      toast({
+        title: "인증 실패",
+        description: "로그인이 필요합니다.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const fetchOptions: RequestInit = {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: formData,
+      }
+      // Content-Type은 명시하지 않음
+      const res = await fetch("http://localhost:3000/api/v1/questions", fetchOptions)
+      const data = await res.json()
+
+      if (res.ok) {
+        router.push("/questions")
+      } else {
+        toast({
+          title: "질문 등록 실패",
+          description: data.message || "질문 등록 중 오류가 발생했습니다.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "질문 등록 실패",
+        description: "질문 등록 중 오류가 발생했습니다.",
+        variant: "destructive",
+      })
+    }
   }
 
   return (
@@ -183,7 +182,7 @@ export default function CreateQuestionPage() {
               <div className="space-y-2">
                 <Label htmlFor="images">이미지 첨부</Label>
                 <FileUpload
-                  onFileSelect={handleImageUpload}
+                  onFilesSelect={handleImageUpload}
                   accept="image/*"
                   maxSize={5} // 5MB
                   multiple={true}

@@ -20,6 +20,12 @@ interface LoginResponse {
   } | null;
 }
 
+const SOCIAL_PROVIDERS = [
+  { name: "Google", provider: "google", color: "bg-red-500 hover:bg-red-600 text-white" },
+  { name: "Naver", provider: "naver", color: "bg-green-500 hover:bg-green-600 text-white" },
+  { name: "Kakao", provider: "kakao", color: "bg-yellow-300 hover:bg-yellow-400 text-black" },
+];
+
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -32,34 +38,42 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      console.log('API URL:', process.env.NEXT_PUBLIC_API_BASE_URL);
-      console.log('로그인 시도...')
       const response = await api.post<LoginResponse>(
         "/auth/login",
         { email, password },
         { requireAuth: false }
       )
 
-      console.log('로그인 응답:', response)
-
       if (response.result?.accessToken) {
-        console.log('토큰 저장 및 로그인 처리...')
         login(response.result.accessToken)
         toast.success("로그인에 성공했습니다.")
-        console.log('메인 페이지로 이동 시도...')
         router.push("/")
-        console.log('라우터 푸시 완료')
       } else {
-        console.log('토큰이 없음')
         toast.error("로그인에 실패했습니다.")
       }
     } catch (error) {
-      console.error('로그인 에러:', error)
       toast.error("로그인에 실패했습니다.")
     } finally {
       setIsLoading(false)
     }
   }
+
+  // 소셜 로그인 핸들러
+  const handleSocialLogin = async (provider: string) => {
+  try {
+    // 백엔드에서 리다이렉트 URL을 받아옴
+    const res = await fetch(`http://localhost:8080/api/v1/auth/oauth/${provider}/login`);
+    const { redirectUrl } = await res.json();
+    if (redirectUrl) {
+      // context-path 포함해서 리다이렉트
+      window.location.href = `http://localhost:8080/api/v1${redirectUrl}`;
+    } else {
+      toast.error("소셜 로그인 URL을 가져오지 못했습니다.");
+    }
+  } catch (error) {
+    toast.error("소셜 로그인에 실패했습니다.");
+  }
+}
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -109,8 +123,44 @@ export default function LoginPage() {
             >
               {isLoading ? "로그인 중..." : "로그인"}
             </Button>
+            {/* 회원가입 버튼 */}
+            <Button
+              type="button"
+              className="w-full mt-3 bg-white text-black border border-gray-300 hover:bg-gray-100"
+              onClick={() => router.push("/auth/register")}
+            >
+              회원가입
+            </Button>
+            {/* 비밀번호 찾기 안내문구 */}
+            <div className="flex justify-end mt-2">
+              <span className="text-xs text-gray-500">
+                비밀번호를 잊어버리셨나요?{" "}
+                <button
+                  type="button"
+                  className="underline text-xs text-gray-700 hover:text-black"
+                  onClick={() => router.push("/auth/reset-password")}
+                  style={{ padding: 0, background: "none", border: "none" }}
+                >
+                  비밀번호 찾기
+                </button>
+              </span>
+            </div>
           </div>
         </form>
+
+        {/* 소셜 로그인 버튼들 */}
+        <div className="mt-8 space-y-2">
+          {SOCIAL_PROVIDERS.map(({ name, provider, color }) => (
+            <Button
+              key={provider}
+              type="button"
+              className={`w-full ${color}`}
+              onClick={() => handleSocialLogin(provider)}
+            >
+              {name}로 로그인
+            </Button>
+          ))}
+        </div>
       </div>
     </div>
   )
