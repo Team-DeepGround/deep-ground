@@ -22,6 +22,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/use-auth"
+import { useNotificationContext } from "@/components/notification-provider"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -47,6 +48,7 @@ export default function Header() {
   const pathname = usePathname()
   const router = useRouter()
   const { user, signOut } = useAuth()
+  const { unreadCount, isConnected } = useNotificationContext()
   const [searchOpen, setSearchOpen] = useState(false)
   const [notificationOpen, setNotificationOpen] = useState(false)
 
@@ -121,13 +123,20 @@ export default function Header() {
           <Button
             variant="ghost"
             size="icon"
-            className="relative"
+            className="relative group hover:bg-accent/50 transition-colors"
             onClick={() => {
               setNotificationOpen(!notificationOpen)
             }}
           >
-            <Bell className="h-5 w-5" />
-            <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center">3</Badge>
+            <Bell className="h-5 w-5 group-hover:scale-110 transition-transform" />
+            {unreadCount > 0 && (
+              <div className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs font-bold rounded-full flex items-center justify-center shadow-lg border-2 border-white animate-bounce">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </div>
+            )}
+            {!isConnected && (
+              <div className="absolute -bottom-1 -right-1 h-2.5 w-2.5 bg-red-500 rounded-full animate-pulse shadow-sm border border-white" />
+            )}
             <span className="sr-only">알림</span>
           </Button>
 
