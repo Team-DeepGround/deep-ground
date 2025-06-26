@@ -34,20 +34,20 @@ export default function ProfilePage() {
 
   // 프로필 정보 상태
   const [profile, setProfile] = useState({
-    nickname: "개발자123",
-    email: user?.email || "user@example.com",
-    bio: "풀스택 개발자입니다. React, Next.js, Node.js를 주로 사용합니다.",
-    techStack: ["React", "Next.js", "Node.js", "TypeScript"],
+    nickname: "프로필 수정 부탁드립니다",
+    email: user?.email || "",
+    bio: "",
+    techStack: [],
     links: {
-      github: "https://github.com/username",
-      linkedin: "https://linkedin.com/in/username",
-      website: "https://mywebsite.com",
-      twitter: "https://twitter.com/username",
+      github: "",
+      linkedin: "",
+      website: "",
+      twitter: "",
     },
-    location: "서울특별시",
-    jobTitle: "프론트엔드 개발자",
-    company: "테크 스타트업",
-    education: "컴퓨터공학 학사",
+    location: "",
+    jobTitle: "",
+    company: "",
+    education: "",
   })
 
   // 사용자 활동 데이터
