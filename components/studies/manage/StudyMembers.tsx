@@ -70,7 +70,7 @@ export function StudyMembers({ members, onInviteMember, onKickMember }: StudyMem
           <CardTitle>참여자 관리</CardTitle>
           <CardDescription>스터디 참여자를 관리하세요</CardDescription>
         </div>
-        <Dialog>
+        {/* <Dialog>
           <DialogTrigger asChild>
             <Button>
               <UserPlus className="mr-2 h-4 w-4" />
@@ -105,7 +105,7 @@ export function StudyMembers({ members, onInviteMember, onKickMember }: StudyMem
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
+        </Dialog> */}
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
