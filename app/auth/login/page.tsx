@@ -20,6 +20,12 @@ interface LoginResponse {
   } | null;
 }
 
+const SOCIAL_PROVIDERS = [
+  { name: "Google", provider: "google", color: "bg-red-500 hover:bg-red-600 text-white" },
+  { name: "Naver", provider: "naver", color: "bg-green-500 hover:bg-green-600 text-white" },
+  { name: "Kakao", provider: "kakao", color: "bg-yellow-300 hover:bg-yellow-400 text-black" },
+];
+
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -51,6 +57,23 @@ export default function LoginPage() {
       setIsLoading(false)
     }
   }
+
+  // 소셜 로그인 핸들러
+  const handleSocialLogin = async (provider: string) => {
+  try {
+    // 백엔드에서 리다이렉트 URL을 받아옴
+    const res = await fetch(`http://localhost:8080/api/v1/auth/oauth/${provider}/login`);
+    const { redirectUrl } = await res.json();
+    if (redirectUrl) {
+      // context-path 포함해서 리다이렉트
+      window.location.href = `http://localhost:8080/api/v1${redirectUrl}`;
+    } else {
+      toast.error("소셜 로그인 URL을 가져오지 못했습니다.");
+    }
+  } catch (error) {
+    toast.error("소셜 로그인에 실패했습니다.");
+  }
+}
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -124,6 +147,20 @@ export default function LoginPage() {
             </div>
           </div>
         </form>
+
+        {/* 소셜 로그인 버튼들 */}
+        <div className="mt-8 space-y-2">
+          {SOCIAL_PROVIDERS.map(({ name, provider, color }) => (
+            <Button
+              key={provider}
+              type="button"
+              className={`w-full ${color}`}
+              onClick={() => handleSocialLogin(provider)}
+            >
+              {name}로 로그인
+            </Button>
+          ))}
+        </div>
       </div>
     </div>
   )
