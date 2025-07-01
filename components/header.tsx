@@ -22,7 +22,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/use-auth"
-import { useNotificationContext } from "@/components/notification-provider"
+import { useNotificationContext } from "./notification/notification-provider"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -33,9 +33,8 @@ import {
   DropdownMenuGroup,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import NotificationDropdown from "@/components/notification-dropdown"
+import { NotificationDropdown } from "./notification/notification-dropdown"
 
 const navigation = [
   { name: "스터디", href: "/studies", icon: BookOpen },
@@ -134,7 +133,7 @@ export default function Header() {
                 {unreadCount > 99 ? '99+' : unreadCount}
               </div>
             )}
-            {!isConnected && (
+            {!isConnected && user && (
               <div className="absolute -bottom-1 -right-1 h-2.5 w-2.5 bg-red-500 rounded-full animate-pulse shadow-sm border border-white" />
             )}
             <span className="sr-only">알림</span>
