@@ -4,53 +4,109 @@ import { useState, useEffect, useRef } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { 
   Bell, 
-  Calendar, 
-  MessageSquare, 
-  UserPlus, 
-  UserCheck,
+  Calendar,
   BookOpen, 
-  X, 
+  X,
   Loader2,
-  Clock,
-  Users
+  Clock
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { useNotificationContext } from "@/components/notification-provider"
-import { Notification, NotificationType } from "@/hooks/use-notification-sse"
+import { Notification, NotificationType } from "@/types/notification"
 import { useRouter } from "next/navigation"
+import { getNotificationTitle, getNotificationMessage, getNotificationIcon, formatDate } from './notification-utils'
+import { useAuth } from '@/components/auth-provider'
+import { useNotificationContext } from './notification-provider'
 
 interface NotificationDropdownProps {
   isOpen: boolean
   onClose: () => void
 }
 
-export default function NotificationDropdown({ isOpen, onClose }: NotificationDropdownProps) {
-  const { toast } = useToast()
-  const { 
-    notifications, 
-    markAsRead, 
-    markAllAsRead, 
-    isLoading, 
-    hasNext, 
-    loadMoreNotifications,
-    fetchNotifications
-  } = useNotificationContext()
-  const [activeTab, setActiveTab] = useState("all")
-  const router = useRouter()
+const TAB_VALUES = {
+  ALL: 'all',
+  UNREAD: 'unread',
+  FRIEND: 'friend',
+  STUDY: 'study',
+  MESSAGE: 'message',
+} as const
+
+type TabValue = typeof TAB_VALUES[keyof typeof TAB_VALUES]
+
+export const NotificationDropdown = ({ isOpen, onClose }: NotificationDropdownProps) => {
+  const [activeTab, setActiveTab] = useState<TabValue>('all')
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const {notifications, unreadCount, isConnected, markAsRead, markAllAsRead, loadMoreNotifications, isLoading, hasNext, fetchNotifications} = useNotificationContext()
+  const {isAuthenticated} = useAuth()
+  const router = useRouter()
+  const { toast } = useToast()
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchNotifications()
+  // 중복 알림 제거 (ID 기반)
+  const uniqueNotifications = notifications.filter((notification, index, self) =>
+    index === self.findIndex(n => n.id === notification.id)
+  )
+
+  // 알림 필터링 함수
+  const filterNotifications = (notifications: Notification[], activeTab: TabValue) => {
+    return notifications.filter((notification) => {
+      if (activeTab === TAB_VALUES.ALL) return true
+      if (activeTab === TAB_VALUES.UNREAD) return !notification.read
+      if (activeTab === TAB_VALUES.FRIEND) return notification.data.type === NotificationType.FRIEND_REQUEST || notification.data.type === NotificationType.FRIEND_ACCEPT
+      if (activeTab === TAB_VALUES.STUDY) return [
+        NotificationType.STUDY_GROUP_INVITE, 
+        NotificationType.STUDY_GROUP_JOIN,
+        NotificationType.SCHEDULE_CREATE,
+        NotificationType.SCHEDULE_REMINDER
+      ].includes(notification.data.type)
+      if (activeTab === TAB_VALUES.MESSAGE) return notification.data.type === NotificationType.NEW_MESSAGE
+      return true
+    })
+  }
+
+  const filteredNotifications = filterNotifications(uniqueNotifications, activeTab)
+
+  const handleNotificationAction = async (notification: Notification) => {
+    if (!notification.read) {
+      await markAsRead(notification.id)
     }
-  }, [isOpen, fetchNotifications])
 
-  // 외부 클릭 감지
+    // 알림 타입에 따른 라우팅
+    switch (notification.data.type) {
+      case NotificationType.FRIEND_REQUEST:
+      case NotificationType.FRIEND_ACCEPT:
+        router.push('/friends')
+        break
+      case NotificationType.STUDY_GROUP_INVITE:
+      case NotificationType.STUDY_GROUP_JOIN:
+        router.push(`/studies/${notification.data.studyGroupId}`)
+        break
+      case NotificationType.SCHEDULE_CREATE:
+      case NotificationType.SCHEDULE_REMINDER:
+        router.push('/calendar')
+        break
+      case NotificationType.NEW_MESSAGE:
+        router.push(`/chat/${notification.data.chatRoomId}`)
+        break
+      default:
+        break
+    }
+
+    onClose()
+  }
+
+  const handleMarkAllAsRead = async () => {
+    await markAllAsRead()
+    toast({
+      title: "알림 읽음 처리",
+      description: "모든 알림을 읽음 처리했습니다.",
+    })
+  }
+
+  // 드롭다운 외부 클릭 감지
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -67,150 +123,37 @@ export default function NotificationDropdown({ isOpen, onClose }: NotificationDr
     }
   }, [isOpen, onClose])
 
-  if (!isOpen) return null
-
-  // 알림 필터링
-  const filteredNotifications = notifications.filter((notification) => {
-    if (activeTab === "all") return true
-    if (activeTab === "unread") return !notification.read
-    if (activeTab === "friend") return notification.data.type === NotificationType.FRIEND_REQUEST || notification.data.type === NotificationType.FRIEND_ACCEPT
-    if (activeTab === "study") return [
-      NotificationType.STUDY_GROUP_INVITE, 
-      NotificationType.STUDY_GROUP_JOIN,
-      NotificationType.SCHEDULE_CREATE,
-      NotificationType.SCHEDULE_REMINDER
-    ].includes(notification.data.type)
-    if (activeTab === "message") return notification.data.type === NotificationType.NEW_MESSAGE
-    return true
-  })
-
-  const handleMarkAllAsRead = async () => {
-    try {
-      await markAllAsRead()
-      toast({
-        title: "알림 읽음 처리",
-        description: "모든 알림을 읽음 처리했습니다.",
-      })
-    } catch (error) {
-      toast({
-        title: "오류",
-        description: "알림 읽음 처리 중 오류가 발생했습니다.",
-        variant: "destructive",
-      })
+  // 드롭다운이 열릴 때 알림 목록 조회
+  useEffect(() => {
+    if (isOpen && isAuthenticated) {
+      fetchNotifications()
     }
-  }
+  }, [isOpen, isAuthenticated, fetchNotifications])
 
-  // 알림 타입별 이동할 URL 반환 함수
-  const getNotificationUrl = (notification: Notification) => {
-    switch (notification.data.type) {
-      case NotificationType.FRIEND_REQUEST:
-      case NotificationType.FRIEND_ACCEPT:
-        return "/friends"
-      case NotificationType.SCHEDULE_CREATE:
-      case NotificationType.SCHEDULE_REMINDER:
-        return "/calendar"
-      default:
-        return null // 나머지는 이동 없음
-    }
-  }
-
-  const handleNotificationAction = async (notification: Notification) => {
-    try {
-      if (!notification.read) {
-        await markAsRead(notification.id)
+  // 네트워크 상태 변화 감지
+  useEffect(() => {
+    const handleOnline = () => {
+      // 온라인 상태 복구 시 알림 목록 새로고침
+      if (isAuthenticated) {
+        // SSE 연결이 자동으로 재연결되므로 추가 작업 불필요
       }
-      const url = getNotificationUrl(notification)
-      if (url) {
-        onClose()
-        setTimeout(() => {
-          router.push(url)
-        }, 0)
-      }
-    } catch (error) {
-      toast({
-        title: "오류",
-        description: "알림 처리 중 오류가 발생했습니다.",
-        variant: "destructive",
-      })
     }
-  }
 
-  const getNotificationTitle = (type: NotificationType) => {
-    switch (type) {
-      case NotificationType.FRIEND_REQUEST:
-        return "친구 요청"
-      case NotificationType.FRIEND_ACCEPT:
-        return "친구 요청 수락"
-      case NotificationType.STUDY_GROUP_INVITE:
-        return "스터디 그룹 초대"
-      case NotificationType.STUDY_GROUP_JOIN:
-        return "스터디 그룹 가입"
-      case NotificationType.SCHEDULE_CREATE:
-        return "스터디 일정 생성"
-      case NotificationType.SCHEDULE_REMINDER:
-        return "스터디 일정 알림"
-      case NotificationType.NEW_MESSAGE:
-        return "새 메시지"
-      default:
-        return "알림"
+    const handleOffline = () => {
+      // 오프라인 상태 시 UI 업데이트
     }
-  }
 
-  const getNotificationMessage = (notification: Notification) => {
-    switch (notification.data.type) {
-      case NotificationType.FRIEND_REQUEST:
-        return `${notification.data.nickname}님이 친구 요청을 보냈습니다.`
-      case NotificationType.FRIEND_ACCEPT:
-        return `${notification.data.nickname}님이 친구 요청을 수락했습니다.`
-      case NotificationType.STUDY_GROUP_INVITE:
-        return `${notification.data.title} 스터디 그룹에 초대되었습니다.`
-      case NotificationType.STUDY_GROUP_JOIN:
-        return `새로운 멤버가 ${notification.data.title} 스터디 그룹에 가입했습니다.`
-      case NotificationType.SCHEDULE_CREATE:
-        return `새로운 스터디 일정이 생성되었습니다: ${notification.data.title}`
-      case NotificationType.SCHEDULE_REMINDER:
-        return `스터디 일정 알림: ${notification.data.title}`
-      case NotificationType.NEW_MESSAGE:
-        return `${notification.data.sender}님이 새 메시지를 보냈습니다.`
-      default:
-        return "새로운 알림이 있습니다."
-    }
-  }
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
 
-  const getNotificationIcon = (type: NotificationType) => {
-    switch (type) {
-      case NotificationType.FRIEND_REQUEST:
-        return <UserPlus className="h-5 w-5 text-blue-500" />
-      case NotificationType.FRIEND_ACCEPT:
-        return <UserCheck className="h-5 w-5 text-green-500" />
-      case NotificationType.STUDY_GROUP_INVITE:
-        return <BookOpen className="h-5 w-5 text-purple-500" />
-      case NotificationType.STUDY_GROUP_JOIN:
-        return <Users className="h-5 w-5 text-indigo-500" />
-      case NotificationType.SCHEDULE_CREATE:
-        return <Calendar className="h-5 w-5 text-orange-500" />
-      case NotificationType.SCHEDULE_REMINDER:
-        return <Clock className="h-5 w-5 text-red-500" />
-      case NotificationType.NEW_MESSAGE:
-        return <MessageSquare className="h-5 w-5 text-teal-500" />
-      default:
-        return <Bell className="h-5 w-5 text-gray-500" />
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
     }
-  }
+  }, [isAuthenticated])
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60)
-    
-    if (diffInHours < 1) {
-      const diffInMinutes = Math.floor(diffInHours * 60)
-      return `${diffInMinutes}분 전`
-    } else if (diffInHours < 24) {
-      return `${Math.floor(diffInHours)}시간 전`
-    } else {
-      return date.toLocaleDateString('ko-KR')
-    }
+  if (!isAuthenticated || !isOpen) {
+    return null
   }
 
   const renderNotificationContent = (notification: Notification) => {
@@ -276,7 +219,7 @@ export default function NotificationDropdown({ isOpen, onClose }: NotificationDr
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
+        <Tabs defaultValue="all" value={activeTab} onValueChange={(value) => setActiveTab(value as TabValue)}>
           <div className="px-4 pt-2">
             <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="all">전체</TabsTrigger>

@@ -21,6 +21,7 @@ import {Client, IMessage} from '@stomp/stompjs'; // STOMP 클라이언트 임포
 import {auth} from "@/lib/auth" // auth 임포트
 import { useOnlineStatus } from './online-status-provider';
 import { Dialog, DialogContent } from "./ui/dialog";
+import { useCurrentChatRoom } from './chat/chat-context'
 
 
 // API 응답 타입 정의
@@ -1174,13 +1175,23 @@ export default function ChatPopup({isOpen, onClose}: ChatPopupProps) {
         }
     }, [handleScroll, handleWheelNative, selectedChatRoom]);
 
+    const { currentChatRoomId, setCurrentChatRoomId } = useCurrentChatRoom()
+
     useEffect(() => {
         if (selectedChatRoom) {
-            (window as any).currentChatRoomId = selectedChatRoom.chatRoomId
+            setCurrentChatRoomId(selectedChatRoom.chatRoomId)
+            // SSE에서 감지할 수 있도록 커스텀 이벤트 발생
+            window.dispatchEvent(new CustomEvent('chat-room-changed', {
+                detail: { chatRoomId: selectedChatRoom.chatRoomId }
+            }))
         } else {
-            (window as any).currentChatRoomId = null
+            setCurrentChatRoomId(null)
+            // SSE에서 감지할 수 있도록 커스텀 이벤트 발생
+            window.dispatchEvent(new CustomEvent('chat-room-changed', {
+                detail: { chatRoomId: null }
+            }))
         }
-    }, [selectedChatRoom])
+    }, [selectedChatRoom, setCurrentChatRoomId])
 
     // SSE unreadCount 이벤트로 채팅방 외부 새 메시지 알림 토스트 표시
     useEffect(() => {

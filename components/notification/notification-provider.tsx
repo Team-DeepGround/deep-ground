@@ -1,10 +1,11 @@
 "use client"
 
 import React, { createContext, useContext, ReactNode } from 'react'
-import { useNotificationSSE } from '@/hooks/use-notification-sse'
+import { useNotificationSSE } from "./use-notification-sse"
+import { Notification } from '@/types/notification'
 
 interface NotificationContextType {
-  notifications: any[]
+  notifications: Notification[]
   unreadCount: number
   isConnected: boolean
   isLoading: boolean
@@ -18,7 +19,7 @@ interface NotificationContextType {
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined)
 
-export const useNotificationContext = () => {
+export const useNotificationContext = (): NotificationContextType => {
   const context = useContext(NotificationContext)
   if (context === undefined) {
     throw new Error('useNotificationContext must be used within a NotificationProvider')
