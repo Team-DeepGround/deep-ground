@@ -278,8 +278,7 @@ export async function getFeedReplyMediaBlob(mediaId: number): Promise<Blob> {
     throw new ApiError(response.status, '이미지를 가져올 수 없습니다');
   }
   return await response.blob();
-} 
-
+}
 
 export async function apiClientFormData(endpoint: string, options: RequestInit = {}) {
   const { body, ...fetchOptions } = options;
@@ -333,4 +332,33 @@ export async function apiClientFormData(endpoint: string, options: RequestInit =
     }
     throw new ApiError(500, '서버 오류가 발생했습니다');
   }
+}
+
+export interface FetchFeedSummariesResponse {
+  status: number;
+  message: string;
+  result: {
+    feedSummaries: FetchFeedSummaryResponse[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  } | null;
+}
+
+export interface FetchFeedSummaryResponse {
+  feedId: number;
+  memberName: string;
+  content: string;
+  createdAt: string;
+}
+
+export async function fetchFeedSummariesByMemberId(memberId: number, { page = 0, size = 10, sort = 'createdAt,desc' }: { page?: number; size?: number; sort?: string } = {}): Promise<FetchFeedSummariesResponse> {
+  return await api.get(`/feed/summaries`, {
+    params: { page: String(page), size: String(size), sort },
+  });
+}
+
+export async function fetchFeedById(feedId: number): Promise<{ status: number; message: string; result: FetchFeedResponse | null }> {
+  return await api.get(`/feed/${feedId}`);
 }
