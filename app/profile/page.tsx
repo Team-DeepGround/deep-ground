@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { CalendarIcon, MessageSquare, PenSquare, BookOpen, Github, Globe, Linkedin, Twitter } from "lucide-react"
+import { CalendarIcon, MessageSquare, PenSquare, BookOpen, Github, Globe, Linkedin, Twitter, FileText, X } from "lucide-react"
 import ProfileForm from "@/components/profile-form"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { fetchFeedSummariesByMemberId, fetchFeedById, FetchFeedSummaryResponse, FetchFeedResponse } from "@/lib/api/feed"
+import { FeedPost } from "@/components/feed/feed-post"
 
 export default function ProfilePage() {
   const { toast } = useToast()
@@ -19,6 +21,10 @@ export default function ProfilePage() {
   const router = useRouter()
   const [isEditing, setIsEditing] = useState(false)
   const [activeTab, setActiveTab] = useState("profile")
+  const [feedSummaries, setFeedSummaries] = useState<FetchFeedSummaryResponse[]>([])
+  const [selectedFeed, setSelectedFeed] = useState<FetchFeedResponse | null>(null)
+  const [showFeedDetail, setShowFeedDetail] = useState(false)
+  const [loading, setLoading] = useState(false)
 
   // Add the following code to handle URL query parameters for tabs
   useEffect(() => {
@@ -31,6 +37,59 @@ export default function ProfilePage() {
       setActiveTab(tabParam)
     }
   }, [])
+
+  // 피드 요약 목록 가져오기
+  useEffect(() => {
+    const loadFeedSummaries = async () => {
+      if (!user?.id) return
+      
+      try {
+        setLoading(true)
+        const response = await fetchFeedSummariesByMemberId(user.id, { page: 0, size: 10 })
+        if (response.result) {
+          setFeedSummaries(response.result.feedSummaries)
+        }
+      } catch (error) {
+        console.error('피드 요약 로드 실패:', error)
+        toast({
+          title: "오류",
+          description: "피드 목록을 불러오는데 실패했습니다.",
+          variant: "destructive"
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadFeedSummaries()
+  }, [user?.id, toast])
+
+  // 피드 상세 조회
+  const handleFeedClick = async (feedId: number) => {
+    try {
+      setLoading(true)
+      const response = await fetchFeedById(feedId)
+      if (response.result) {
+        setSelectedFeed(response.result)
+        setShowFeedDetail(true)
+      }
+    } catch (error) {
+      console.error('피드 상세 조회 실패:', error)
+      toast({
+        title: "오류",
+        description: "피드 상세 정보를 불러오는데 실패했습니다.",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 피드 상세 모달 닫기
+  const handleCloseFeedDetail = () => {
+    setShowFeedDetail(false)
+    setSelectedFeed(null)
+  }
 
   // 프로필 정보 상태
   const [profile, setProfile] = useState({
@@ -49,31 +108,6 @@ export default function ProfilePage() {
     company: "",
     education: "",
   })
-
-  // 사용자 활동 데이터
-  const activities = [
-    {
-      id: 1,
-      type: "study_join",
-      title: "스터디 참여",
-      content: "React와 Next.js 마스터하기 스터디에 참여했습니다.",
-      date: "2023-05-10T09:30:00Z",
-    },
-    {
-      id: 2,
-      type: "question",
-      title: "질문 작성",
-      content: "Spring Security와 JWT 인증 구현 방법에 대해 질문했습니다.",
-      date: "2023-05-08T14:20:00Z",
-    },
-    {
-      id: 3,
-      type: "study_create",
-      title: "스터디 개설",
-      content: "알고리즘 문제 풀이 스터디를 개설했습니다.",
-      date: "2023-05-05T11:15:00Z",
-    },
-  ]
 
   // 내가 만든 스터디
   const createdStudies = [
@@ -541,33 +575,45 @@ export default function ProfilePage() {
                   <TabsContent value="activity" className="mt-6">
                     <Card>
                       <CardHeader>
-                        <CardTitle>최근 활동</CardTitle>
+                        <CardTitle>최근 피드</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="space-y-6">
-                          {activities.map((activity) => (
-                            <div key={activity.id} className="flex gap-4">
-                              <div className="mt-1">
-                                {activity.type === "study_join" || activity.type === "study_create" ? (
-                                  <BookOpen className="h-5 w-5 text-blue-500" />
-                                ) : activity.type === "question" ? (
-                                  <MessageSquare className="h-5 w-5 text-green-500" />
-                                ) : (
-                                  <CalendarIcon className="h-5 w-5 text-orange-500" />
-                                )}
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex justify-between">
-                                  <h3 className="font-medium">{activity.title}</h3>
-                                  <span className="text-sm text-muted-foreground">
-                                    {new Date(activity.date).toLocaleDateString()}
-                                  </span>
+                        {loading ? (
+                          <div className="text-center py-8">
+                            <p className="text-muted-foreground">로딩 중...</p>
+                          </div>
+                        ) : feedSummaries.length > 0 ? (
+                          <div className="space-y-4">
+                            {feedSummaries.map((feed) => (
+                              <div 
+                                key={feed.feedId} 
+                                className="p-4 border rounded-lg hover:bg-accent transition-colors cursor-pointer"
+                                onClick={() => handleFeedClick(feed.feedId)}
+                              >
+                                <div className="flex items-start gap-3">
+                                  <div className="mt-1">
+                                    <FileText className="h-5 w-5 text-blue-500" />
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="flex justify-between">
+                                      <h3 className="font-medium">피드 작성</h3>
+                                      <span className="text-sm text-muted-foreground">
+                                        {new Date(feed.createdAt).toLocaleDateString()}
+                                      </span>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                      {feed.content}
+                                    </p>
+                                  </div>
                                 </div>
-                                <p className="text-sm text-muted-foreground mt-1">{activity.content}</p>
                               </div>
-                            </div>
-                          ))}
-                        </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8">
+                            <p className="text-muted-foreground">아직 작성한 피드가 없습니다.</p>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   </TabsContent>
@@ -676,6 +722,44 @@ export default function ProfilePage() {
           <TabsContent value="security">{renderSecurityTab()}</TabsContent>
         </Tabs>
       </div>
+
+      {/* 피드 상세 모달 */}
+      {showFeedDetail && selectedFeed && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-background rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b flex justify-between items-center">
+              <h2 className="text-lg font-semibold">피드 상세</h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleCloseFeedDetail}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="p-4">
+              <FeedPost 
+                post={selectedFeed} 
+                onRefresh={() => {
+                  // 피드 상세에서 변경사항이 있을 경우 목록 새로고침
+                  const loadFeedSummaries = async () => {
+                    if (!user?.id) return
+                    try {
+                      const response = await fetchFeedSummariesByMemberId(user.id, { page: 0, size: 10 })
+                      if (response.result) {
+                        setFeedSummaries(response.result.feedSummaries)
+                      }
+                    } catch (error) {
+                      console.error('피드 요약 로드 실패:', error)
+                    }
+                  }
+                  loadFeedSummaries()
+                }} 
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

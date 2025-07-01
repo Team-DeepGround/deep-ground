@@ -40,7 +40,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { api } from "@/lib/api-client"
 
 interface ProfileData {
   id: string;
