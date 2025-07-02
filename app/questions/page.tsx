@@ -57,14 +57,16 @@ export default function QuestionsPage() {
 
   // 필터링된 질문
   const filteredQuestions = allQuestions.filter((question) => {
+    const title = question.title ?? "";
+    const content = question.content ?? "";
     const matchesSearch =
-      question.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      question.content.toLowerCase().includes(searchTerm.toLowerCase())
+      title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      content.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const tags = question.tags || [];
-    const matchesTags = selectedTags.length === 0 || tags.some((tag: any) => selectedTags.includes(tag))
+    const tags = question.tags || question.techStacks || [];
+    const matchesTags = selectedTags.length === 0 || tags.some((tag: any) => selectedTags.includes(tag));
 
-    return matchesSearch && matchesTags
+    return matchesSearch && matchesTags;
   })
 
   // 정렬된 질문
@@ -73,10 +75,8 @@ export default function QuestionsPage() {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     } else if (sortOrder === "oldest") {
       return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-    } else if (sortOrder === "most_likes") {
-      return b.likeCount - a.likeCount
-    } else if (sortOrder === "most_comments") {
-      return b.commentCount - a.commentCount
+    } else if (sortOrder === "most_answers") {
+      return b.answerCount - a.answerCount
     }
     return 0
   })
@@ -153,16 +153,10 @@ export default function QuestionsPage() {
                       <span>오래된순</span>
                     </div>
                   </SelectItem>
-                  <SelectItem value="most_likes">
-                    <div className="flex items-center">
-                      <ThumbsUp className="mr-2 h-4 w-4" />
-                      <span>좋아요순</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="most_comments">
+                  <SelectItem value="most_answers">
                     <div className="flex items-center">
                       <MessageSquare className="mr-2 h-4 w-4" />
-                      <span>댓글순</span>
+                      <span>답변순</span>
                     </div>
                   </SelectItem>
                 </SelectContent>
@@ -175,7 +169,7 @@ export default function QuestionsPage() {
                 {(
                   Array.from(new Set([
                     ...predefinedTags,
-                    ...allQuestions.flatMap((question: any) => question.tags || [])
+                    ...allQuestions.flatMap((question: any) => question.tags || question.techStacks || [])
                   ]))
                 ).map((tag: any, idx: number) => (
                   <Badge

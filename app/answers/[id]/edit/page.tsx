@@ -18,7 +18,7 @@ export default function EditAnswerPage() {
 
   const [content, setContent] = useState("")
   const [uploadedImages, setUploadedImages] = useState<File[]>([])
-  const [existingImages, setExistingImages] = useState<any[]>([])
+  const [existingImages, setExistingImages] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [questionId, setQuestionId] = useState<number | null>(null)
   const answerId = params.id
@@ -30,7 +30,14 @@ export default function EditAnswerPage() {
         const res = await api.get(`/answers/${answerId}`)
         const answer = res.result
         setContent(answer.answerContent || "")
-        setExistingImages(answer.mediaUrls || [])
+        let urls: string[] = [];
+        if (Array.isArray(answer.mediaUrls)) {
+          urls = answer.mediaUrls.map((img: any) => {
+            const url = typeof img === 'string' ? img : img.url;
+            return url.replace(/^@/, '');
+          })
+        }
+        setExistingImages(urls)
         setQuestionId(answer.questionId || null)
       } catch (e) {
         toast({ title: "답변 불러오기 실패", description: "답변 정보를 불러올 수 없습니다.", variant: "destructive" })
@@ -41,17 +48,30 @@ export default function EditAnswerPage() {
     if (answerId) fetchAnswer()
   }, [answerId])
 
-  const handleImageUpload = (file: File) => {
-    setUploadedImages((prev) => [...prev, file])
-    toast({ title: "이미지 업로드", description: "이미지가 추가되었습니다." })
+  const handleImageUpload = (files: File[]) => {
+    const newFiles = files.filter(file => !uploadedImages.some(f => f.name === file.name && f.size === file.size))
+    if (newFiles.length < files.length) {
+      toast({
+        title: "중복 이미지",
+        description: "이미 첨부된 이미지는 제외되었습니다.",
+        variant: "destructive",
+      })
+    }
+    setUploadedImages((prev) => [...prev, ...newFiles])
+    if (newFiles.length > 0) {
+      toast({
+        title: "이미지 업로드",
+        description: `${newFiles.length}개의 이미지가 추가되었습니다.`,
+      })
+    }
   }
 
   const removeImage = (index: number) => {
     setUploadedImages((prev) => prev.filter((_, i) => i !== index))
   }
 
-  const removeExistingImage = (id: number) => {
-    setExistingImages((prev) => prev.filter((img) => img.id !== id))
+  const removeExistingImage = (url: string) => {
+    setExistingImages((prev) => prev.filter((img) => img !== url))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -72,7 +92,7 @@ export default function EditAnswerPage() {
     const formData = new FormData()
     formData.append("answerContent", content)
     formData.append("questionId", questionId?.toString() || "")
-    uploadedImages.forEach(file => formData.append("files", file))
+    uploadedImages.forEach(file => formData.append("image", file))
 
     // 디버깅: 전송할 데이터 확인
     console.log('수정할 답변 ID:', answerId)
@@ -143,7 +163,7 @@ export default function EditAnswerPage() {
               <div className="space-y-2">
                 <Label>이미지 첨부</Label>
                 <FileUpload
-                  onFileSelect={handleImageUpload}
+                  onFilesSelect={handleImageUpload}
                   accept="image/*"
                   maxSize={5}
                   multiple={true}
@@ -154,10 +174,10 @@ export default function EditAnswerPage() {
                   <div className="mt-4 space-y-2">
                     <Label>기존 이미지</Label>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {existingImages.map((image, index) => (
-                        <div key={image.id} className="relative group">
+                      {existingImages.map((url, index) => (
+                        <div key={url || index} className="relative group">
                           <img
-                            src={image.url || "/placeholder.svg"}
+                            src={url || "/placeholder.svg"}
                             alt={`Existing ${index + 1}`}
                             className="h-24 w-full object-cover rounded-md"
                           />
@@ -165,7 +185,7 @@ export default function EditAnswerPage() {
                             variant="destructive"
                             size="icon"
                             className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => removeExistingImage(image.id)}
+                            onClick={() => removeExistingImage(url)}
                           >
                             <X className="h-3 w-3" />
                           </Button>

@@ -76,6 +76,10 @@ function useAuthImageUrls(urls: string[] | undefined) {
 
 // 인증 헤더가 필요한 이미지 렌더링용 컴포넌트
 function AuthImage({ imageUrl, alt = "이미지" }: { imageUrl: string; alt?: string }) {
+  // S3 URL 등 외부 URL이면 바로 렌더링
+  if (imageUrl.startsWith("http")) {
+    return <img src={imageUrl} alt={alt} style={{ maxWidth: "100%" }} />;
+  }
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   useEffect(() => {
     if (!imageUrl) return;
@@ -216,21 +220,24 @@ export default function QuestionDetailPage() {
     return () => window.removeEventListener('focus', handleFocus)
   }, [params.id])
 
-  const handleImageUpload = (file: File) => {
-    // 중복 체크
-    if (uploadedImages.some(f => f.name === file.name && f.size === file.size)) {
+  // 여러 파일 업로드 핸들러 (질문 작성과 동일하게)
+  const handleImageUpload = (files: File[]) => {
+    // 여러 파일 중 중복 아닌 것만 추가
+    const newFiles = files.filter(file => !uploadedImages.some(f => f.name === file.name && f.size === file.size))
+    if (newFiles.length < files.length) {
       toast({
         title: "중복 이미지",
-        description: "이미 첨부된 이미지입니다.",
+        description: "이미 첨부된 이미지는 제외되었습니다.",
         variant: "destructive",
       })
-      return
     }
-    setUploadedImages((prev) => [...prev, file])
-    toast({
-      title: "이미지 업로드",
-      description: "이미지가 추가되었습니다.",
-    })
+    setUploadedImages((prev) => [...prev, ...newFiles])
+    if (newFiles.length > 0) {
+      toast({
+        title: "이미지 업로드",
+        description: `${newFiles.length}개의 이미지가 추가되었습니다.`,
+      })
+    }
   }
 
   const removeImage = (index: number) => {
@@ -547,14 +554,11 @@ export default function QuestionDetailPage() {
               {/* 질문 이미지 */}
               {question.mediaUrl && question.mediaUrl.length > 0 && (
                 <div className="mt-4 space-y-4">
-                  {question.mediaUrl.map((url: string, idx: number) => {
-                    const fileName = url.replace("/media/", "");
-                    return (
-                      <div key={url || idx} className="rounded-md overflow-hidden">
-                        <AuthImage imageUrl={`/question/media/${fileName}`} alt={`질문 이미지 ${idx + 1}`} />
-                      </div>
-                    );
-                  })}
+                  {question.mediaUrl.map((url: string, idx: number) => (
+                    <div key={url || idx} className="rounded-md overflow-hidden">
+                      <AuthImage imageUrl={url} alt={`질문 이미지 ${idx + 1}`} />
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -564,14 +568,6 @@ export default function QuestionDetailPage() {
         {/* 답변 수 */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold">{answers.length}개의 답변</h2>
-          <select
-            defaultValue="votes"
-            className="w-[180px] h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
-          >
-            <option value="votes">추천순</option>
-            <option value="newest">최신순</option>
-            <option value="oldest">오래된순</option>
-          </select>
         </div>
 
         {/* 답변 목록 */}
@@ -617,8 +613,8 @@ export default function QuestionDetailPage() {
                 <div className="prose max-w-none">
                   <p className="whitespace-pre-line">{answer.answerContent}</p>
 
-                  {answer.images && answer.images.length > 0 && (
-                    <AnswerImagesWithAuth images={answer.images} />
+                  {answer.mediaUrls && answer.mediaUrls.length > 0 && (
+                    <AnswerImagesWithAuth images={answer.mediaUrls} />
                   )}
                 </div>
               </CardContent>
@@ -764,9 +760,10 @@ export default function QuestionDetailPage() {
             <div className="space-y-2">
               <Label htmlFor="answer-images">이미지 첨부</Label>
               <FileUpload
-                onFileSelect={handleImageUpload}
+                onFilesSelect={handleImageUpload}
                 accept="image/*"
                 maxSize={5}
+                multiple={true}
                 buttonText="이미지 선택"
               />
 
@@ -818,15 +815,23 @@ function Label({ htmlFor, children, className }: { htmlFor: string; children: Re
 }
 
 // 답변 이미지용 컴포넌트
-function AnswerImagesWithAuth({ images }: { images: any[] }) {
+function AnswerImagesWithAuth({ images }: { images: string[] }) {
   return (
     <div className="mt-4 space-y-4">
-      {images.map((img, idx) => {
-        // img.url: "/media/파일명"
-        const fileName = img.url.replace("/media/", "");
+      {images.map((url, idx) => {
+        if (url.startsWith('http')) {
+          // S3 URL이면 바로 렌더링
+          return (
+            <div key={url || idx} className="rounded-md overflow-hidden">
+              <img src={url} alt={`답변 이미지 ${idx + 1}`} style={{ maxWidth: '100%' }} />
+            </div>
+          );
+        }
+        // /media/파일명.확장자 → 파일명.확장자 추출
+        const fileName = url.replace("/media/", "");
         return (
-          <div key={img.url || idx} className="rounded-md overflow-hidden">
-            <AuthImage imageUrl={`/question/media/${fileName}`} alt={img.alt || `답변 이미지 ${idx + 1}`} />
+          <div key={url || idx} className="rounded-md overflow-hidden">
+            <AuthImage imageUrl={`/answer/media/${fileName}`} alt={`답변 이미지 ${idx + 1}`} />
           </div>
         );
       })}
