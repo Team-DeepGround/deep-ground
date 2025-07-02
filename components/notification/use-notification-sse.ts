@@ -10,9 +10,11 @@ import { Notification } from '@/types/notification'
 import { fetchNotificationsApi, fetchUnreadCountApi, markAsReadApi, markAllAsReadApi } from '@/lib/api/notification'
 import { getNotificationMessage } from './notification-utils'
 
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/sse/subscribe`
+
 // SSE 설정 상수
 const SSE_CONFIG = {
-    URL: 'http://localhost:8080/api/v1/sse/subscribe',
+    URL: API_BASE,
     HEARTBEAT_TIMEOUT: 60000,
     CONNECTION_TIMEOUT: 10000,
     RECONNECT_INTERVAL: 5000,
@@ -393,7 +395,7 @@ export const useNotificationSSE = () => {
         if (reconnectDebounceRef.current) {
             clearTimeout(reconnectDebounceRef.current)
         }
-        
+
         reconnectDebounceRef.current = setTimeout(() => {
             if (isAuthenticated && !isConnected) {
                 console.log('디바운스된 SSE 재연결 시도')
@@ -459,7 +461,7 @@ export const useNotificationSSE = () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange)
             window.removeEventListener('focus', handleFocus)
             window.removeEventListener('blur', handleBlur)
-            
+
             // 디바운스 타이머 정리
             if (reconnectDebounceRef.current) {
                 clearTimeout(reconnectDebounceRef.current)
@@ -498,4 +500,4 @@ export const useNotificationSSE = () => {
         reconnect: connectSSE,
         fetchNotifications,
     }
-} 
+}
