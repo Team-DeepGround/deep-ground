@@ -174,6 +174,10 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
             }
         })
 
+        eventSource.addEventListener('heartbeat', () => {
+            lastHeartbeatTime = Date.now();
+        });
+
         eventSource.onerror = async (error: Event) => {
             if (isTokenExpiredError(error)) {
                 console.log('토큰 만료 감지 - 내장 재연결 중단 후 수동 재연결')
@@ -245,15 +249,16 @@ const startHeartbeatMonitoring = (): void => {
     if (heartbeatIntervalId) {
         clearInterval(heartbeatIntervalId)
     }
-    
     heartbeatIntervalId = setInterval(() => {
         if (globalConnectionCount > 0 && !validateConnection()) {
             console.log('하트비트 모니터링에서 연결 끊김 감지 - 내장 재연결 기능 활용')
             if (globalEventSource) {
-                globalEventSource.close() // 내장 재연결이 자동으로 동작
+                globalEventSource.close();
+                // 직접 재연결 시도
+                createGlobalSSEConnection();
             }
         }
-    }, 30000) // 30초마다 연결 상태 확인
+    }, 30000)
 }
 
 // 하트비트 모니터링 중단
