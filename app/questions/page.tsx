@@ -295,6 +295,13 @@ interface QuestionCardProps {
 function QuestionCard({ question, onTitleClick }: QuestionCardProps) {
   const authorName = question.author?.name || question.memberId || "알 수 없음";
   const authorAvatar = question.author?.avatar || "/placeholder.svg";
+  // 상태 한글 변환 함수
+  const statusLabel = (status?: string) => {
+    if (status === "OPEN") return "미해결";
+    if (status === "RESOLVED") return "해결중";
+    if (status === "CLOSED") return "해결완료";
+    return "미해결";
+  };
   return (
     <Card>
       <CardHeader className="p-4 pb-0">
@@ -329,6 +336,36 @@ function QuestionCard({ question, onTitleClick }: QuestionCardProps) {
               </h3>
             </div>
           </div>
+          {/* 상태 pill */}
+          <span
+            className={
+              "text-base font-bold px-4 py-1.5 rounded-full border-4 shadow-sm text-black"
+            }
+            style={{
+              color: '#111',
+              background: question.status === "OPEN"
+                ? "#ffe5e5"
+                : question.status === "RESOLVED"
+                ? "#fff9db"
+                : question.status === "CLOSED"
+                ? "#e6ffe5"
+                : "#f5f5f5",
+              borderColor: question.status === "OPEN"
+                ? "#dc2626"
+                : question.status === "RESOLVED"
+                ? "#eab308"
+                : question.status === "CLOSED"
+                ? "#16a34a"
+                : "#d1d5db",
+              lineHeight: "1.5",
+              fontWeight: 700,
+              fontSize: "1rem",
+              minWidth: "80px",
+              textAlign: "center"
+            }}
+          >
+            {statusLabel(question.status)}
+          </span>
         </div>
       </CardHeader>
       <CardContent className="p-4">
