@@ -144,9 +144,12 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
                 hasReceivedMessage = true
                 lastHeartbeatTime = Date.now() // 하트비트 시간 업데이트
                 const {chatRoomId, unreadCount, lastestMessageTime} = JSON.parse(event.data)
-                if (!globalCurrentChatRoomId || globalCurrentChatRoomId !== chatRoomId) {
-                    if (typeof window !== 'undefined') {
+                if (typeof window !== 'undefined') {
+                    if (!globalCurrentChatRoomId || globalCurrentChatRoomId !== chatRoomId) {
                         window.dispatchEvent(new CustomEvent('chat-unread-toast', {
+                            detail: {chatRoomId, unreadCount, lastestMessageTime}
+                        }))
+                        window.dispatchEvent(new CustomEvent('chat-unread-count', {
                             detail: {chatRoomId, unreadCount, lastestMessageTime}
                         }))
                     }
