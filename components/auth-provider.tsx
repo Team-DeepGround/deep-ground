@@ -6,7 +6,7 @@ import {auth} from "@/lib/auth"
 
 interface AuthContextType {
     isAuthenticated: boolean
-    login: (token: string, memberId: number) => void
+    login: (token: string) => void
     logout: () => void
 }
 
@@ -45,10 +45,9 @@ export default function AuthProvider({children}: { children: React.ReactNode }) 
         checkAuth()
     }, [pathname, router])
 
-    const login = (token: string, memberId: number) => {
+    const login = (token: string) => {
         console.log('로그인 처리 시작')
         auth.setToken(token)
-        auth.setMemberId(memberId)
         setIsAuthenticated(true)
         console.log('로그인 처리 완료')
     }
@@ -56,7 +55,6 @@ export default function AuthProvider({children}: { children: React.ReactNode }) 
     const logout = () => {
         console.log('로그아웃 처리 시작')
         auth.removeToken()
-        auth.removeMemberId()
         setIsAuthenticated(false)
         router.push("/auth/login")
         console.log('로그아웃 처리 완료')
