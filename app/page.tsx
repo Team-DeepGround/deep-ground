@@ -1,11 +1,16 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { TrendingUp, Users, Calendar, MessageSquare } from "lucide-react"
 import FeaturedStudies from "@/components/featured-studies"
 import RecentQuestions from "@/components/recent-questions"
 import TechFeed from "@/components/tech-feed"
+import { useAuth } from "@/components/auth-provider"
 
 export default function Home() {
+  const { isAuthenticated } = useAuth();
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Hero Section */}
@@ -19,10 +24,12 @@ export default function Home() {
             <div className="flex flex-wrap gap-4">
               <Button asChild size="lg">
                 <Link href="/studies">스터디 찾기</Link>
-              </Button>
-              <Button asChild variant="outline" size="lg">
-                <Link href="/auth/register">회원가입</Link>
-              </Button>
+               </Button>
+              {!isAuthenticated && ( // 로그인 안 했을 때만 회원가입 버튼 노출
+                <Button asChild variant="outline" size="lg">
+                  <Link href="/auth/register">회원가입</Link>
+                </Button>
+              )}
             </div>
           </div>
           <div className="rounded-lg overflow-hidden shadow-xl">

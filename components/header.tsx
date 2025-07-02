@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
   BookOpen,
@@ -12,16 +12,16 @@ import {
   Menu,
   Users,
   User,
-  LogIn,
-  Search,
   Settings,
   Shield,
   LogOut,
   HelpCircle,
+  Search,
+  LogIn,
 } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
-import { useAuth } from "@/hooks/use-auth"
+import { useAuth } from "@/components/auth-provider"
 import { useNotificationContext } from "./notification/notification-provider"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -45,8 +45,7 @@ const navigation = [
 
 export default function Header() {
   const pathname = usePathname()
-  const router = useRouter()
-  const { user, signOut } = useAuth()
+  const { isAuthenticated, logout } = useAuth()
   const { unreadCount, isConnected } = useNotificationContext()
   const [searchOpen, setSearchOpen] = useState(false)
   const [notificationOpen, setNotificationOpen] = useState(false)
@@ -133,19 +132,27 @@ export default function Header() {
                 {unreadCount > 99 ? '99+' : unreadCount}
               </div>
             )}
-            {!isConnected && user && (
+            {!isConnected && isAuthenticated && (
               <div className="absolute -bottom-1 -right-1 h-2.5 w-2.5 bg-red-500 rounded-full animate-pulse shadow-sm border border-white" />
             )}
             <span className="sr-only">알림</span>
           </Button>
 
-          {user ? (
+          {/* 로그인 전: 로그인 버튼, 로그인 후: 프로필 드롭다운 */}
+          {!isAuthenticated ? (
+            <Button asChild variant="default" size="sm">
+              <Link href="/auth/login">
+                <LogIn className="mr-2 h-4 w-4" />
+                로그인
+              </Link>
+            </Button>
+          ) : (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src="/placeholder.svg?height=32&width=32" alt={user.email || "사용자"} />
-                    <AvatarFallback>{user.email?.charAt(0).toUpperCase() || "U"}</AvatarFallback>
+                    <AvatarImage src="/placeholder.svg?height=32&width=32" alt="프로필" />
+                    <AvatarFallback>N</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
@@ -196,7 +203,7 @@ export default function Header() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => signOut()}
+                  onClick={logout}
                   className="cursor-pointer text-destructive focus:text-destructive"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
@@ -204,13 +211,6 @@ export default function Header() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          ) : (
-            <Button asChild variant="default" size="sm">
-              <Link href="/auth/login">
-                <LogIn className="mr-2 h-4 w-4" />
-                로그인
-              </Link>
-            </Button>
           )}
         </div>
       </div>
