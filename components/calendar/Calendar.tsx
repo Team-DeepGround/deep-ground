@@ -129,17 +129,15 @@ function EventPopup({
             <UserX className="w-4 h-4" />
             불참석
           </Button>
-          {event.attendance !== null && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="flex items-center gap-1"
-              onClick={() => handleAttendanceChange(null)}
-            >
-              <Circle className="w-4 h-4" />
-              대기
-            </Button>
-          )}
+          <Button
+            size="sm"
+            variant={event.attendance === null ? "default" : "outline"}
+            className="flex items-center gap-1"
+            onClick={() => handleAttendanceChange(null)}
+          >
+            <Circle className="w-4 h-4" />
+            대기
+          </Button>
         </div>
       </div>
 
@@ -267,7 +265,7 @@ function CalendarHeader({
               key={view}
               className={`px-4 py-2 ${
                 viewType === view
-                  ? "bg-blue-500 text-white"
+                  ? "bg-gray-500 text-white"
                   : "bg-gray-100 dark:bg-black text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
               }`}
               onClick={() => setViewType(view)}
@@ -346,7 +344,9 @@ function DayView({ currentDate, events, showHiddenEvents, onEventClick, onAttend
                         </div>
                       )}
                       <div
-                        className={`p-2 rounded-sm cursor-pointer event-item h-full flex flex-col justify-center ${getEventStyle(event)}`}
+                        className={`p-2 rounded-sm cursor-pointer event-item h-full flex flex-col justify-center ${getEventStyle(event)} ${
+                          event.attendance === "not_attending" ? "opacity-40" : ""
+                        }`}
                         style={{ backgroundColor: event.color }}
                         onClick={(e) => onEventClick(event, e)}
                       >
@@ -375,6 +375,8 @@ function WeekView({ currentDate, events, showHiddenEvents, onEventClick, onAtten
 
   return (
     <div className="bg-white dark:bg-black">
+      
+      {/* 상단 날짜 헤더 */}
       <div className="grid grid-cols-[100px_1fr] border-b border-gray-200 dark:border-gray-700">
         <div className="py-4 text-center text-gray-500 dark:text-gray-400 font-medium">시간</div>
         <div className="grid grid-cols-7">
@@ -396,48 +398,49 @@ function WeekView({ currentDate, events, showHiddenEvents, onEventClick, onAtten
           })}
         </div>
       </div>
-
+  
+      {/* 본문 시간표 영역 */}
       <div>
         {Array.from({ length: (24 - 8) * 6 }, (_, i) => {
           const totalMinutes = i * 10
           const hour = Math.floor(totalMinutes / 60) + 8
           const minute = totalMinutes % 60
           const isHourLine = minute === 0
-
+  
           return (
-            <div
-              key={i}
-              className={`grid grid-cols-[100px_1fr] h-[20px] ${
-                isHourLine
-                  ? "border-t border-gray-300 dark:border-gray-600"
-                  : "border-t border-gray-100 dark:border-gray-800"
-              }`}
-            >
+            <div key={i} className="grid grid-cols-[100px_1fr] h-[20px] relative">
+              
+              {/* 시간 표시 영역 */}
               <div className="py-0.5 text-right pr-3 text-gray-500 dark:text-gray-400 text-xs bg-gray-50 dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800">
                 {minute === 0 && `${hour < 12 ? "오전" : "오후"} ${hour % 12 === 0 ? 12 : hour % 12}시`}
               </div>
+  
+              {/* 7일 영역 */}
               <div className="grid grid-cols-7 relative">
                 {weekDays.map((day, dayIndex) => {
                   const dayEvents = getEventsForTimeSlot(events, day, hour, minute, showHiddenEvents)
                   return (
-                    <div
-                      key={dayIndex}
-                      className={`relative ${
-                        isHourLine
-                          ? "border-l border-gray-200 dark:border-gray-600"
-                          : "border-l border-gray-100 dark:border-gray-800"
-                      }`}
-                    >
+                    <div key={dayIndex} className="relative border-l border-gray-100 dark:border-gray-800">
+                      
+                      {/* 배경선 */}
+                      <div
+                        className={`absolute left-0 right-0 h-[1px] ${
+                          isHourLine ? "bg-gray-300 dark:bg-gray-600" : "bg-gray-100 dark:bg-gray-800"
+                        }`}
+                        style={{ top: 0, zIndex: 0 }}
+                      />
+  
+                      {/* 일정 렌더링 */}
                       {dayEvents.map((event) => {
                         const eventHeight = getEventHeight(event)
                         return (
                           <div
                             key={event.id}
-                            className="absolute left-1 right-1 z-10"
+                            className="absolute left-1 right-1 z-20"
                             style={{ top: 0, height: `${eventHeight}px` }}
                           >
                             {shouldShowAttendanceButtons(event, showHiddenEvents) && (
-                              <div className="absolute -top-1 -right-1 z-10 flex space-x-1">
+                              <div className="absolute -top-1 -right-1 z-30 flex space-x-1">
                                 <button
                                   className="w-4 h-4 rounded-full bg-green-500 text-white flex items-center justify-center"
                                   onClick={(e) => onAttendanceClick(event, "attending", e)}
@@ -452,15 +455,17 @@ function WeekView({ currentDate, events, showHiddenEvents, onEventClick, onAtten
                                 </button>
                               </div>
                             )}
-                            <div
-                              className={`p-1 text-xs rounded-sm cursor-pointer event-item h-full flex flex-col justify-center ${getEventStyle(event)}`}
-                              style={{ backgroundColor: event.color }}
-                              onClick={(e) => onEventClick(event, e)}
-                              title={`${event.title} (${event.time})`}
-                            >
+                                <div
+                                  className={`p-1 text-xs rounded-sm cursor-pointer event-item h-full flex flex-col justify-center ${getEventStyle(event)} ${
+                                    event.attendance === "not_attending" ? "opacity-40" : ""
+                                  }`}
+                                  style={{ backgroundColor: event.color }}
+                                  onClick={(e) => onEventClick(event, e)}
+                                  title={`${event.title} (${event.time})`}
+                                >
                               <div className="font-medium truncate flex items-center gap-1">
-                              {event.isImportant && <Star className="w-2 h-2 text-yellow-500 fill-current" />}
-                              {event.title}
+                                {event.isImportant && <Star className="w-2 h-2 text-yellow-500 fill-current" />}
+                                {event.title}
                               </div>
                               <div className="text-[10px] opacity-80">{event.time}</div>
                             </div>
@@ -542,7 +547,9 @@ function MonthView({ currentDate, events, showHiddenEvents, onEventClick, onAtte
                       </div>
                     )}
                     <div
-                      className={`text-xs py-1 px-2 rounded-sm truncate cursor-pointer event-item ${getEventStyle(event)}`}
+                      className={`text-xs py-1 px-2 rounded-sm truncate cursor-pointer event-item ${getEventStyle(event)} ${
+                        event.attendance === "not_attending" ? "opacity-40" : ""
+                      }`}
                       style={{ backgroundColor: event.color }}
                       onClick={(e) => onEventClick(event, e)}
                     >
@@ -640,7 +647,7 @@ export function Calendar({
 
   return (
     <div ref={calendarRef}>
-      <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-700">
+      <Card className="bg-white dark:bg-black border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
         <CalendarHeader
           viewType={calendarView}
           setViewType={setCalendarView}

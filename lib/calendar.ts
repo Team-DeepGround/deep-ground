@@ -165,28 +165,67 @@ export const useCalendar = () => {
   }
 
   const updateEventAttendance = async (eventId: number, attendance: "attending" | "not_attending" | null) => {
-    setEvents((prev) => prev.map((event) => (event.id === eventId ? { ...event, attendance } : event)))
-
-    const isAvailable = 
-    attendance === "attending" ? true : 
-    attendance === "not_attending" ? false : 
-    null;
-
+    const target = events.find((e) => e.id === eventId)
+    if (!target) return
+  
+    const isAvailable =
+      attendance === "attending" ? true :
+      attendance === "not_attending" ? false :
+      null
+  
     try {
-      await updateMemberSchedule(eventId, {
+      // 서버에 최종 상태 업데이트 요청
+      const updated = await updateMemberSchedule(eventId, {
         isAvailable,
-        isImportant: events.find((e) => e.id === eventId)?.isImportant ?? false,
-        memo: events.find((e) => e.id === eventId)?.personalNote ?? "",
+        isImportant: target.isImportant ?? false,
+        memo: target.personalNote ?? "",
       })
-
+      console.log("✅ updated 값 확인:", updated);
+  
+      // 서버 응답 기반으로 화면 상태 정확히 반영
+      setEvents((prev) =>
+        prev.map((e) =>
+          e.id === eventId
+            ? {
+                ...e,
+                attendance:
+                  updated.isAvailable === true
+                    ? "attending"
+                    : updated.isAvailable === false
+                    ? "not_attending"
+                    : null,
+                isAvailable: updated.isAvailable ?? undefined, // 핵심 부분
+              }
+            : e
+        )
+      )
+  
+      // 현재 열려있는 팝업도 정확히 동기화
+      if (selectedEvent?.memberStudyScheduleId === eventId) {
+        setSelectedEvent((prev) =>
+          prev
+            ? {
+                ...prev,
+                attendance:
+                  updated.isAvailable === true
+                    ? "attending"
+                    : updated.isAvailable === false
+                    ? "not_attending"
+                    : null,
+                isAvailable: updated.isAvailable ?? undefined,
+              }
+            : null
+        )
+      }
+  
       toast({
         title: "참석 정보 업데이트 완료",
         description:
-          attendance === "attending"
+          updated.isAvailable === true
             ? "일정에 참석하기로 했습니다."
-            : attendance === "not_attending"
-              ? "일정에 참석하지 않기로 했습니다."
-              : "참석 여부를 미정으로 변경했습니다.",
+            : updated.isAvailable === false
+            ? "일정에 참석하지 않기로 했습니다."
+            : "참석 여부를 미정으로 변경했습니다.",
       })
     } catch (error) {
       toast({
@@ -194,28 +233,9 @@ export const useCalendar = () => {
         title: "참석 정보 업데이트 실패",
         description: "서버에 반영하지 못했습니다.",
       })
-
-      setEvents((prev) =>
-        prev.map((event) =>
-          event.id === eventId
-            ? {
-                ...event,
-                attendance:
-                  selectedEvent?.isAvailable === true
-                    ? "attending"
-                    : selectedEvent?.isAvailable === false
-                      ? "not_attending"
-                      : null,
-              }
-            : event,
-        ),
-      )
-    }
-
-    if (selectedEvent && selectedEvent.memberStudyScheduleId === eventId) {
-      setSelectedEvent((prev: StudyEvent | null) => (prev ? { ...prev, attendance } : null))
     }
   }
+  
 
   const updateEventNote = async (eventId: number, note: string) => {
     setEvents((prev) => prev.map((event) => (event.id === eventId ? { ...event, personalNote: note } : event)))

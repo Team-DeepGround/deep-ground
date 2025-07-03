@@ -174,10 +174,30 @@ export function StudySchedule() {
     loadSchedules()
   }, [params.id])
 
+  const isOverlapping = (startA: Date, endA: Date, startB: Date, endB: Date) => {
+    return startA < endB && startB < endA
+  }
+
   const handleAddSchedule = async () => {
     const startTime = `${newSchedule.date}T${newSchedule.startTime}:00`
     const endTime = `${newSchedule.date}T${newSchedule.endTime}:00`
+    const startDateTime = new Date(startTime)
+    const endDateTime = new Date(endTime)
     const studyGroupId = Number(params.id)
+
+    const isConflict = schedules.some(schedule =>
+    isOverlapping(startDateTime, endDateTime, schedule.startTime, schedule.endTime)
+  )
+
+  if (isConflict) {
+    alert("다른 일정과 시간이 겹칩니다.")
+    return
+  }
+
+    if (newSchedule.endTime <= newSchedule.startTime) {
+      alert("종료 시간은 시작 시간보다 늦어야 합니다")
+      return
+    }
   
     try {
       const res = await createStudySchedule(studyGroupId, {
@@ -187,24 +207,21 @@ export function StudySchedule() {
         description: newSchedule.description,
         location: newSchedule.location,
       })
+      const fetched = await fetchStudySchedulesByGroup(studyGroupId)
 
-      console.log("✅ 백엔드 응답 확인:", res) 
-  
-      const result = res.result  // result 꺼내기
-
-      setSchedules((prev) => [
-        ...prev,
-        {
-          id: result.id,
-          studyScheduleId: result.studyScheduleId,
-          title: result.title,
-          date: result.startTime.split("T")[0],
-          startTime: new Date(result.startTime),
-          endTime: new Date(result.endTime),
-          location: result.location,
-          description: result.description,
-        },
-      ].sort((a, b) => a.startTime.getTime() - b.startTime.getTime()))
+      setSchedules(
+        fetched.map((s) => ({
+          id: s.id,
+          studyScheduleId: s.studyScheduleId,
+          title: s.title,
+          date: s.startTime.split("T")[0],
+          startTime: new Date(s.startTime),
+          endTime: new Date(s.endTime),
+          location: s.location,
+          description: s.description,
+        }))
+        .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
+      )
   
       setNewSchedule({
         title: "",
@@ -215,6 +232,7 @@ export function StudySchedule() {
         description: "",
       })
       setIsAddModalOpen(false)
+      window.location.reload(); // 새로고침
     } catch (error) {
       console.error("일정 생성 실패:", error)
     }
@@ -224,10 +242,48 @@ export function StudySchedule() {
     if (!editSchedule) return
   
     const studyGroupId = Number(params.id)
+    if (!editSchedule || !editSchedule.studyScheduleId) {
+      console.error("studyScheduleId 값이 비정상입니다.", editSchedule)
+      return
+    }
+    
     const scheduleId = Number(editSchedule.studyScheduleId)
+    
+    if (isNaN(scheduleId)) {
+      console.error("scheduleId 변환 결과가 NaN입니다.", editSchedule.studyScheduleId)
+      return
+    }
   
     const startTime = format(editSchedule.startTime, "yyyy-MM-dd'T'HH:mm:ss")
     const endTime = format(editSchedule.endTime, "yyyy-MM-dd'T'HH:mm:ss")
+    const startDateTime = new Date(startTime)
+    const endDateTime = new Date(endTime)
+
+    if (!editSchedule.title.trim()) {
+      alert("제목을 입력해주세요.")
+      return
+    }
+
+    if (!editSchedule.description.trim()) {
+      alert("설명을 입력해주세요.")
+      return
+    }
+
+    if (editSchedule.endTime <= editSchedule.startTime) {
+      alert("종료 시간은 시작 시간보다 늦어야 합니다")
+      return
+    }
+
+
+  const isConflict = schedules.some(schedule =>
+    schedule.studyScheduleId !== scheduleId && // 본인 일정 제외
+    isOverlapping(startDateTime, endDateTime, schedule.startTime, schedule.endTime)
+  )
+
+  if (isConflict) {
+    alert("다른 일정과 시간이 겹칩니다.")
+    return
+  }
   
     try {
       const res = await updateStudySchedule(studyGroupId, scheduleId, {
@@ -245,9 +301,6 @@ export function StudySchedule() {
   
       const updated = res.result // ✅ result 꺼내서 사용
 
-      console.log("✅ updated.startTime:", updated.startTime)
-      console.log("✅ updated.endTime:", updated.endTime)
-  
       setSchedules((prev) =>
         prev
           .map((s) =>
@@ -290,11 +343,14 @@ export function StudySchedule() {
 
   const handleDeleteSchedule = async (scheduleId: number) => {
     if (!params.id) return
+
+    const isConfirmed = window.confirm("일정을 삭제하시겠습니까?")
+    if (!isConfirmed) return
   
     try {
       const studyGroupId = Number(params.id)
       await deleteStudySchedule(studyGroupId, scheduleId)
-      alert("✅ 일정이 삭제되었습니다.")
+      alert("일정이 삭제되었습니다.")
   
       const updated = await fetchStudySchedulesByGroup(studyGroupId)
       const formatted = updated.map((item) => {
@@ -325,8 +381,11 @@ export function StudySchedule() {
           isImportant: item.isImportant ?? false,
         }
       })
+      setSchedules(
+        formatted.sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
+      )
   
-      setSchedules(formatted)
+      // setSchedules(formatted)
     } catch (error) {
       console.error("❌ 일정 삭제 실패:", error)
       alert("❌ 일정 삭제에 실패했습니다.")
