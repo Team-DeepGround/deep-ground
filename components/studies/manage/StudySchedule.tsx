@@ -194,8 +194,23 @@ export function StudySchedule() {
     return
   }
 
+  if (!newSchedule.title.trim()) {
+    alert("제목을 입력해주세요.")
+    return
+  }
+
+  if (!newSchedule.startTime || !newSchedule.endTime) {
+    alert("일정 시간을 입력해주세요.")
+    return
+  }
+
     if (newSchedule.endTime <= newSchedule.startTime) {
       alert("종료 시간은 시작 시간보다 늦어야 합니다")
+      return
+    }
+
+    if (!newSchedule.description.trim()) {
+      alert("설명을 입력해주세요.")
       return
     }
   

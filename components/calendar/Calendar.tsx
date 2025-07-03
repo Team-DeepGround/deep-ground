@@ -74,7 +74,7 @@ function EventPopup({
 
   return (
     <div
-      className="absolute bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 w-72 z-50 event-popup"
+      className="absolute bg-[#f5f5f5] dark:bg-[#42474D] border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg p-4 w-72 z-50 event-popup"
       style={{ top: `${position.top}px`, left: `${position.left}px` }}
     >
       <div className="flex justify-between items-start mb-3">
@@ -100,6 +100,12 @@ function EventPopup({
       {event.description && (
         <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
           {event.description}
+        </div>
+      )}
+
+      {event.location && (
+        <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+          📍 {event.location}
         </div>
       )}
 
@@ -265,7 +271,7 @@ function CalendarHeader({
               key={view}
               className={`px-4 py-2 ${
                 viewType === view
-                  ? "bg-gray-500 text-white"
+                  ? "bg-gray-400 dark:bg-gray-500 text-white"
                   : "bg-gray-100 dark:bg-black text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
               }`}
               onClick={() => setViewType(view)}
@@ -315,7 +321,7 @@ function DayView({ currentDate, events, showHiddenEvents, onEventClick, onAttend
               }`}
               style={{ minHeight: "20px" }}
             >
-              <div className="py-0.5 text-right pr-3 text-gray-500 dark:text-gray-400 text-xs bg-gray-50 dark:bg-gray-900">
+              <div className="py-0.5 text-right pr-3 text-gray-500 dark:text-gray-400 text-xs bg-gray-50 dark:bg-[rgba(43,43,43,0.7)]">
                 {minute === 0 && `${hour < 12 ? "오전" : "오후"} ${hour % 12 === 0 ? 12 : hour % 12}시`}
               </div>
               <div className="py-1 relative">
@@ -387,8 +393,8 @@ function WeekView({ currentDate, events, showHiddenEvents, onEventClick, onAtten
                 key={i}
                 className={`py-4 text-center border-l border-gray-100 dark:border-gray-700 ${
                   isToday
-                    ? "text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-gray-300/20"
-                    : "text-gray-900 dark:text-gray-100"
+                  ? "bg-blue-50 dark:bg-gray-300/20"
+                  : ""
                 }`}
               >
                 <div className="text-base font-medium">{format(day, "d일", { locale: ko })}</div>
@@ -411,7 +417,7 @@ function WeekView({ currentDate, events, showHiddenEvents, onEventClick, onAtten
             <div key={i} className="grid grid-cols-[100px_1fr] h-[20px] relative">
               
               {/* 시간 표시 영역 */}
-              <div className="py-0.5 text-right pr-3 text-gray-500 dark:text-gray-400 text-xs bg-gray-50 dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800">
+              <div className="py-0.5 text-right pr-3 text-gray-500 dark:text-gray-400 text-xs bg-gray-50 dark:bg-[rgba(43,43,43,0.6)] border-r border-gray-100 dark:border-gray-800">
                 {minute === 0 && `${hour < 12 ? "오전" : "오후"} ${hour % 12 === 0 ? 12 : hour % 12}시`}
               </div>
   
@@ -514,15 +520,15 @@ function MonthView({ currentDate, events, showHiddenEvents, onEventClick, onAtte
             <div
               key={i}
               className={`min-h-[100px] border-b border-r border-gray-200 dark:border-gray-700 p-1 ${
-                !isCurrentMonth ? "text-gray-400 dark:text-gray-600 bg-gray-50 dark:bg-gray-900" : ""
+                !isCurrentMonth ? "text-gray-400 dark:text-gray-600 bg-gray-50 dark:bg-[#1E1E1E]" : ""
               }`}
             >
               <div className="flex justify-between items-start">
-                <div
-                  className={`w-7 h-7 flex items-center justify-center rounded-full ${
-                    isToday ? "bg-blue-500 text-white" : "text-gray-900 dark:text-gray-100"
-                  }`}
-                >
+              <div
+                className={`w-7 h-7 flex items-center justify-center rounded-full ${
+                  isToday ? "bg-gray-400 dark:bg-gray-500 text-white" : "text-gray-900 dark:text-gray-100"
+                }`}
+              >
                   {format(day, "d")}
                 </div>
               </div>

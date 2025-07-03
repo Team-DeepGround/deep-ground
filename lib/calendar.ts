@@ -33,7 +33,7 @@ export interface StudyEvent {
 export type CalendarViewType = "day" | "week" | "month"
 
 // 유틸리티 함수들
-const colorPalette = ["#FFB6C1", "#87CEFA", "#90EE90", "#FFD700", "#DDA0DD"]
+const colorPalette = ["#F2C4CC", "#B7D7F4", "#BEE3B8", "#F9E79F", "#D8BFD8"]
 const studyColorMap = new Map<number, string>()
 
 export const getColorByStudyId = (studyId: number) => {
@@ -144,6 +144,7 @@ export const useCalendar = () => {
           id: dto.memberStudyScheduleId,
           memberStudyScheduleId: dto.memberStudyScheduleId,
           studyId: dto.studyGroupId,
+          studyName: dto.studyGroupName,
           title: dto.title,
           description: dto.description,
           date: startTime,
@@ -155,6 +156,7 @@ export const useCalendar = () => {
           personalNote: dto.memo ?? "",
           isImportant: dto.isImportant ?? false,
           organizer: { id: 0, name: "" },
+          location: dto.location ?? ""
         }
       })
 
