@@ -22,6 +22,8 @@ import { useParams } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { format } from "date-fns"
 import TimePicker from "./TimePicker"
+import ScheduleDetailModal from "./ScheduleDetailModal"
+import ScheduleEditModal from "./ScheduleEditModal"
 
 interface Schedule {
   id: number
@@ -478,133 +480,21 @@ export function StudySchedule() {
       </CardContent>
 
       {/* 상세보기 모달 */}
-      <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>{selectedSchedule?.title}</DialogTitle>
-            <DialogDescription>일정 상세 정보</DialogDescription>
-          </DialogHeader>
-          {selectedSchedule && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right font-semibold">날짜:</Label>
-                <span className="col-span-3">{format(selectedSchedule.date, "yyyy-MM-dd")}</span>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right font-semibold">시간:</Label>
-                <span className="col-span-3">
-                {format(selectedSchedule.startTime, "HH:mm")} - {format(selectedSchedule.endTime, "HH:mm")}
-                </span>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right font-semibold">장소:</Label>
-                <span className="col-span-3">{selectedSchedule.location}</span>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right font-semibold">설명:</Label>
-                <span className="col-span-3">{selectedSchedule.description}</span>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button onClick={() => setIsDetailModalOpen(false)}>닫기</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ScheduleDetailModal
+        open={isDetailModalOpen}
+        onOpenChange={setIsDetailModalOpen}
+        schedule={selectedSchedule}
+      />
 
       {/* 수정 모달 */}
-      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>일정 수정</DialogTitle>
-            <DialogDescription>일정 정보를 수정하세요.</DialogDescription>
-          </DialogHeader>
-          {editSchedule && (
-            <div className="grid gap-6 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-title" className="text-right">
-                  제목
-                </Label>
-                <Input
-                  id="edit-title"
-                  placeholder="제목은 필수입니다"
-                  value={editSchedule.title}
-                  onChange={(e) => setEditSchedule({ ...editSchedule, title: e.target.value })}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-date" className="text-right">
-                  날짜
-                </Label>
-                <Input
-                id="edit-date"
-                type="date"
-                value={editSchedule.date}
-                onChange={(e) => {
-                  const newDate = e.target.value
-                  setEditSchedule({
-                    ...editSchedule,
-                    date: newDate,
-                    startTime: new Date(`${newDate}T${format(editSchedule.startTime, "HH:mm")}:00`),
-                    endTime: new Date(`${newDate}T${format(editSchedule.endTime, "HH:mm")}:00`),
-                  })
-                }}
-                className="col-span-3"
-              />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">시작 시간</Label>
-                <div className="col-span-3">
-                  <TimePicker
-                    value={format(editSchedule.startTime, "HH:mm")}
-                    onChange={(time) => setEditSchedule({ ...editSchedule, startTime: new Date(`${format(editSchedule.date, "yyyy-MM-dd")}T${time}:00`) })}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">종료 시간</Label>
-                <div className="col-span-3">
-                  <TimePicker
-                    value={format(editSchedule.endTime, "HH:mm")}
-                    onChange={(time) => setEditSchedule({ ...editSchedule,  endTime: new Date(`${format(editSchedule.date, "yyyy-MM-dd")}T${time}:00`)})}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-location" className="text-right">
-                  장소
-                </Label>
-                <Input
-                  id="edit-location"
-                  value={editSchedule.location}
-                  onChange={(e) => setEditSchedule({ ...editSchedule, location: e.target.value })}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-description" className="text-right">
-                  설명
-                </Label>
-                <Textarea
-                  id="edit-description"
-                  placeholder="설명은 필수입니다"
-                  value={editSchedule.description}
-                  onChange={(e) => setEditSchedule({ ...editSchedule, description: e.target.value })}
-                  className="col-span-3"
-                />
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
-              취소
-            </Button>
-            <Button onClick={handleEditSchedule}>수정하기</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </Card>
+      <ScheduleEditModal
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        schedule={editSchedule}
+        setSchedule={setEditSchedule}
+        onSubmit={handleEditSchedule}
+      />
+    </Card> 
   )
 }
 
