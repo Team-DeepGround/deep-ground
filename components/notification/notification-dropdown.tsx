@@ -13,7 +13,8 @@ import {
   BookOpen, 
   X,
   Loader2,
-  Clock
+  Clock,
+  MessageSquare
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Notification, NotificationType } from "@/types/notification"
@@ -32,7 +33,7 @@ const TAB_VALUES = {
   UNREAD: 'unread',
   FRIEND: 'friend',
   STUDY: 'study',
-  MESSAGE: 'message',
+  COMMUNITY: 'community',
 } as const
 
 type TabValue = typeof TAB_VALUES[keyof typeof TAB_VALUES]
@@ -57,12 +58,17 @@ export const NotificationDropdown = ({ isOpen, onClose }: NotificationDropdownPr
       if (activeTab === TAB_VALUES.UNREAD) return !notification.read
       if (activeTab === TAB_VALUES.FRIEND) return notification.data.type === NotificationType.FRIEND_REQUEST || notification.data.type === NotificationType.FRIEND_ACCEPT
       if (activeTab === TAB_VALUES.STUDY) return [
-        NotificationType.STUDY_GROUP_INVITE, 
         NotificationType.STUDY_GROUP_JOIN,
+        NotificationType.STUDY_GROUP_KICK,
+        NotificationType.STUDY_GROUP_ACCEPT,
         NotificationType.SCHEDULE_CREATE,
         NotificationType.SCHEDULE_REMINDER
       ].includes(notification.data.type)
-      if (activeTab === TAB_VALUES.MESSAGE) return notification.data.type === NotificationType.NEW_MESSAGE
+      if (activeTab === TAB_VALUES.COMMUNITY) return [
+        NotificationType.FEED_COMMENT,
+        NotificationType.QNA_ANSWER,
+        NotificationType.QNA_COMMENT
+      ].includes(notification.data.type)
       return true
     })
   }
@@ -80,16 +86,25 @@ export const NotificationDropdown = ({ isOpen, onClose }: NotificationDropdownPr
       case NotificationType.FRIEND_ACCEPT:
         router.push('/friends')
         break
-      case NotificationType.STUDY_GROUP_INVITE:
       case NotificationType.STUDY_GROUP_JOIN:
+        router.push(`/studies/manage/${notification.data.studyGroupId}`)
+        break
+      case NotificationType.STUDY_GROUP_ACCEPT:
         router.push(`/studies/${notification.data.studyGroupId}`)
+        break
+      case NotificationType.STUDY_GROUP_KICK:
+        // 강퇴 알림은 클릭해도 반응 없음
         break
       case NotificationType.SCHEDULE_CREATE:
       case NotificationType.SCHEDULE_REMINDER:
         router.push('/calendar')
         break
-      case NotificationType.NEW_MESSAGE:
-        router.push(`/chat/${notification.data.chatRoomId}`)
+      case NotificationType.FEED_COMMENT:
+        router.push(`/feed`)
+        break
+      case NotificationType.QNA_ANSWER:
+      case NotificationType.QNA_COMMENT:
+        router.push(`/questions/${notification.data.questionId}`)
         break
       default:
         break
@@ -161,8 +176,9 @@ export const NotificationDropdown = ({ isOpen, onClose }: NotificationDropdownPr
       case NotificationType.FRIEND_REQUEST:
       case NotificationType.FRIEND_ACCEPT:
         return null
-      case NotificationType.STUDY_GROUP_INVITE:
       case NotificationType.STUDY_GROUP_JOIN:
+      case NotificationType.STUDY_GROUP_KICK:
+      case NotificationType.STUDY_GROUP_ACCEPT:
         return (
           <div className="flex items-center gap-2 mt-2">
             <BookOpen className="h-4 w-4 text-muted-foreground" />
@@ -187,17 +203,19 @@ export const NotificationDropdown = ({ isOpen, onClose }: NotificationDropdownPr
             )}
           </div>
         )
-      case NotificationType.NEW_MESSAGE:
+      case NotificationType.FEED_COMMENT:
         return (
           <div className="flex items-center gap-2 mt-2">
-            <Avatar className="h-6 w-6">
-              <AvatarImage
-                src="/placeholder.svg"
-                alt={notification.data.sender}
-              />
-              <AvatarFallback>{notification.data.sender[0]}</AvatarFallback>
-            </Avatar>
-            <span className="text-sm">{notification.data.sender}</span>
+            <MessageSquare className="h-4 w-4 text-violet-500" />
+            <span className="text-sm font-medium">{notification.data.content}</span>
+          </div>
+        )
+      case NotificationType.QNA_ANSWER:
+      case NotificationType.QNA_COMMENT:
+        return (
+          <div className="flex items-center gap-2 mt-2">
+            <BookOpen className="h-4 w-4 text-blue-500" />
+            <span className="text-sm font-medium">{notification.data.content}</span>
           </div>
         )
       default:
@@ -226,7 +244,7 @@ export const NotificationDropdown = ({ isOpen, onClose }: NotificationDropdownPr
               <TabsTrigger value="unread">안읽음</TabsTrigger>
               <TabsTrigger value="friend">친구</TabsTrigger>
               <TabsTrigger value="study">스터디</TabsTrigger>
-              <TabsTrigger value="message">메시지</TabsTrigger>
+              <TabsTrigger value="community">커뮤니티</TabsTrigger>
             </TabsList>
           </div>
 
