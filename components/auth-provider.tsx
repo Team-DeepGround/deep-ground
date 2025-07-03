@@ -13,7 +13,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null)
 
 // 인증이 필요하지 않은 경로들
-const publicPaths = ["/auth/login", "/auth/register", "/auth/forgot-password", "/auth/verify-email", "/auth/reset-password"]
+const publicPaths = ["/", "/auth/login", "/auth/register", "/auth/forgot-password", "/auth/verify-email", "/auth/reset-password"]
 
 export function useAuth() {
     const context = useContext(AuthContext)

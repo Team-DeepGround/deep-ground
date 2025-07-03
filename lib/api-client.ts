@@ -65,7 +65,7 @@ async function apiClient(endpoint: string, options: RequestOptions = {}) {
         if (!response.ok && response.status !== 302) {
             if (response.status === 401) {
                 // 401 에러 발생 시 로그인 페이지로 리다이렉트
-                window.location.href = '/login';
+                window.location.href = '/auth/login';
             }
             throw new ApiError(response.status, data.message || 'API 요청 실패');
         }
