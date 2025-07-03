@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/components/auth-provider"
 import { api } from "@/lib/api-client"
+import { fetchFeedSummaries, FetchFeedSummaryResponse } from "@/lib/api/feed"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -29,6 +30,8 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true)
   const [createdStudies, setCreatedStudies] = useState([])
   const [joinedStudies, setJoinedStudies] = useState([])
+  const [feeds, setFeeds] = useState<FetchFeedSummaryResponse[]>([])
+  const [feedsLoading, setFeedsLoading] = useState(false)
 
   // 프로필 정보 상태
   const [profile, setProfile] = useState({
@@ -98,8 +101,33 @@ export default function ProfilePage() {
 
     if (isAuthenticated ) {
       fetchUserData()
+      loadFeeds()
     }
   }, [isAuthenticated])
+
+  // 피드 목록 로드
+  const loadFeeds = async () => {
+    try {
+      setFeedsLoading(true)
+      console.log('내 피드 요약 목록 조회 시작')
+      const response = await fetchFeedSummaries({ page: 0, size: 20, sort: "createdAt,desc" })
+      console.log('피드 요약 목록 응답:', response)
+      
+      if (response.result?.feedSummaries) {
+        setFeeds(response.result.feedSummaries)
+      } else {
+        setFeeds([])
+      }
+    } catch (error) {
+      console.error('피드 목록 로드 실패:', error)
+      toast({
+        title: "피드 목록 로드 실패",
+        description: "피드 목록을 불러오는데 실패했습니다.",
+      })
+    } finally {
+      setFeedsLoading(false)
+    }
+  }
 
   // 프로필 업데이트 핸들러
   const handleProfileUpdate = async (updatedProfile) => {
@@ -169,12 +197,36 @@ export default function ProfilePage() {
     </Card>
   )
 
+  // 피드 카드 컴포넌트
+  const FeedCard = ({ feed }: { feed: FetchFeedSummaryResponse }) => (
+    <Card className="hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => router.push(`/feed/${feed.feedId}`)}>
+      <CardContent className="p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="font-medium text-sm">{feed.memberName}</span>
+          <span className="text-xs text-muted-foreground">
+            {new Date(feed.createdAt).toLocaleDateString()}
+          </span>
+        </div>
+        <p className="text-sm text-gray-700 line-clamp-3 whitespace-pre-line">
+          {feed.content}
+        </p>
+        <Button size="sm" className="mt-3" onClick={(e) => {
+          e.stopPropagation()
+          router.push(`/feed/${feed.feedId}`)
+        }}>
+          상세보기
+        </Button>
+      </CardContent>
+    </Card>
+  )
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
         <Tabs defaultValue="profile" className="space-y-6">
           <TabsList>
             <TabsTrigger value="profile">프로필</TabsTrigger>
+            <TabsTrigger value="feeds">피드</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile">
@@ -344,6 +396,30 @@ export default function ProfilePage() {
                   </div>
                 </div>
               </>
+            )}
+          </TabsContent>
+
+          <TabsContent value="feeds">
+            <h2 className="text-xl font-bold mb-4">내가 작성한 피드</h2>
+            {feedsLoading ? (
+              <div className="flex justify-center items-center min-h-[200px]">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            ) : feeds.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {feeds.map((feed) => (
+                  <FeedCard key={feed.feedId} feed={feed} />
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <p className="text-muted-foreground">아직 작성한 피드가 없습니다.</p>
+                  <Button className="mt-4" asChild>
+                    <Link href="/feed">피드 작성하기</Link>
+                  </Button>
+                </CardContent>
+              </Card>
             )}
           </TabsContent>
         </Tabs>
