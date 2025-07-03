@@ -56,6 +56,25 @@ export interface FetchFeedsResponse {
   } | null;
 }
 
+export interface FetchFeedSummaryResponse {
+  feedId: number;
+  memberName: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface FetchFeedSummariesResponse {
+  status: number;
+  message: string;
+  result: {
+    feedSummaries: FetchFeedSummaryResponse[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  } | null;
+}
+
 export interface FeedMediaResponse {
   image: any;
   extension: string;
@@ -128,6 +147,16 @@ export async function fetchFeeds({ page = 0, size = 10, sort = 'createdAt,desc' 
   return await api.get('/feed/list', {
     params: { page: String(page), size: String(size), sort },
   });
+}
+
+export async function fetchFeedSummaries({ page = 0, size = 10, sort = 'createdAt,desc' }: { page?: number; size?: number; sort?: string } = {}): Promise<FetchFeedSummariesResponse> {
+  return await api.get('/feed/summaries', {
+    params: { page: String(page), size: String(size), sort },
+  });
+}
+
+export async function fetchFeedById(feedId: number): Promise<{ status: number; message: string; result: FetchFeedResponse | null }> {
+  return await api.get(`/feed/${feedId}`);
 }
 
 export async function createFeed(formData: FormData): Promise<any> {
