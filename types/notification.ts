@@ -1,11 +1,14 @@
 export enum NotificationType {
     FRIEND_REQUEST = 'FRIEND_REQUEST',
     FRIEND_ACCEPT = 'FRIEND_ACCEPT',
-    STUDY_GROUP_INVITE = 'STUDY_GROUP_INVITE',
     STUDY_GROUP_JOIN = 'STUDY_GROUP_JOIN',
+    STUDY_GROUP_KICK = 'STUDY_GROUP_KICK',
+    STUDY_GROUP_ACCEPT = 'STUDY_GROUP_ACCEPT',
     SCHEDULE_CREATE = 'SCHEDULE_CREATE',
     SCHEDULE_REMINDER = 'SCHEDULE_REMINDER',
-    NEW_MESSAGE = 'NEW_MESSAGE',
+    FEED_COMMENT = 'FEED_COMMENT',
+    QNA_ANSWER = 'QNA_ANSWER',
+    QNA_COMMENT = 'QNA_COMMENT',
 }
 
 export interface BaseNotificationData {
@@ -19,7 +22,7 @@ export interface FriendNotificationData extends BaseNotificationData {
 }
 
 export interface StudyGroupNotificationData extends BaseNotificationData {
-    type: NotificationType.STUDY_GROUP_INVITE | NotificationType.STUDY_GROUP_JOIN
+    type: NotificationType.STUDY_GROUP_JOIN | NotificationType.STUDY_GROUP_KICK | NotificationType.STUDY_GROUP_ACCEPT
     studyGroupId: number
     title: string
 }
@@ -31,18 +34,24 @@ export interface ScheduleNotificationData extends BaseNotificationData {
     startTime: string
 }
 
-export interface ChatMessageNotificationData extends BaseNotificationData {
-    type: NotificationType.NEW_MESSAGE
-    chatRoomId: number
-    senderId: number
-    sender: string
+export interface FeedCommentNotificationData extends BaseNotificationData {
+    type: NotificationType.FEED_COMMENT
+    feedId: number
+    content: string
+}
+
+export interface QnaNotificationData extends BaseNotificationData {
+    type: NotificationType.QNA_ANSWER | NotificationType.QNA_COMMENT
+    questionId: number
+    content: string
 }
 
 export type NotificationData =
     | FriendNotificationData
     | StudyGroupNotificationData
     | ScheduleNotificationData
-    | ChatMessageNotificationData
+    | FeedCommentNotificationData
+    | QnaNotificationData
 
 export interface Notification {
     id: string
