@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
@@ -28,6 +29,7 @@ interface FeedPostProps {
 export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
   const { toast } = useToast()
   const { user } = useAuth()
+  const router = useRouter()
   const [post, setPost] = useState(initialPost)
   const [showComments, setShowComments] = useState(false)
   const [showShareDialog, setShowShareDialog] = useState(false)
@@ -161,7 +163,10 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
             </DropdownMenu>
           </div>
         </CardHeader>
-        <CardContent className="p-4">
+        <CardContent 
+          className="p-4 cursor-pointer hover:bg-gray-50/50 transition-colors" 
+          onClick={() => router.push(`/feed/${post.feedId}`)}
+        >
           <p className="text-sm whitespace-pre-line">{post.content}</p>
           {post.mediaIds && post.mediaIds.length > 0 && (
             <div className="mt-3 rounded-md overflow-hidden">
@@ -185,7 +190,10 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
               variant="ghost"
               size="sm"
               className={`flex items-center gap-1 ${post.liked ? "text-primary" : ""}`}
-              onClick={() => handleLike(post.feedId, post.liked)}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleLike(post.feedId, post.liked)
+              }}
             >
               <ThumbsUp className={`h-4 w-4 ${post.liked ? "fill-primary" : ""}`} />
               <span>{post.likeCount}</span>
@@ -194,7 +202,10 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
               variant="ghost"
               size="sm"
               className={`flex items-center gap-1 ${showComments ? "text-primary" : ""}`}
-              onClick={handleToggleComments}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleToggleComments()
+              }}
             >
               <MessageSquare className="h-4 w-4" />
               <span>{post.commentCount}</span>
@@ -205,7 +216,10 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
                 variant="ghost"
                 size="sm"
                 className="flex items-center gap-1"
-                onClick={handleShareClick}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleShareClick()
+                }}
               >
                 <Share2 className="h-4 w-4" />
                 <span>{post.shareCount}</span>
