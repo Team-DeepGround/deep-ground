@@ -23,22 +23,4 @@ export const auth = {
         const token = await this.getToken();
         return !!token;
     },
-
-    // memberId는 ui에 사용하고 서버 요청에 사용 X
-    setMemberId(memberId: number) {
-        localStorage.setItem(MEMBER_ID_KEY, String(memberId));
-    },
-
-    // 멤버 Id 가져오기
-    async getMemberId(): Promise<number | null> {
-        if (typeof window === 'undefined') return null;
-
-        const stored = localStorage.getItem(MEMBER_ID_KEY);
-        return stored !== null ? Number(stored) : null;
-    },
-
-    // 멤버 Id 삭제
-    removeMemberId() {
-        localStorage.removeItem(MEMBER_ID_KEY);
-    }
 };

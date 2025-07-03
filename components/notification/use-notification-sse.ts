@@ -10,9 +10,11 @@ import { Notification } from '@/types/notification'
 import { fetchNotificationsApi, fetchUnreadCountApi, markAsReadApi, markAllAsReadApi } from '@/lib/api/notification'
 import { getNotificationMessage } from './notification-utils'
 
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/sse/subscribe`
+
 // SSE 설정 상수
 const SSE_CONFIG = {
-    URL: 'http://localhost:8080/api/v1/sse/subscribe',
+    URL: API_BASE,
     HEARTBEAT_TIMEOUT: 60000,
     CONNECTION_TIMEOUT: 10000,
     RECONNECT_INTERVAL: 5000,
@@ -142,9 +144,12 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
                 hasReceivedMessage = true
                 lastHeartbeatTime = Date.now() // 하트비트 시간 업데이트
                 const {chatRoomId, unreadCount, lastestMessageTime} = JSON.parse(event.data)
-                if (!globalCurrentChatRoomId || globalCurrentChatRoomId !== chatRoomId) {
-                    if (typeof window !== 'undefined') {
+                if (typeof window !== 'undefined') {
+                    if (!globalCurrentChatRoomId || globalCurrentChatRoomId !== chatRoomId) {
                         window.dispatchEvent(new CustomEvent('chat-unread-toast', {
+                            detail: {chatRoomId, unreadCount, lastestMessageTime}
+                        }))
+                        window.dispatchEvent(new CustomEvent('chat-unread-count', {
                             detail: {chatRoomId, unreadCount, lastestMessageTime}
                         }))
                     }
@@ -168,6 +173,10 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
                 console.error('presence 이벤트 파싱 오류:', error)
             }
         })
+
+        eventSource.addEventListener('heartbeat', () => {
+            lastHeartbeatTime = Date.now();
+        });
 
         eventSource.onerror = async (error: Event) => {
             if (isTokenExpiredError(error)) {
@@ -240,15 +249,16 @@ const startHeartbeatMonitoring = (): void => {
     if (heartbeatIntervalId) {
         clearInterval(heartbeatIntervalId)
     }
-    
     heartbeatIntervalId = setInterval(() => {
         if (globalConnectionCount > 0 && !validateConnection()) {
             console.log('하트비트 모니터링에서 연결 끊김 감지 - 내장 재연결 기능 활용')
             if (globalEventSource) {
-                globalEventSource.close() // 내장 재연결이 자동으로 동작
+                globalEventSource.close();
+                // 직접 재연결 시도
+                createGlobalSSEConnection();
             }
         }
-    }, 30000) // 30초마다 연결 상태 확인
+    }, 30000)
 }
 
 // 하트비트 모니터링 중단
@@ -393,7 +403,7 @@ export const useNotificationSSE = () => {
         if (reconnectDebounceRef.current) {
             clearTimeout(reconnectDebounceRef.current)
         }
-        
+
         reconnectDebounceRef.current = setTimeout(() => {
             if (isAuthenticated && !isConnected) {
                 console.log('디바운스된 SSE 재연결 시도')
@@ -459,7 +469,7 @@ export const useNotificationSSE = () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange)
             window.removeEventListener('focus', handleFocus)
             window.removeEventListener('blur', handleBlur)
-            
+
             // 디바운스 타이머 정리
             if (reconnectDebounceRef.current) {
                 clearTimeout(reconnectDebounceRef.current)
@@ -498,4 +508,4 @@ export const useNotificationSSE = () => {
         reconnect: connectSSE,
         fetchNotifications,
     }
-} 
+}
