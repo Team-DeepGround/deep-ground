@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast"
 import { api } from "@/lib/api-client"
 import { StudyGroupDetail } from "@/types/study"
 import { StudyHeader } from "@/components/studies/manage/StudyHeader"
-import { StudySchedule } from "@/components/studies/manage/StudySchedule"
+import { StudySchedule } from "@/components/studies/manage/studySchedule/StudySchedule"
 import { StudyMembers } from "@/components/studies/manage/StudyMembers"
 import { StudyApplicants } from "@/components/studies/manage/StudyApplicants"
 

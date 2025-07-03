@@ -16,32 +16,12 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Calendar, FileText, MapPin, Settings, Trash2 } from "lucide-react"
 import { createStudySchedule, fetchStudySchedulesByGroup, updateStudySchedule, deleteStudySchedule, convertToSchedule, StudyScheduleResponseDto } from "@/lib/api/studySchedule"
 import { useParams } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { format } from "date-fns"
-
-
-// 시간 옵션 생성 (0-23시)
-const hourOptions = Array.from({ length: 17 }, (_, i) => (i + 8).toString().padStart(2, "0"))
-
-// 분 옵션 생성 (10분 간격)
-const minuteOptions = ["00", "10", "20", "30", "40", "50"]
-
-// 시간 문자열을 시와 분으로 분리하는 함수
-const parseTime = (timeString: string) => {
-  if (!timeString) return { hour: "", minute: "" }
-  const [hour, minute] = timeString.split(":")
-  return { hour, minute }
-}
-
-// 시와 분을 시간 문자열로 합치는 함수
-const formatTime = (hour: string, minute: string) => {
-  if (!hour || !minute) return ""
-  return `${hour}:${minute}`
-}
+import TimePicker from "./TimePicker"
 
 interface Schedule {
   id: number
@@ -55,55 +35,6 @@ interface Schedule {
   attendance?: "attending" | "not_attending" | null
   isImportant?: boolean
   personalNote?: string
-}
-
-// 시간 선택 컴포넌트
-interface TimePickerProps {
-  value: string
-  onChange: (time: string) => void
-  placeholder?: string
-}
-
-function TimePicker({ value, onChange, placeholder }: TimePickerProps) {
-  const { hour, minute } = parseTime(value)
-
-  const handleHourChange = (newHour: string) => {
-    onChange(formatTime(newHour, minute || "00"))
-  }
-
-  const handleMinuteChange = (newMinute: string) => {
-    onChange(formatTime(hour || "00", newMinute))
-  }
-
-  return (
-    <div className="flex gap-2 items-center">
-      <Select value={hour} onValueChange={handleHourChange}>
-        <SelectTrigger className="w-20">
-          <SelectValue placeholder="시" />
-        </SelectTrigger>
-        <SelectContent>
-          {hourOptions.map((h) => (
-            <SelectItem key={h} value={h}>
-              {h}시
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <span className="text-muted-foreground">:</span>
-      <Select value={minute} onValueChange={handleMinuteChange}>
-        <SelectTrigger className="w-20">
-          <SelectValue placeholder="분" />
-        </SelectTrigger>
-        <SelectContent>
-          {minuteOptions.map((m) => (
-            <SelectItem key={m} value={m}>
-              {m}분
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  )
 }
 
 export function StudySchedule() {
