@@ -34,29 +34,47 @@ export default function LoginPage() {
   const { login } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+  e.preventDefault()
+  setIsLoading(true)
 
-    try {
-      const response = await api.post<LoginResponse>(
-        "/auth/login",
-        { email, password },
-        { requireAuth: false }
-      )
+  try {
+    const response = await api.post<LoginResponse>(
+      "/auth/login",
+      { email, password },
+      { requireAuth: false }
+    )
 
-      if (response.result?.accessToken) {
-        login(response.result.accessToken)
-        toast.success("로그인에 성공했습니다.")
-        router.push("/")
-      } else {
-        toast.error("로그인에 실패했습니다.")
+    if (response.result?.accessToken) {
+      login(response.result.accessToken)
+      toast.success("로그인에 성공했습니다.")
+
+      // 프로필 존재 여부 체크
+      try {
+        const profileRes = await api.get("/members/profile/me")
+        console.log("프로필 응답:", profileRes)
+
+        // result 객체가 있고 내용이 있는 경우 메인 페이지로 이동
+        if (profileRes.result && Object.keys(profileRes.result).length > 0) {
+          console.log("프로필 존재함 - 메인 페이지로 이동")
+          router.push("/")
+        } else {
+          console.log("프로필 없음 - 프로필 생성 페이지로 이동")
+          router.push("/profile/new")
+        }
+      } catch (error: any) {
+        console.error("프로필 조회 에러:", error)
+        router.push("/profile/new")
       }
-    } catch (error) {
+    } else {
       toast.error("로그인에 실패했습니다.")
-    } finally {
-      setIsLoading(false)
     }
+  } catch (error) {
+    console.error("로그인 에러:", error)
+    toast.error("로그인에 실패했습니다.")
+  } finally {
+    setIsLoading(false)
   }
+}
 
   // 소셜 로그인 핸들러
   const handleSocialLogin = async (provider: string) => {

@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,7 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import FileUpload from "@/components/file-upload"
 
 interface ProfileFormProps {
-  profile: {
+  initialProfile?: {
     nickname: string
     email: string
     bio: string
@@ -28,13 +26,30 @@ interface ProfileFormProps {
     company?: string
     education?: string
   }
-  onSubmit: (updatedProfile: any) => void
-  onCancel: () => void
+  onSubmit: (profile: any, profileImage: File | null) => void
+  onCancel?: () => void
+  loading?: boolean
 }
 
-export default function ProfileForm({ profile, onSubmit, onCancel }: ProfileFormProps) {
-  const [formData, setFormData] = useState({ ...profile })
+export default function ProfileForm({
+  initialProfile,
+  onSubmit,
+  onCancel,
+  loading,
+}: ProfileFormProps) {
+  const [formData, setFormData] = useState({
+    nickname: initialProfile?.nickname || "",
+    email: initialProfile?.email || "",
+    bio: initialProfile?.bio || "",
+    techStack: initialProfile?.techStack || [],
+    links: initialProfile?.links || {},
+    location: initialProfile?.location || "",
+    jobTitle: initialProfile?.jobTitle || "",
+    company: initialProfile?.company || "",
+    education: initialProfile?.education || "",
+  })
   const [newTech, setNewTech] = useState("")
+  const [profileImage, setProfileImage] = useState<File | null>(null)
 
   const handleAddTech = () => {
     if (newTech.trim() && !formData.techStack.includes(newTech.trim())) {
@@ -69,14 +84,13 @@ export default function ProfileForm({ profile, onSubmit, onCancel }: ProfileForm
     })
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSubmit(formData)
+  const handleProfileImageUpload = (file: File) => {
+    setProfileImage(file)
   }
 
-  const handleProfileImageUpload = (file: File) => {
-    // 실제 구현에서는 파일을 서버에 업로드하고 URL을 받아옴
-    console.log("Uploading profile image:", file.name)
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onSubmit(formData, profileImage)
   }
 
   return (
@@ -212,10 +226,14 @@ export default function ProfileForm({ profile, onSubmit, onCancel }: ProfileForm
       </div>
 
       <div className="flex justify-end gap-4">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          취소
+        {onCancel && (
+          <Button type="button" variant="outline" onClick={onCancel}>
+            취소
+          </Button>
+        )}
+        <Button type="submit" disabled={loading}>
+          {loading ? "저장 중..." : "프로필 저장"}
         </Button>
-        <Button type="submit">프로필 저장</Button>
       </div>
     </form>
   )

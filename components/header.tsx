@@ -166,18 +166,6 @@ export default function Header() {
                       <span>프로필</span>
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/profile?tab=settings" className="cursor-pointer">
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>계정 설정</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/profile?tab=security" className="cursor-pointer">
-                      <Shield className="mr-2 h-4 w-4" />
-                      <span>보안</span>
-                    </Link>
-                  </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
