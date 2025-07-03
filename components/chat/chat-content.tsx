@@ -13,7 +13,7 @@ interface ChatContentProps {
   currentChatIsLoading: boolean;
   isChatContentVisible: boolean;
   showNewMessageToast: boolean;
-  mediaInfos: Record<string, string>;
+  mediaInfos: Record<string, { url: string; contentType: string; fileName: string; fileSize: number; }>;
   scrollableDivRef: React.RefObject<HTMLDivElement>;
   messagesEndRef: React.RefObject<HTMLDivElement>;
   uploadedFiles: UploadingFile[];
@@ -84,9 +84,6 @@ export const ChatContent: React.FC<ChatContentProps> = ({
           <ChatFileUpload
             uploadedFiles={uploadedFiles}
             onRemoveFile={onRemoveFile}
-            onFileUpload={onFileUpload}
-            fileInputRef={fileInputRef}
-            onFileChange={onFileChange}
           />
           
           <ChatInput

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ChatMessage, MemberInfo, MediaInfo } from '@/types/chat';
-import { formatMessageTime, isImageFile, calculateUnreadCount } from '@/lib/chat-utils';
+import { formatMessageTime, isImageFile, calculateUnreadCount, formatFileSize } from '@/lib/chat-utils';
 
 interface ChatMessageItemProps {
   message: ChatMessage;
@@ -11,7 +11,7 @@ interface ChatMessageItemProps {
   senderName: string;
   showDateSeparator: boolean;
   dateSeparatorText: string;
-  mediaInfos: Record<string, string>;
+  mediaInfos: Record<string, { url: string; contentType: string; fileName: string; fileSize: number; }>;
   onImageLoad?: () => void;
 }
 
@@ -64,51 +64,44 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
           )}
           <p>{message.message}</p>
 
-          {/* 미디어 렌더링 */}
-          {message.mediaIds && message.media && Array.isArray(message.media) && 
-           message.mediaIds.length === message.media.length && (
+          {/* 미디어(파일) 렌더링: mediaIds만 있을 때 */}
+          {message.mediaIds && message.mediaIds.length > 0 && (
             <div className="mt-2 space-y-2">
-              {message.mediaIds.map((id, idx) => {
-                const mediaUrl = mediaInfos[id];
-                const mediaArray = message.media as MediaInfo[];
-                const info = mediaArray[idx];
-                
-                if (!info || !mediaUrl) return <div key={id}>로딩중...</div>;
-                
-                if (isImageFile(info.extension)) {
+              {message.mediaIds.map((id) => {
+                const media = mediaInfos[id];
+                if (!media) return <div key={id}>로딩중...</div>;
+                if (media.contentType.startsWith('image/')) {
                   return (
                     <div key={id} className="mt-2">
                       <img
-                        src={mediaUrl}
-                        alt={info.fileName}
+                        src={media.url}
+                        alt="이미지"
                         className="max-w-full rounded-md cursor-pointer hover:opacity-90"
-                        onLoad={onImageLoad}
+                        onLoad={() => {
+                          // 이미지 로드 완료 시 스크롤 조정
+                          if (onImageLoad) {
+                            onImageLoad();
+                          }
+                        }}
                       />
-                      <div className="text-xs mt-1 flex justify-between">
-                        <span>{info.fileName}</span>
-                        <span>{(info.fileSize / 1024).toFixed(1)}KB</span>
+                      <div className="text-xs mt-1 flex justify-between min-w-0">
+                        <span className="truncate max-w-[160px] block">{media.fileName}</span>
+                        <span>{formatFileSize(media.fileSize)}</span>
                       </div>
                     </div>
                   );
                 }
-                
-                // 파일 다운로드 시 확장자 중복 방지
-                let downloadName = info.fileName;
-                if (info.extension && !info.fileName.toLowerCase().endsWith('.' + info.extension.toLowerCase())) {
-                  downloadName += '.' + info.extension;
-                }
-                
                 return (
                   <a
                     key={id}
-                    href={mediaUrl}
-                    download={downloadName}
-                    className="flex items-center gap-2 p-2 rounded-md bg-accent text-black border border-gray-300"
+                    href={media.url}
+                    download={media.fileName}
+                    className="flex items-center gap-2 p-2 rounded-md bg-accent text-black border border-gray-300 min-w-0"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    <span className="text-sm">{info.fileName}</span>
-                    <span className="text-xs">{(info.fileSize / 1024).toFixed(1)}KB</span>
+                    <span className="text-sm truncate max-w-[160px] block">{media.fileName}</span>
+                    <span className="text-xs">{formatFileSize(media.fileSize)}</span>
                   </a>
                 );
               })}

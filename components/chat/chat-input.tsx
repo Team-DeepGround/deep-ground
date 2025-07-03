@@ -123,7 +123,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         onChange={onFileChange}
         className="hidden"
         multiple
-        accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+        accept="*/*"
       />
     </div>
   );

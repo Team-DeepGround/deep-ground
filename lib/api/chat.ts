@@ -144,7 +144,7 @@ export const uploadFiles = async (
 };
 
 // 미디어 다운로드
-export const downloadMedia = async (chatRoomId: number, mediaId: string): Promise<string> => {
+export const downloadMedia = async (chatRoomId: number, mediaId: string): Promise<{ url: string, contentType: string, fileName: string, fileSize: number }> => {
   const token = await auth.getToken();
   const response = await fetch(`/api/v1/chatrooms/${chatRoomId}/media/${mediaId}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -155,12 +155,22 @@ export const downloadMedia = async (chatRoomId: number, mediaId: string): Promis
   }
   
   const blob = await response.blob();
-  return URL.createObjectURL(blob);
-};
+  const url = URL.createObjectURL(blob);
+  const contentType = response.headers.get('Content-Type') || '';
 
-// 미디어 URL 보정 함수
-export const getMediaUrl = (url: string): string => {
-  if (url.startsWith('/api/')) return url;
-  if (url.startsWith('/')) return `/api/v1${url}`;
-  return url;
-}; 
+  // 파일명 추출
+  const disposition = response.headers.get('Content-Disposition') || '';
+  let fileName = '파일';
+  const matchStar = disposition.match(/filename\*=UTF-8''([^;\n]*)/);
+  const matchNormal = disposition.match(/filename="([^"]+)"/);
+  if (matchStar) {
+    fileName = decodeURIComponent(matchStar[1]);
+  } else if (matchNormal) {
+    fileName = matchNormal[1];
+  }
+
+  // 파일 크기 추출
+  const fileSize = Number(response.headers.get('Content-Length') || '0');
+
+  return { url, contentType, fileName, fileSize };
+};

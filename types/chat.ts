@@ -59,7 +59,6 @@ export interface ChatMessage {
     senderId: number;
     message: string;
     mediaIds?: string[];
-    media?: MediaInfo | MediaInfo[];
     createdAt: string;
 }
 

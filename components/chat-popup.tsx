@@ -252,6 +252,11 @@ export default function ChatPopup({ isOpen, onClose }: ChatPopupProps) {
 
     // 채팅방 변경 시 메시지/업로드 상태 초기화 및 빠른 전환 대응
     const handleSelectChatRoom = (room: FriendChatRoom | StudyGroupChatRoom) => {
+      // 현재 선택된 채팅방과 같은 채팅방을 클릭한 경우 아무것도 하지 않음
+      if (selectedChatRoom?.chatRoomId === room.chatRoomId) {
+        return;
+      }
+
       if (!stompClientState || !isConnected) {
         toast({
           title: "채팅 서버 연결 중...",

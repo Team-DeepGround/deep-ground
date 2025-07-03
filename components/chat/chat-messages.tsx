@@ -13,7 +13,7 @@ interface ChatMessagesProps {
   currentChatIsLoading: boolean;
   isChatContentVisible: boolean;
   showNewMessageToast: boolean;
-  mediaInfos: Record<string, string>;
+  mediaInfos: Record<string, { url: string; contentType: string; fileName: string; fileSize: number; }>;
   scrollableDivRef: React.RefObject<HTMLDivElement>;
   messagesEndRef: React.RefObject<HTMLDivElement>;
   onLoadMoreMessages: () => void;

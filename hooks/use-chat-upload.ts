@@ -27,6 +27,40 @@ export const useChatUpload = (selectedChatRoom: any) => {
     if (files && files.length > 0) {
       const newFiles = Array.from(files);
       for (const file of newFiles) {
+        // 허용 확장자 목록
+        const allowedExtensions = [
+          'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'heic',
+          'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'hwp', 'csv',
+          'zip', 'rar', '7z', 'tar', 'gz'
+        ];
+        const extMatch = file.name.match(/\.([^.]+)$/);
+        const ext = extMatch ? extMatch[1].toLowerCase() : '';
+        if (!allowedExtensions.includes(ext)) {
+          toast({
+            title: '허용되지 않는 파일 형식',
+            description: `${file.name}은(는) 업로드할 수 없는 파일 형식입니다.`,
+            variant: 'destructive',
+          });
+          continue;
+        }
+        // 중복 파일 체크 (이름+크기)
+        if (uploadedFiles.some(f => f.file.name === file.name && f.file.size === file.size)) {
+          toast({
+            title: '중복 파일',
+            description: `${file.name}은(는) 이미 첨부된 파일입니다.`,
+            variant: 'destructive',
+          });
+          continue;
+        }
+        // 파일 크기 제한 (10MB)
+        if (file.size > 10485760) {
+          toast({
+            title: '파일 크기 초과',
+            description: `파일 크기는  10MB를 초과할 수 없습니다.`,
+            variant: 'destructive',
+          });
+          continue;
+        }
         const uploadingFile: UploadingFile = { file, progress: 0, status: 'uploading' };
         setUploadedFiles(prev => [...prev, uploadingFile]);
         
@@ -73,11 +107,15 @@ export const useChatUpload = (selectedChatRoom: any) => {
     if (e.target) {
       e.target.value = "";
     }
-  }, [selectedChatRoom, toast]);
+  }, [selectedChatRoom, toast, uploadedFiles]);
 
   // 파일 제거 핸들러
   const removeFile = useCallback((index: number) => {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+    // 파일 input의 value 초기화 (같은 파일을 다시 선택할 수 있도록)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   }, []);
 
   // 메시지 전송용 파일 업로드

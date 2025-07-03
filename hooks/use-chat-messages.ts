@@ -44,7 +44,7 @@ export const useChatMessages = (
   const showNewMessageToastStateRef = useRef(showNewMessageToast);
   
   // 미디어 정보 상태
-  const [mediaInfos, setMediaInfos] = useState<Record<string, string>>({});
+  const [mediaInfos, setMediaInfos] = useState<Record<string, { url: string, contentType: string, fileName: string, fileSize: number }>>({});
 
   // 내 memberInfo를 ref로 관리
   const myInfoRef = useRef<MemberInfo | undefined>(undefined);
@@ -54,9 +54,14 @@ export const useChatMessages = (
     showNewMessageToastStateRef.current = showNewMessageToast;
   }, [showNewMessageToast]);
 
+  // selectedChatRoom을 ref로 관리
+  const selectedChatRoomRef = useRef(selectedChatRoom);
+  useEffect(() => {
+    selectedChatRoomRef.current = selectedChatRoom;
+  }, [selectedChatRoom]);
+
   // 선택된 채팅방의 메시지 및 멤버 정보를 가져오는 함수
   const loadChatRoomMessages = useCallback(async (chatRoomId: number) => {
-    console.log(`[FUNCTION: loadChatRoomMessages] Called for chatRoomId: ${chatRoomId}`);
     setIsChatContentVisible(false);
     setAllChatRoomMessages(prev => ({
       ...prev,
@@ -121,10 +126,7 @@ export const useChatMessages = (
           viewport.scrollTop = oldScrollTop + scrollDiff;
         }
       });
-
-      console.log(`[API Call] Older messages for chatRoom ${chatRoomId}:`, fetchedMessages);
     } catch (error) {
-      console.error("Failed to load older messages:", error);
       toast({
         title: "이전 메시지 로드 실패",
         description: "이전 채팅 메시지를 불러오는데 실패했습니다.",
@@ -181,15 +183,18 @@ export const useChatMessages = (
   useEffect(() => {
     if (!selectedChatRoom) return;
     const chatRoomId = selectedChatRoom.chatRoomId;
+    let hasNewMedia = false;
+    
     allChatRoomMessages[chatRoomId]?.messages.forEach((msg) => {
-      if (!msg.mediaIds || !msg.media || !Array.isArray(msg.media) || msg.mediaIds.length !== msg.media.length) return;
-      msg.mediaIds.forEach(async (id, idx) => {
+      if (!msg.mediaIds) return;
+      msg.mediaIds.forEach(async (id) => {
         if (!mediaInfos[id]) {
+          hasNewMedia = true;
           try {
-            const url = await downloadMedia(chatRoomId, id);
+            const { url, contentType, fileName, fileSize } = await downloadMedia(chatRoomId, id);
             setMediaInfos((prev) => ({
               ...prev,
-              [id]: url,
+              [id]: { url, contentType, fileName, fileSize },
             }));
           } catch (e) {
             // 실패 시 무시
@@ -197,13 +202,21 @@ export const useChatMessages = (
         }
       });
     });
+    
+    // 새로운 미디어가 로드되었고, 현재 스크롤이 맨 아래에 있다면 스크롤을 맨 아래로 이동
+    if (hasNewMedia && isScrolledToBottomRef.current) {
+      setTimeout(() => {
+        if (scrollableDivRef.current) {
+          scrollToBottom(scrollableDivRef.current, false);
+        }
+      }, 100); // 미디어 로드 완료를 기다리기 위한 지연
+    }
   }, [selectedChatRoom, allChatRoomMessages, mediaInfos]);
 
   // 1. 구독 및 cleanup useEffect 추가
   useEffect(() => {
     if (!stompClientState || !isConnected || !selectedChatRoom) return;
     const chatRoomId = selectedChatRoom.chatRoomId;
-    console.log('[DEBUG] useChatMessages effect: SUBSCRIBE chatRoomId', chatRoomId);
     setIsChatContentVisible(false);
     setShowNewMessageToast(false);
     setMediaInfos({});
@@ -239,10 +252,10 @@ export const useChatMessages = (
             initialReadSent.current.add(chatRoomId);
             // 목록에서 unreadCount를 0으로
             setFriendChatRooms((prev: any[]) => prev.map((room: any) =>
-              room.chatRoomId === chatRoomId ? { ...room, unreadCount: 0 } : room
+              room.chatRoomId === chatRoomId ? { ...room, unreadCount: selectedChatRoomRef.current?.chatRoomId === chatRoomId ? 0 : 0 } : room
             ));
             setStudyGroupChatRooms((prev: any[]) => prev.map((room: any) =>
-              room.chatRoomId === chatRoomId ? { ...room, unreadCount: 0 } : room
+              room.chatRoomId === chatRoomId ? { ...room, unreadCount: selectedChatRoomRef.current?.chatRoomId === chatRoomId ? 0 : 0 } : room
             ));
           }
           
@@ -268,7 +281,6 @@ export const useChatMessages = (
         });
       },
       (error) => {
-        console.error("Error parsing init message in callback:", error);
         toast({
           title: "채팅 초기화 실패",
           description: "채팅 메시지를 불러오는데 실패했습니다.",
@@ -285,8 +297,6 @@ export const useChatMessages = (
       stompClientState,
       chatRoomId,
       (newMessage: ChatMessage) => {
-        console.log(`[STOMP Receive] /topic/chatrooms/${chatRoomId}/message:`, newMessage);
-
         setAllChatRoomMessages(prev => {
           const currentRoomState = prev[chatRoomId];
           if (currentRoomState) {
@@ -308,7 +318,7 @@ export const useChatMessages = (
             if (newMessage.senderId !== myInfoRef.current?.memberId && isLatest) {
               sendReadReceipt(stompClientState, chatRoomId, newMessage.createdAt);
               // 내가 현재 보고 있는 채팅방이면 unreadCount를 0으로 직접 갱신
-              if (selectedChatRoom && selectedChatRoom.chatRoomId === chatRoomId) {
+              if (selectedChatRoomRef.current && selectedChatRoomRef.current.chatRoomId === chatRoomId) {
                 setFriendChatRooms((prev: any[]) => prev.map((room: any) =>
                   room.chatRoomId === chatRoomId ? { ...room, unreadCount: 0 } : room
                 ));
@@ -355,15 +365,12 @@ export const useChatMessages = (
         });
       },
       (error) => {
-        console.error("Error parsing new message:", error);
       }
     );
     const subsRead = subscribeToReadReceipts(
       stompClientState,
       chatRoomId,
       (readReceipt: { memberId: number; lastReadMessageTime: string }) => {
-        console.log(`[STOMP Receive] /topic/chatrooms/${chatRoomId}/read-receipt:`, readReceipt);
-
         setAllChatRoomMessages(prev => {
           const currentRoomState = prev[chatRoomId];
           if (currentRoomState) {
@@ -390,11 +397,9 @@ export const useChatMessages = (
         });
       },
       (error) => {
-        console.error("Error parsing read receipt message:", error);
       }
     );
     return () => {
-      console.log('[DEBUG] useChatMessages cleanup: UNSUBSCRIBE chatRoomId', chatRoomId);
       subsInit.unsubscribe();
       subsLive.unsubscribe();
       subsRead.unsubscribe();
@@ -403,7 +408,6 @@ export const useChatMessages = (
 
   // selectedChatRoom 변화 추적
   useEffect(() => {
-    console.log('[DEBUG] selectedChatRoom changed:', selectedChatRoom);
   }, [selectedChatRoom]);
 
   return {

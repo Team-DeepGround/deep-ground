@@ -107,7 +107,6 @@ export const useChat = (isOpen: boolean) => {
       }
 
     } catch (error) {
-      console.error("Failed to fetch friend chatrooms:", error);
       toast({
         title: "친구 채팅방 로드 실패",
         description: "친구 채팅방 목록을 불러오는데 실패했습니다.",
@@ -133,7 +132,6 @@ export const useChat = (isOpen: boolean) => {
       }
 
     } catch (error) {
-      console.error("Failed to fetch study group chatrooms:", error);
       toast({
         title: "그룹 채팅방 로드 실패",
         description: "그룹 채팅방 목록을 불러오는데 실패했습니다.",
@@ -180,7 +178,6 @@ export const useChat = (isOpen: boolean) => {
       });
 
     } catch (error) {
-      console.error(`Failed to fetch member ${memberId} for room ${chatRoomId}:`, error);
       failedMemberFetches.current.add(memberId);
     } finally {
       fetchingMembers.current.delete(memberId);
@@ -203,11 +200,6 @@ export const useChat = (isOpen: boolean) => {
             setIsConnected(false);
             stompClientRef.current = null;
             setStompClientState(null);
-            toast({
-              title: "채팅 서버 연결 오류",
-              description: "채팅 서버와의 연결에 문제가 발생했습니다.",
-              variant: "destructive",
-            });
           },
           () => {
             setIsConnected(false);
@@ -240,7 +232,6 @@ export const useChat = (isOpen: boolean) => {
           const token = await auth.getToken();
           setAuthToken(token);
         } catch (error) {
-          console.error("Failed to get auth token on popup open:", error);
           toast({
             title: "인증 정보 로드 실패",
             description: "로그인 상태를 확인해주세요.",
@@ -318,7 +309,13 @@ export const useChat = (isOpen: boolean) => {
 
       setSelectedChatRoom(prev => {
         if (prev && 'status' in prev && prev.id === presenceData.memberId) {
+          if (prev.status === (presenceData.isOnline === true ? "online" : "offline")) {
+            // 상태가 동일하면 기존 객체 반환(참조 유지)
+            return prev;
+          }
+          // 상태만 다르면 새 객체 반환
           const newStatus = presenceData.isOnline === true ? "online" : "offline";
+          // id, status만 바뀌는 경우 기존 객체를 최대한 재사용
           return { ...prev, status: newStatus };
         }
         return prev;
@@ -343,23 +340,32 @@ export const useChat = (isOpen: boolean) => {
 
   // SSE/WebSocket unreadCount 이벤트 수신 시 채팅방 목록 unreadCount 갱신
   useEffect(() => {
-    console.log('chat-unread-count 이벤트 리스너 등록됨');
     function handleUnreadCountEvent(e: any) {
       const { chatRoomId, unreadCount } = e.detail || {};
       setFriendChatRooms(prev => {
         const updated = prev.map(room => {
-          console.log('친구방:', room.chatRoomId, typeof room.chatRoomId, '이벤트:', chatRoomId, typeof chatRoomId);
           return room.chatRoomId === Number(chatRoomId)
-            ? { ...room, unreadCount }
+            ? {
+                ...room,
+                unreadCount:
+                  selectedChatRoom && selectedChatRoom.chatRoomId === Number(chatRoomId)
+                    ? 0
+                    : unreadCount
+              }
             : room;
         });
         return updated;
       });
       setStudyGroupChatRooms(prev => {
         const updated = prev.map(room => {
-          console.log('그룹방:', room.chatRoomId, typeof room.chatRoomId, '이벤트:', chatRoomId, typeof chatRoomId);
           return room.chatRoomId === Number(chatRoomId)
-            ? { ...room, unreadCount }
+            ? {
+                ...room,
+                unreadCount:
+                  selectedChatRoom && selectedChatRoom.chatRoomId === Number(chatRoomId)
+                    ? 0
+                    : unreadCount
+              }
             : room;
         });
         return updated;
@@ -367,7 +373,27 @@ export const useChat = (isOpen: boolean) => {
     }
     window.addEventListener('chat-unread-count', handleUnreadCountEvent);
     return () => window.removeEventListener('chat-unread-count', handleUnreadCountEvent);
-  }, []);
+  }, [selectedChatRoom]);
+
+  // selectedChatRoom이 바뀔 때마다 해당 방의 unreadCount를 0으로 강제 세팅
+  useEffect(() => {
+    if (selectedChatRoom) {
+      setFriendChatRooms(prev =>
+        prev.map(room =>
+          room.chatRoomId === selectedChatRoom.chatRoomId
+            ? { ...room, unreadCount: 0 }
+            : room
+        )
+      );
+      setStudyGroupChatRooms(prev =>
+        prev.map(room =>
+          room.chatRoomId === selectedChatRoom.chatRoomId
+            ? { ...room, unreadCount: 0 }
+            : room
+        )
+      );
+    }
+  }, [selectedChatRoom]);
 
   return {
     // 상태
