@@ -4,20 +4,12 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent,  DialogDescription,  DialogFooter,  DialogHeader,  DialogTitle,  DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Calendar, FileText, MapPin, Settings, Trash2 } from "lucide-react"
-import { createStudySchedule, fetchStudySchedulesByGroup, updateStudySchedule, deleteStudySchedule, convertToSchedule, StudyScheduleResponseDto } from "@/lib/api/studySchedule"
+import { createStudySchedule, fetchStudySchedulesByGroup, updateStudySchedule, deleteStudySchedule } from "@/lib/api/studySchedule"
 import { useParams } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { format } from "date-fns"
@@ -45,9 +37,7 @@ export function StudySchedule() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-  const { toast } = useToast()
   const params = useParams()
-
 
   // 새 일정 추가용 상태
   const [newSchedule, setNewSchedule] = useState({
@@ -66,9 +56,7 @@ export function StudySchedule() {
     const loadSchedules = async () => {
       try {
         const studyGroupId = Number(params.id)
-  
-        const data = await fetchStudySchedulesByGroup(studyGroupId)
-  
+        const data = await fetchStudySchedulesByGroup(studyGroupId) 
         const mappedSchedules = data.map((item: any) => {
           const startDate = new Date(item.startTime)
           const endDate = new Date(item.endTime)
@@ -117,7 +105,6 @@ export function StudySchedule() {
     const startDateTime = new Date(startTime)
     const endDateTime = new Date(endTime)
     const studyGroupId = Number(params.id)
-
     const isConflict = schedules.some(schedule =>
     isOverlapping(startDateTime, endDateTime, schedule.startTime, schedule.endTime)
   )
@@ -137,15 +124,15 @@ export function StudySchedule() {
     return
   }
 
-    if (newSchedule.endTime <= newSchedule.startTime) {
-      alert("종료 시간은 시작 시간보다 늦어야 합니다")
-      return
-    }
+  if (newSchedule.endTime <= newSchedule.startTime) {
+    alert("종료 시간은 시작 시간보다 늦어야 합니다")
+    return
+   }
 
-    if (!newSchedule.description.trim()) {
-      alert("설명을 입력해주세요.")
-      return
-    }
+  if (!newSchedule.description.trim()) {
+    alert("설명을 입력해주세요.")
+    return
+  }
   
     try {
       const res = await createStudySchedule(studyGroupId, {
@@ -188,7 +175,6 @@ export function StudySchedule() {
 
   const handleEditSchedule = async () => {
     if (!editSchedule) return
-  
     const studyGroupId = Number(params.id)
     if (!editSchedule || !editSchedule.studyScheduleId) {
       console.error("studyScheduleId 값이 비정상입니다.", editSchedule)
@@ -221,7 +207,6 @@ export function StudySchedule() {
       alert("종료 시간은 시작 시간보다 늦어야 합니다")
       return
     }
-
 
   const isConflict = schedules.some(schedule =>
     schedule.studyScheduleId !== scheduleId && // 본인 일정 제외
@@ -331,7 +316,6 @@ export function StudySchedule() {
         formatted.sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
       )
   
-      // setSchedules(formatted)
     } catch (error) {
       console.error("❌ 일정 삭제 실패:", error)
       alert("❌ 일정 삭제에 실패했습니다.")
