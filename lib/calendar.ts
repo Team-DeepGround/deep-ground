@@ -37,12 +37,10 @@ const colorPalette = ["#F2C4CC", "#B7D7F4", "#BEE3B8", "#F9E79F", "#D8BFD8"]
 const studyColorMap = new Map<number, string>()
 
 export const getColorByStudyId = (studyId: number) => {
-    console.log("현재 studyColorMap:", Array.from(studyColorMap.entries()))
   if (!studyColorMap.has(studyId)) {
     const color = colorPalette[studyColorMap.size % colorPalette.length]
     studyColorMap.set(studyId, color)
   }
-  console.log(`studyId: ${studyId}의 색상: ${studyColorMap.get(studyId)}`)
   return studyColorMap.get(studyId)!
 }
 
@@ -85,8 +83,6 @@ export const getEventsForTimeSlot = (
 
 export const getEventHeight = (event: StudyEvent) => {
 
-    console.log("startTime:", event.startTime)
-    console.log("endTime:", event.endTime)
   const startTime = event.startTime.getTime()
   const endTime = event.endTime.getTime()
   const durationMinutes = (endTime - startTime) / (1000 * 60)
@@ -135,7 +131,6 @@ export const useCalendar = () => {
     
     try {
       const scheduleData = await fetchMySchedules()
-      console.log("받아온 일정 데이터:", scheduleData)
       const mapped: StudyEvent[] = scheduleData.map((dto) => {
         const startTime = new Date(dto.startTime)
         const endTime = new Date(dto.endTime)
@@ -182,7 +177,6 @@ export const useCalendar = () => {
         isImportant: target.isImportant ?? false,
         memo: target.personalNote ?? "",
       })
-      console.log("✅ updated 값 확인:", updated);
   
       // 서버 응답 기반으로 화면 상태 정확히 반영
       setEvents((prev) =>

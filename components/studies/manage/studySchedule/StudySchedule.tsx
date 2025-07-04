@@ -245,7 +245,6 @@ export function StudySchedule() {
         isImportant: editSchedule.isImportant ?? false,
         memo: editSchedule.personalNote ?? "",
       })
-      console.log("✅ scheduleId 값 확인:", editSchedule.studyScheduleId, typeof editSchedule.studyScheduleId)
   
       const updated = res.result // ✅ result 꺼내서 사용
 
@@ -280,7 +279,6 @@ export function StudySchedule() {
   }
 
   const openEditModal = (schedule: Schedule) => {
-    console.log("✅ schedule 전체 확인:", schedule)
   
     setEditSchedule({
       ...schedule,

@@ -231,13 +231,7 @@ export function Calendar({
       top: rect.top - calendarRect.top,
       left: left,
     })
-
-    console.log("startTime 원본:", event.startTime)
-    console.log("endTime 원본:", event.endTime)
-    console.log("startTime 변환:", new Date(event.startTime).toString())
-    console.log("endTime 변환:", new Date(event.endTime).toString())
-    console.log("차이(분):", (new Date(event.endTime).getTime() - new Date(event.startTime).getTime()) / (1000 * 60))
-
+    
     setSelectedEvent(event)
   }
 

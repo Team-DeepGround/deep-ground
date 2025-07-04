@@ -78,7 +78,6 @@ export interface CreateStudyScheduleRequest {
     studyGroupId: number
   ): Promise<StudyScheduleResponseDto[]> => {
     const res = await api.get(`/study-group/${studyGroupId}/schedules`)
-    console.log("✅ API 응답 확인:", res)
   
     if (!res.result) {
       throw new Error("일정 목록이 비어 있습니다")
