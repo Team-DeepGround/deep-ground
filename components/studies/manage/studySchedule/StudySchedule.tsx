@@ -4,44 +4,18 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent,  DialogDescription,  DialogFooter,  DialogHeader,  DialogTitle,  DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Calendar, FileText, MapPin, Settings, Trash2 } from "lucide-react"
-import { createStudySchedule, fetchStudySchedulesByGroup, updateStudySchedule, deleteStudySchedule, convertToSchedule, StudyScheduleResponseDto } from "@/lib/api/studySchedule"
+import { createStudySchedule, fetchStudySchedulesByGroup, updateStudySchedule, deleteStudySchedule } from "@/lib/api/studySchedule"
 import { useParams } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { format } from "date-fns"
-
-
-// 시간 옵션 생성 (0-23시)
-const hourOptions = Array.from({ length: 17 }, (_, i) => (i + 8).toString().padStart(2, "0"))
-
-// 분 옵션 생성 (10분 간격)
-const minuteOptions = ["00", "10", "20", "30", "40", "50"]
-
-// 시간 문자열을 시와 분으로 분리하는 함수
-const parseTime = (timeString: string) => {
-  if (!timeString) return { hour: "", minute: "" }
-  const [hour, minute] = timeString.split(":")
-  return { hour, minute }
-}
-
-// 시와 분을 시간 문자열로 합치는 함수
-const formatTime = (hour: string, minute: string) => {
-  if (!hour || !minute) return ""
-  return `${hour}:${minute}`
-}
+import TimePicker from "./TimePicker"
+import ScheduleDetailModal from "./ScheduleDetailModal"
+import ScheduleEditModal from "./ScheduleEditModal"
 
 interface Schedule {
   id: number
@@ -57,64 +31,13 @@ interface Schedule {
   personalNote?: string
 }
 
-// 시간 선택 컴포넌트
-interface TimePickerProps {
-  value: string
-  onChange: (time: string) => void
-  placeholder?: string
-}
-
-function TimePicker({ value, onChange, placeholder }: TimePickerProps) {
-  const { hour, minute } = parseTime(value)
-
-  const handleHourChange = (newHour: string) => {
-    onChange(formatTime(newHour, minute || "00"))
-  }
-
-  const handleMinuteChange = (newMinute: string) => {
-    onChange(formatTime(hour || "00", newMinute))
-  }
-
-  return (
-    <div className="flex gap-2 items-center">
-      <Select value={hour} onValueChange={handleHourChange}>
-        <SelectTrigger className="w-20">
-          <SelectValue placeholder="시" />
-        </SelectTrigger>
-        <SelectContent>
-          {hourOptions.map((h) => (
-            <SelectItem key={h} value={h}>
-              {h}시
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <span className="text-muted-foreground">:</span>
-      <Select value={minute} onValueChange={handleMinuteChange}>
-        <SelectTrigger className="w-20">
-          <SelectValue placeholder="분" />
-        </SelectTrigger>
-        <SelectContent>
-          {minuteOptions.map((m) => (
-            <SelectItem key={m} value={m}>
-              {m}분
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  )
-}
-
 export function StudySchedule() {
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-  const { toast } = useToast()
   const params = useParams()
-
 
   // 새 일정 추가용 상태
   const [newSchedule, setNewSchedule] = useState({
@@ -133,9 +56,7 @@ export function StudySchedule() {
     const loadSchedules = async () => {
       try {
         const studyGroupId = Number(params.id)
-  
-        const data = await fetchStudySchedulesByGroup(studyGroupId)
-  
+        const data = await fetchStudySchedulesByGroup(studyGroupId) 
         const mappedSchedules = data.map((item: any) => {
           const startDate = new Date(item.startTime)
           const endDate = new Date(item.endTime)
@@ -174,10 +95,44 @@ export function StudySchedule() {
     loadSchedules()
   }, [params.id])
 
+  const isOverlapping = (startA: Date, endA: Date, startB: Date, endB: Date) => {
+    return startA < endB && startB < endA
+  }
+
   const handleAddSchedule = async () => {
     const startTime = `${newSchedule.date}T${newSchedule.startTime}:00`
     const endTime = `${newSchedule.date}T${newSchedule.endTime}:00`
+    const startDateTime = new Date(startTime)
+    const endDateTime = new Date(endTime)
     const studyGroupId = Number(params.id)
+    const isConflict = schedules.some(schedule =>
+    isOverlapping(startDateTime, endDateTime, schedule.startTime, schedule.endTime)
+  )
+
+  if (isConflict) {
+    alert("다른 일정과 시간이 겹칩니다.")
+    return
+  }
+
+  if (!newSchedule.title.trim()) {
+    alert("제목을 입력해주세요.")
+    return
+  }
+
+  if (!newSchedule.startTime || !newSchedule.endTime) {
+    alert("일정 시간을 입력해주세요.")
+    return
+  }
+
+  if (newSchedule.endTime <= newSchedule.startTime) {
+    alert("종료 시간은 시작 시간보다 늦어야 합니다")
+    return
+   }
+
+  if (!newSchedule.description.trim()) {
+    alert("설명을 입력해주세요.")
+    return
+  }
   
     try {
       const res = await createStudySchedule(studyGroupId, {
@@ -187,24 +142,21 @@ export function StudySchedule() {
         description: newSchedule.description,
         location: newSchedule.location,
       })
+      const fetched = await fetchStudySchedulesByGroup(studyGroupId)
 
-      console.log("✅ 백엔드 응답 확인:", res) 
-  
-      const result = res.result  // result 꺼내기
-
-      setSchedules((prev) => [
-        ...prev,
-        {
-          id: result.id,
-          studyScheduleId: result.studyScheduleId,
-          title: result.title,
-          date: result.startTime.split("T")[0],
-          startTime: new Date(result.startTime),
-          endTime: new Date(result.endTime),
-          location: result.location,
-          description: result.description,
-        },
-      ].sort((a, b) => a.startTime.getTime() - b.startTime.getTime()))
+      setSchedules(
+        fetched.map((s) => ({
+          id: s.id,
+          studyScheduleId: s.studyScheduleId,
+          title: s.title,
+          date: s.startTime.split("T")[0],
+          startTime: new Date(s.startTime),
+          endTime: new Date(s.endTime),
+          location: s.location,
+          description: s.description,
+        }))
+        .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
+      )
   
       setNewSchedule({
         title: "",
@@ -215,6 +167,7 @@ export function StudySchedule() {
         description: "",
       })
       setIsAddModalOpen(false)
+      window.location.reload(); // 새로고침
     } catch (error) {
       console.error("일정 생성 실패:", error)
     }
@@ -222,12 +175,48 @@ export function StudySchedule() {
 
   const handleEditSchedule = async () => {
     if (!editSchedule) return
-  
     const studyGroupId = Number(params.id)
+    if (!editSchedule || !editSchedule.studyScheduleId) {
+      console.error("studyScheduleId 값이 비정상입니다.", editSchedule)
+      return
+    }
+    
     const scheduleId = Number(editSchedule.studyScheduleId)
+    
+    if (isNaN(scheduleId)) {
+      console.error("scheduleId 변환 결과가 NaN입니다.", editSchedule.studyScheduleId)
+      return
+    }
   
     const startTime = format(editSchedule.startTime, "yyyy-MM-dd'T'HH:mm:ss")
     const endTime = format(editSchedule.endTime, "yyyy-MM-dd'T'HH:mm:ss")
+    const startDateTime = new Date(startTime)
+    const endDateTime = new Date(endTime)
+
+    if (!editSchedule.title.trim()) {
+      alert("제목을 입력해주세요.")
+      return
+    }
+
+    if (!editSchedule.description.trim()) {
+      alert("설명을 입력해주세요.")
+      return
+    }
+
+    if (editSchedule.endTime <= editSchedule.startTime) {
+      alert("종료 시간은 시작 시간보다 늦어야 합니다")
+      return
+    }
+
+  const isConflict = schedules.some(schedule =>
+    schedule.studyScheduleId !== scheduleId && // 본인 일정 제외
+    isOverlapping(startDateTime, endDateTime, schedule.startTime, schedule.endTime)
+  )
+
+  if (isConflict) {
+    alert("다른 일정과 시간이 겹칩니다.")
+    return
+  }
   
     try {
       const res = await updateStudySchedule(studyGroupId, scheduleId, {
@@ -241,13 +230,9 @@ export function StudySchedule() {
         isImportant: editSchedule.isImportant ?? false,
         memo: editSchedule.personalNote ?? "",
       })
-      console.log("✅ scheduleId 값 확인:", editSchedule.studyScheduleId, typeof editSchedule.studyScheduleId)
   
       const updated = res.result // ✅ result 꺼내서 사용
 
-      console.log("✅ updated.startTime:", updated.startTime)
-      console.log("✅ updated.endTime:", updated.endTime)
-  
       setSchedules((prev) =>
         prev
           .map((s) =>
@@ -279,7 +264,6 @@ export function StudySchedule() {
   }
 
   const openEditModal = (schedule: Schedule) => {
-    console.log("✅ schedule 전체 확인:", schedule)
   
     setEditSchedule({
       ...schedule,
@@ -290,11 +274,14 @@ export function StudySchedule() {
 
   const handleDeleteSchedule = async (scheduleId: number) => {
     if (!params.id) return
+
+    const isConfirmed = window.confirm("일정을 삭제하시겠습니까?")
+    if (!isConfirmed) return
   
     try {
       const studyGroupId = Number(params.id)
       await deleteStudySchedule(studyGroupId, scheduleId)
-      alert("✅ 일정이 삭제되었습니다.")
+      alert("일정이 삭제되었습니다.")
   
       const updated = await fetchStudySchedulesByGroup(studyGroupId)
       const formatted = updated.map((item) => {
@@ -325,8 +312,10 @@ export function StudySchedule() {
           isImportant: item.isImportant ?? false,
         }
       })
+      setSchedules(
+        formatted.sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
+      )
   
-      setSchedules(formatted)
     } catch (error) {
       console.error("❌ 일정 삭제 실패:", error)
       alert("❌ 일정 삭제에 실패했습니다.")
@@ -473,133 +462,21 @@ export function StudySchedule() {
       </CardContent>
 
       {/* 상세보기 모달 */}
-      <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>{selectedSchedule?.title}</DialogTitle>
-            <DialogDescription>일정 상세 정보</DialogDescription>
-          </DialogHeader>
-          {selectedSchedule && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right font-semibold">날짜:</Label>
-                <span className="col-span-3">{format(selectedSchedule.date, "yyyy-MM-dd")}</span>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right font-semibold">시간:</Label>
-                <span className="col-span-3">
-                {format(selectedSchedule.startTime, "HH:mm")} - {format(selectedSchedule.endTime, "HH:mm")}
-                </span>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right font-semibold">장소:</Label>
-                <span className="col-span-3">{selectedSchedule.location}</span>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right font-semibold">설명:</Label>
-                <span className="col-span-3">{selectedSchedule.description}</span>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button onClick={() => setIsDetailModalOpen(false)}>닫기</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ScheduleDetailModal
+        open={isDetailModalOpen}
+        onOpenChange={setIsDetailModalOpen}
+        schedule={selectedSchedule}
+      />
 
       {/* 수정 모달 */}
-      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>일정 수정</DialogTitle>
-            <DialogDescription>일정 정보를 수정하세요.</DialogDescription>
-          </DialogHeader>
-          {editSchedule && (
-            <div className="grid gap-6 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-title" className="text-right">
-                  제목
-                </Label>
-                <Input
-                  id="edit-title"
-                  placeholder="제목은 필수입니다"
-                  value={editSchedule.title}
-                  onChange={(e) => setEditSchedule({ ...editSchedule, title: e.target.value })}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-date" className="text-right">
-                  날짜
-                </Label>
-                <Input
-                id="edit-date"
-                type="date"
-                value={editSchedule.date}
-                onChange={(e) => {
-                  const newDate = e.target.value
-                  setEditSchedule({
-                    ...editSchedule,
-                    date: newDate,
-                    startTime: new Date(`${newDate}T${format(editSchedule.startTime, "HH:mm")}:00`),
-                    endTime: new Date(`${newDate}T${format(editSchedule.endTime, "HH:mm")}:00`),
-                  })
-                }}
-                className="col-span-3"
-              />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">시작 시간</Label>
-                <div className="col-span-3">
-                  <TimePicker
-                    value={format(editSchedule.startTime, "HH:mm")}
-                    onChange={(time) => setEditSchedule({ ...editSchedule, startTime: new Date(`${format(editSchedule.date, "yyyy-MM-dd")}T${time}:00`) })}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">종료 시간</Label>
-                <div className="col-span-3">
-                  <TimePicker
-                    value={format(editSchedule.endTime, "HH:mm")}
-                    onChange={(time) => setEditSchedule({ ...editSchedule,  endTime: new Date(`${format(editSchedule.date, "yyyy-MM-dd")}T${time}:00`)})}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-location" className="text-right">
-                  장소
-                </Label>
-                <Input
-                  id="edit-location"
-                  value={editSchedule.location}
-                  onChange={(e) => setEditSchedule({ ...editSchedule, location: e.target.value })}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-description" className="text-right">
-                  설명
-                </Label>
-                <Textarea
-                  id="edit-description"
-                  placeholder="설명은 필수입니다"
-                  value={editSchedule.description}
-                  onChange={(e) => setEditSchedule({ ...editSchedule, description: e.target.value })}
-                  className="col-span-3"
-                />
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
-              취소
-            </Button>
-            <Button onClick={handleEditSchedule}>수정하기</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </Card>
+      <ScheduleEditModal
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        schedule={editSchedule}
+        setSchedule={setEditSchedule}
+        onSubmit={handleEditSchedule}
+      />
+    </Card> 
   )
 }
 

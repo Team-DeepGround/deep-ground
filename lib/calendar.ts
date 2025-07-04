@@ -33,16 +33,14 @@ export interface StudyEvent {
 export type CalendarViewType = "day" | "week" | "month"
 
 // 유틸리티 함수들
-const colorPalette = ["#FFB6C1", "#87CEFA", "#90EE90", "#FFD700", "#DDA0DD"]
+const colorPalette = ["#F2C4CC", "#B7D7F4", "#BEE3B8", "#F9E79F", "#D8BFD8"]
 const studyColorMap = new Map<number, string>()
 
 export const getColorByStudyId = (studyId: number) => {
-    console.log("현재 studyColorMap:", Array.from(studyColorMap.entries()))
   if (!studyColorMap.has(studyId)) {
     const color = colorPalette[studyColorMap.size % colorPalette.length]
     studyColorMap.set(studyId, color)
   }
-  console.log(`studyId: ${studyId}의 색상: ${studyColorMap.get(studyId)}`)
   return studyColorMap.get(studyId)!
 }
 
@@ -85,8 +83,6 @@ export const getEventsForTimeSlot = (
 
 export const getEventHeight = (event: StudyEvent) => {
 
-    console.log("startTime:", event.startTime)
-    console.log("endTime:", event.endTime)
   const startTime = event.startTime.getTime()
   const endTime = event.endTime.getTime()
   const durationMinutes = (endTime - startTime) / (1000 * 60)
@@ -135,7 +131,6 @@ export const useCalendar = () => {
     
     try {
       const scheduleData = await fetchMySchedules()
-      console.log("받아온 일정 데이터:", scheduleData)
       const mapped: StudyEvent[] = scheduleData.map((dto) => {
         const startTime = new Date(dto.startTime)
         const endTime = new Date(dto.endTime)
@@ -144,6 +139,7 @@ export const useCalendar = () => {
           id: dto.memberStudyScheduleId,
           memberStudyScheduleId: dto.memberStudyScheduleId,
           studyId: dto.studyGroupId,
+          studyName: dto.studyGroupName,
           title: dto.title,
           description: dto.description,
           date: startTime,
@@ -155,6 +151,7 @@ export const useCalendar = () => {
           personalNote: dto.memo ?? "",
           isImportant: dto.isImportant ?? false,
           organizer: { id: 0, name: "" },
+          location: dto.location ?? ""
         }
       })
 
@@ -165,28 +162,66 @@ export const useCalendar = () => {
   }
 
   const updateEventAttendance = async (eventId: number, attendance: "attending" | "not_attending" | null) => {
-    setEvents((prev) => prev.map((event) => (event.id === eventId ? { ...event, attendance } : event)))
-
-    const isAvailable = 
-    attendance === "attending" ? true : 
-    attendance === "not_attending" ? false : 
-    null;
-
+    const target = events.find((e) => e.id === eventId)
+    if (!target) return
+  
+    const isAvailable =
+      attendance === "attending" ? true :
+      attendance === "not_attending" ? false :
+      null
+  
     try {
-      await updateMemberSchedule(eventId, {
+      // 서버에 최종 상태 업데이트 요청
+      const updated = await updateMemberSchedule(eventId, {
         isAvailable,
-        isImportant: events.find((e) => e.id === eventId)?.isImportant ?? false,
-        memo: events.find((e) => e.id === eventId)?.personalNote ?? "",
+        isImportant: target.isImportant ?? false,
+        memo: target.personalNote ?? "",
       })
-
+  
+      // 서버 응답 기반으로 화면 상태 정확히 반영
+      setEvents((prev) =>
+        prev.map((e) =>
+          e.id === eventId
+            ? {
+                ...e,
+                attendance:
+                  updated.isAvailable === true
+                    ? "attending"
+                    : updated.isAvailable === false
+                    ? "not_attending"
+                    : null,
+                isAvailable: updated.isAvailable ?? undefined, // 핵심 부분
+              }
+            : e
+        )
+      )
+  
+      // 현재 열려있는 팝업도 정확히 동기화
+      if (selectedEvent?.memberStudyScheduleId === eventId) {
+        setSelectedEvent((prev) =>
+          prev
+            ? {
+                ...prev,
+                attendance:
+                  updated.isAvailable === true
+                    ? "attending"
+                    : updated.isAvailable === false
+                    ? "not_attending"
+                    : null,
+                isAvailable: updated.isAvailable ?? undefined,
+              }
+            : null
+        )
+      }
+  
       toast({
         title: "참석 정보 업데이트 완료",
         description:
-          attendance === "attending"
+          updated.isAvailable === true
             ? "일정에 참석하기로 했습니다."
-            : attendance === "not_attending"
-              ? "일정에 참석하지 않기로 했습니다."
-              : "참석 여부를 미정으로 변경했습니다.",
+            : updated.isAvailable === false
+            ? "일정에 참석하지 않기로 했습니다."
+            : "참석 여부를 미정으로 변경했습니다.",
       })
     } catch (error) {
       toast({
@@ -194,28 +229,9 @@ export const useCalendar = () => {
         title: "참석 정보 업데이트 실패",
         description: "서버에 반영하지 못했습니다.",
       })
-
-      setEvents((prev) =>
-        prev.map((event) =>
-          event.id === eventId
-            ? {
-                ...event,
-                attendance:
-                  selectedEvent?.isAvailable === true
-                    ? "attending"
-                    : selectedEvent?.isAvailable === false
-                      ? "not_attending"
-                      : null,
-              }
-            : event,
-        ),
-      )
-    }
-
-    if (selectedEvent && selectedEvent.memberStudyScheduleId === eventId) {
-      setSelectedEvent((prev: StudyEvent | null) => (prev ? { ...prev, attendance } : null))
     }
   }
+  
 
   const updateEventNote = async (eventId: number, note: string) => {
     setEvents((prev) => prev.map((event) => (event.id === eventId ? { ...event, personalNote: note } : event)))

@@ -7,6 +7,7 @@ export interface MemberScheduleCalendarResponseDto {
   memberStudyScheduleId: number
   studyScheduleId: number
   studyGroupId: number
+  studyGroupName: string
   title: string
   description: string 
   startTime: string
@@ -14,6 +15,7 @@ export interface MemberScheduleCalendarResponseDto {
   isAvailable: boolean | null
   isImportant: boolean
   memo?: string
+  location ?: string
 }
 
 // 로그인한 사용자의 모든 일정 조회
