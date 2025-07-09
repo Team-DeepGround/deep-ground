@@ -76,6 +76,10 @@ function useAuthImageUrls(urls: string[] | undefined) {
 
 // 인증 헤더가 필요한 이미지 렌더링용 컴포넌트
 function AuthImage({ imageUrl, alt = "이미지" }: { imageUrl: string; alt?: string }) {
+  // S3 URL 등 외부 URL이면 바로 렌더링
+  if (imageUrl.startsWith("http")) {
+    return <img src={imageUrl} alt={alt} style={{ maxWidth: "100%" }} />;
+  }
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   useEffect(() => {
     if (!imageUrl) return;
@@ -133,6 +137,8 @@ export default function QuestionDetailPage() {
 
   // 질문 이미지 Object URL
   // const questionImageUrls = useAuthImageUrls(question?.mediaUrl)
+
+  const [statusUpdating, setStatusUpdating] = useState(false)
 
   const fetchQuestion = async () => {
     setLoading(true)
@@ -216,21 +222,24 @@ export default function QuestionDetailPage() {
     return () => window.removeEventListener('focus', handleFocus)
   }, [params.id])
 
-  const handleImageUpload = (file: File) => {
-    // 중복 체크
-    if (uploadedImages.some(f => f.name === file.name && f.size === file.size)) {
+  // 여러 파일 업로드 핸들러 (질문 작성과 동일하게)
+  const handleImageUpload = (files: File[]) => {
+    // 여러 파일 중 중복 아닌 것만 추가
+    const newFiles = files.filter(file => !uploadedImages.some(f => f.name === file.name && f.size === file.size))
+    if (newFiles.length < files.length) {
       toast({
         title: "중복 이미지",
-        description: "이미 첨부된 이미지입니다.",
+        description: "이미 첨부된 이미지는 제외되었습니다.",
         variant: "destructive",
       })
-      return
     }
-    setUploadedImages((prev) => [...prev, file])
-    toast({
-      title: "이미지 업로드",
-      description: "이미지가 추가되었습니다.",
-    })
+    setUploadedImages((prev) => [...prev, ...newFiles])
+    if (newFiles.length > 0) {
+      toast({
+        title: "이미지 업로드",
+        description: `${newFiles.length}개의 이미지가 추가되었습니다.`,
+      })
+    }
   }
 
   const removeImage = (index: number) => {
@@ -453,6 +462,29 @@ export default function QuestionDetailPage() {
     }
   };
 
+  // 질문 상태 변경 함수
+  const handleStatusChange = async (newStatus: string) => {
+    if (!question) return;
+    setStatusUpdating(true);
+    try {
+      await api.patch(`/questions/${question.id}/status`, { status: newStatus });
+      setQuestion((prev: any) => ({ ...prev, status: newStatus }));
+      toast({ title: "상태 변경 완료", description: `질문 상태가 '${statusLabel(newStatus)}'로 변경되었습니다.` });
+    } catch (e: any) {
+      toast({ title: "상태 변경 실패", description: e?.message || "상태 변경 중 오류가 발생했습니다.", variant: "destructive" });
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
+
+  // 상태 한글 변환 함수
+  const statusLabel = (status?: string) => {
+    if (status === "OPEN") return "미해결";
+    if (status === "RESOLVED") return "해결중";
+    if (status === "CLOSED") return "해결완료";
+    return "미해결";
+  };
+
   if (loading) return <div className="text-center py-20">질문을 불러오는 중...</div>
 
   return (
@@ -487,37 +519,83 @@ export default function QuestionDetailPage() {
                   <span>{question?.createdAt ? new Date(question.createdAt).toISOString().slice(0, 10) : ''}</span>
                 </div>
               </div>
-              <div className="flex gap-2 items-center">
-                {/* 연필(수정) 버튼 항상 노출 */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-1"
-                  onClick={() => router.push(`/questions/${params.id}/edit`)}
-                  aria-label="질문 수정하기"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-1"
-                  aria-label="질문 삭제하기"
-                  onClick={async () => {
-                    if (window.confirm("정말로 이 질문을 삭제하시겠습니까?")) {
-                      try {
-                        const res = await api.delete(`/questions/${params.id}`)
-                        // 백엔드 응답에서 questionId를 받아 토스트에 표시
-                        toast({ title: "질문 삭제 완료", description: `질문이 삭제되었습니다. (ID: ${res?.result ?? params.id})` })
-                        router.push("/questions")
-                      } catch (e: any) {
-                        toast({ title: "질문 삭제 실패", description: e?.message || "삭제 중 오류가 발생했습니다.", variant: "destructive" })
-                      }
+              <div className="flex flex-col gap-2 items-end">
+                <div className="flex items-center gap-2">
+                  {/* 상태 pill */}
+                  <span
+                    className={
+                      "text-base font-bold px-4 py-1.5 rounded-full border-4 shadow-sm text-black"
                     }
-                  }}
-                >
-                  <Trash className="h-4 w-4" />
-                </Button>
+                    style={{
+                      color: '#111',
+                      background: question?.status === "OPEN"
+                        ? "#ffe5e5"
+                        : question?.status === "RESOLVED"
+                        ? "#fff9db"
+                        : question?.status === "CLOSED"
+                        ? "#e6ffe5"
+                        : "#f5f5f5",
+                      borderColor: question?.status === "OPEN"
+                        ? "#dc2626"
+                        : question?.status === "RESOLVED"
+                        ? "#eab308"
+                        : question?.status === "CLOSED"
+                        ? "#16a34a"
+                        : "#d1d5db",
+                      lineHeight: "1.5",
+                      fontWeight: 700,
+                      fontSize: "1rem",
+                      minWidth: "80px",
+                      textAlign: "center"
+                    }}
+                  >
+                    {statusLabel(question?.status)}
+                  </span>
+                  {/* 상태 변경 드롭다운: 작성자만 노출 */}
+                  {user?.id && user.id === question?.memberId && (
+                    <select
+                      className="ml-4 text-lg font-bold border-4 border-blue-400 bg-white px-4 py-2 rounded-full shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      value={question?.status}
+                      disabled={statusUpdating}
+                      onChange={e => handleStatusChange(e.target.value)}
+                    >
+                      <option value="OPEN">미해결</option>
+                      <option value="RESOLVED">해결중</option>
+                      <option value="CLOSED">해결완료</option>
+                    </select>
+                  )}
+                </div>
+                {/* 기존 수정/삭제 버튼 */}
+                <div className="flex gap-2 items-center mt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-1"
+                    onClick={() => router.push(`/questions/${params.id}/edit`)}
+                    aria-label="질문 수정하기"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-1"
+                    aria-label="질문 삭제하기"
+                    onClick={async () => {
+                      if (window.confirm("정말로 이 질문을 삭제하시겠습니까?")) {
+                        try {
+                          const res = await api.delete(`/questions/${params.id}`)
+                          toast({ title: "질문 삭제 완료", description: `질문이 삭제되었습니다. (ID: ${res?.result ?? params.id})` })
+                          router.push("/questions")
+                        } catch (e: any) {
+                          toast({ title: "질문 삭제 실패", description: e?.message || "삭제 중 오류가 발생했습니다.", variant: "destructive" })
+                        }
+                      }
+                    }}
+                  >
+                    <Trash className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           </CardHeader>
@@ -547,14 +625,11 @@ export default function QuestionDetailPage() {
               {/* 질문 이미지 */}
               {question.mediaUrl && question.mediaUrl.length > 0 && (
                 <div className="mt-4 space-y-4">
-                  {question.mediaUrl.map((url: string, idx: number) => {
-                    const fileName = url.replace("/media/", "");
-                    return (
-                      <div key={url || idx} className="rounded-md overflow-hidden">
-                        <AuthImage imageUrl={`/question/media/${fileName}`} alt={`질문 이미지 ${idx + 1}`} />
-                      </div>
-                    );
-                  })}
+                  {question.mediaUrl.map((url: string, idx: number) => (
+                    <div key={url || idx} className="rounded-md overflow-hidden">
+                      <AuthImage imageUrl={url} alt={`질문 이미지 ${idx + 1}`} />
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -564,14 +639,6 @@ export default function QuestionDetailPage() {
         {/* 답변 수 */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold">{answers.length}개의 답변</h2>
-          <select
-            defaultValue="votes"
-            className="w-[180px] h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
-          >
-            <option value="votes">추천순</option>
-            <option value="newest">최신순</option>
-            <option value="oldest">오래된순</option>
-          </select>
         </div>
 
         {/* 답변 목록 */}
@@ -617,8 +684,8 @@ export default function QuestionDetailPage() {
                 <div className="prose max-w-none">
                   <p className="whitespace-pre-line">{answer.answerContent}</p>
 
-                  {answer.images && answer.images.length > 0 && (
-                    <AnswerImagesWithAuth images={answer.images} />
+                  {answer.mediaUrls && answer.mediaUrls.length > 0 && (
+                    <AnswerImagesWithAuth images={answer.mediaUrls} />
                   )}
                 </div>
               </CardContent>
@@ -764,9 +831,10 @@ export default function QuestionDetailPage() {
             <div className="space-y-2">
               <Label htmlFor="answer-images">이미지 첨부</Label>
               <FileUpload
-                onFileSelect={handleImageUpload}
+                onFilesSelect={handleImageUpload}
                 accept="image/*"
                 maxSize={5}
+                multiple={true}
                 buttonText="이미지 선택"
               />
 
@@ -818,15 +886,23 @@ function Label({ htmlFor, children, className }: { htmlFor: string; children: Re
 }
 
 // 답변 이미지용 컴포넌트
-function AnswerImagesWithAuth({ images }: { images: any[] }) {
+function AnswerImagesWithAuth({ images }: { images: string[] }) {
   return (
     <div className="mt-4 space-y-4">
-      {images.map((img, idx) => {
-        // img.url: "/media/파일명"
-        const fileName = img.url.replace("/media/", "");
+      {images.map((url, idx) => {
+        if (url.startsWith('http')) {
+          // S3 URL이면 바로 렌더링
+          return (
+            <div key={url || idx} className="rounded-md overflow-hidden">
+              <img src={url} alt={`답변 이미지 ${idx + 1}`} style={{ maxWidth: '100%' }} />
+            </div>
+          );
+        }
+        // /media/파일명.확장자 → 파일명.확장자 추출
+        const fileName = url.replace("/media/", "");
         return (
-          <div key={img.url || idx} className="rounded-md overflow-hidden">
-            <AuthImage imageUrl={`/question/media/${fileName}`} alt={img.alt || `답변 이미지 ${idx + 1}`} />
+          <div key={url || idx} className="rounded-md overflow-hidden">
+            <AuthImage imageUrl={`/answer/media/${fileName}`} alt={`답변 이미지 ${idx + 1}`} />
           </div>
         );
       })}
