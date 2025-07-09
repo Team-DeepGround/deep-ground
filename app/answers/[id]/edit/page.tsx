@@ -23,28 +23,28 @@ export default function EditAnswerPage() {
   const [questionId, setQuestionId] = useState<number | null>(null)
   const answerId = params.id
 
-  useEffect(() => {
-    async function fetchAnswer() {
-      setLoading(true)
-      try {
-        const res = await api.get(`/answers/${answerId}`)
-        const answer = res.result
-        setContent(answer.answerContent || "")
-        let urls: string[] = [];
-        if (Array.isArray(answer.mediaUrls)) {
-          urls = answer.mediaUrls.map((img: any) => {
-            const url = typeof img === 'string' ? img : img.url;
-            return url.replace(/^@/, '');
-          })
-        }
-        setExistingImages(urls)
-        setQuestionId(answer.questionId || null)
-      } catch (e) {
-        toast({ title: "답변 불러오기 실패", description: "답변 정보를 불러올 수 없습니다.", variant: "destructive" })
-      } finally {
-        setLoading(false)
+  async function fetchAnswer() {
+    setLoading(true)
+    try {
+      const res = await api.get(`/answers/${answerId}`)
+      console.log('res 전체:', res)
+      setContent(res.content || "")
+      let urls: string[] = [];
+      if (Array.isArray(res.imageUrls)) {
+        urls = res.imageUrls.map((img: any) => {
+          const url = typeof img === 'string' ? img : img.url;
+          return url.replace(/^@/, '');
+        })
       }
+      setExistingImages(urls)
+      setQuestionId(res.questionId || null)
+    } catch (e) {
+      toast({ title: "답변 불러오기 실패", description: "답변 정보를 불러올 수 없습니다.", variant: "destructive" })
+    } finally {
+      setLoading(false)
     }
+  }
+  useEffect(() => {
     if (answerId) fetchAnswer()
   }, [answerId])
 
@@ -92,7 +92,7 @@ export default function EditAnswerPage() {
     const formData = new FormData()
     formData.append("answerContent", content)
     formData.append("questionId", questionId?.toString() || "")
-    uploadedImages.forEach(file => formData.append("image", file))
+    uploadedImages.forEach(file => formData.append("images", file))
 
     // 디버깅: 전송할 데이터 확인
     console.log('수정할 답변 ID:', answerId)
@@ -127,7 +127,10 @@ export default function EditAnswerPage() {
       }
       
       toast({ title: "답변 수정 성공", description: "답변이 성공적으로 수정되었습니다." })
-      // 질문 상세 페이지로 돌아가면서 새로고침 신호 전달
+      // 수정 후 최신 답변 정보를 다시 불러와서 이미지가 바로 반영되도록 함
+      await fetchAnswer();
+      setUploadedImages([]);
+      // 질문 상세 페이지로 이동
       if (questionId) {
         router.push(`/questions/${questionId}?refresh=true`)
       } else {
@@ -228,7 +231,7 @@ export default function EditAnswerPage() {
             <Button variant="outline" type="button" onClick={() => router.back()}>
               취소
             </Button>
-            <Button type="submit">답변 수정하기</Button>
+            <Button type="submit" disabled={loading}>답변 수정하기</Button>
           </div>
         </form>
       </div>

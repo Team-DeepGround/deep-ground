@@ -103,7 +103,7 @@ export default function EditQuestionPage() {
     formData.append("title", title)
     formData.append("content", content)
     tags.forEach(tag => formData.append("techStacks", tag))
-    uploadedImages.forEach(file => formData.append("image", file))
+    uploadedImages.forEach(file => formData.append("images", file))
     formData.append("remainImageIds", JSON.stringify(existingImages.map(img => img.id)))
     const accessToken = localStorage.getItem("auth_token")
     try {
