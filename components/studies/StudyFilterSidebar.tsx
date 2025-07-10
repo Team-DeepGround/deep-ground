@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search } from "lucide-react"
-import { AVAILABLE_TECH_TAGS } from "@/lib/constants/tech-tags"
+import { getTechStacks, TechStack } from "@/lib/api/techStack"
 
 interface StudyFilterSidebarProps {
   searchTerm: string
@@ -142,17 +142,24 @@ export const StudyFilterSidebar = memo(function StudyFilterSidebar({
     })
   }, [])
 
+  const [availableTags, setAvailableTags] = useState<TechStack[]>([])
+  useEffect(() => {
+    getTechStacks().then((tags) => {
+      setAvailableTags(tags)
+    })
+  }, [])
+
   // Memoize tech tags rendering
   const techTags = useMemo(() => {
-    return AVAILABLE_TECH_TAGS.map((tag) => (
+    return availableTags.map((tag) => (
       <TechTag
-        key={tag}
-        tag={tag}
-        isSelected={internalSelectedTags.includes(tag)}
+        key={tag.id + '-' + tag.name}
+        tag={tag.name}
+        isSelected={internalSelectedTags.includes(tag.name)}
         onClick={handleTagClick}
       />
     ))
-  }, [internalSelectedTags, handleTagClick])
+  }, [availableTags, internalSelectedTags, handleTagClick])
 
   return (
     <Card className="h-fit">

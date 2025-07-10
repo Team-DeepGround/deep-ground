@@ -4,7 +4,6 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Calendar, Users, MapPin } from "lucide-react"
-import { toClientTechTag } from "@/lib/constants/tech-tags"
 
 export interface StudyGroup {
   id: number;
@@ -12,7 +11,7 @@ export interface StudyGroup {
   description: string;
   period: string;
   recruitmentPeriod: string;
-  tags: string[];
+  tags: { id: number; name: string }[];
   maxMembers: number;
   currentMembers: number;
   organizer: {
@@ -63,8 +62,8 @@ export const StudyCard = memo(function StudyCard({ study }: StudyCardProps) {
         )}
         <div className="flex flex-wrap gap-1.5 mt-3">
           {study.tags?.map((tag) => (
-            <Badge key={tag} variant="secondary" className="font-normal">
-              {toClientTechTag(tag)}
+            <Badge key={tag.id + '-' + tag.name} variant="secondary" className="font-normal">
+              {tag.name}
             </Badge>
           ))}
         </div>

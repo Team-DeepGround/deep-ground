@@ -23,6 +23,7 @@ import { api } from "@/lib/api-client"
 import { auth } from "@/lib/auth"
 import { useAuth } from "@/components/auth-provider"
 import { AVAILABLE_TECH_TAGS, toServerTechTag } from "@/lib/constants/tech-tags"
+import { getTechStacks, TechStack } from "@/lib/api/techStack"
 
 interface CreateStudyGroupRequest {
   title: string;
@@ -77,8 +78,14 @@ export default function CreateStudyPage() {
   const [recruitEndDate, setRecruitEndDate] = useState<Date>()
 
   // 기술 태그 선택 방식으로 변경
-  const availableTags = AVAILABLE_TECH_TAGS
+  const [availableTags, setAvailableTags] = useState<TechStack[]>([])
   const [selectedTags, setSelectedTags] = useState<string[]>([])
+
+  useEffect(() => {
+    getTechStacks().then((tags) => {
+      setAvailableTags(tags)
+    })
+  }, [])
 
   const handleTagToggle = (tag: string) => {
     if (selectedTags.includes(tag)) {
@@ -168,7 +175,7 @@ export default function CreateStudyPage() {
         groupMemberCount: parseInt(maxMembers),
         isOffline: !isOnline,
         studyLocation: location,
-        techTags: selectedTags.map(toServerTechTag),
+        techTags: selectedTags,
       }
 
       await api.post('/study-group', requestData)
@@ -386,14 +393,14 @@ export default function CreateStudyPage() {
                     <p className="text-sm text-muted-foreground mb-2">기술 태그 선택 (다중 선택 가능)</p>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                       {availableTags.map((tag) => (
-                        <div key={tag} className="flex items-center space-x-2">
+                        <div key={tag.id} className="flex items-center space-x-2">
                           <Checkbox
-                            id={`tag-${tag}`}
-                            checked={selectedTags.includes(tag)}
-                            onCheckedChange={() => handleTagToggle(tag)}
+                            id={`tag-${tag.name}`}
+                            checked={selectedTags.includes(tag.name)}
+                            onCheckedChange={() => handleTagToggle(tag.name)}
                           />
-                          <label htmlFor={`tag-${tag}`} className="text-sm cursor-pointer">
-                            {tag}
+                          <label htmlFor={`tag-${tag.name}`} className="text-sm cursor-pointer">
+                            {tag.name}
                           </label>
                         </div>
                       ))}
