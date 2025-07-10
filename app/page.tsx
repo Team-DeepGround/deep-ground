@@ -32,8 +32,15 @@ export default function Home() {
               )}
             </div>
           </div>
-          <div className="rounded-lg overflow-hidden shadow-xl">
-            <img src="/placeholder.svg?height=400&width=600" alt="DeepGround 커뮤니티" className="w-full h-auto" />
+          <div className="rounded-lg overflow-hidden">
+          <video
+            src="https://oopy.lazyrockets.com/api/v2/notion/fileUrl?src=https%3A%2F%2Fprod-files-secure.s3.us-west-2.amazonaws.com%2F38552da6-340d-42c1-a9a1-b181ff331f03%2Faa681f6a-cb4a-4a41-8563-35d8e3ce3a53%2FDeepDive_keyvisual_Web_%25E1%2584%258C%25E1%2585%25A5%25E1%2584%258B%25E1%2585%25AD%25E1%2586%25BC%25E1%2584%2585%25E1%2585%25A3%25E1%2586%25BC.mp4&blockId=19cacac0-e8b1-4dd5-bece-dddb3f779b73#t=0.0001"
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-[400px] object-cover rounded-xl shadow-lg mb-8 pointer-events-none select-none"
+          />
           </div>
         </div>
       </section>
