@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
+import { fetchFeedSummaries, FetchFeedSummaryResponse } from "@/lib/api/feed"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -40,7 +41,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { api } from "@/lib/api-client"
 
 interface ProfileData {
   id: string;
@@ -120,9 +120,12 @@ export default function UserProfilePage() {
     twitterUrl: ""
   })
   const [techStackInput, setTechStackInput] = useState("")
+  const [feeds, setFeeds] = useState<FetchFeedSummaryResponse[]>([])
+  const [feedsLoading, setFeedsLoading] = useState(false)
 
   useEffect(() => {
     loadProfile()
+    loadFeeds()
   }, [id, user?.id])
 
   const loadProfile = async () => {
@@ -145,6 +148,30 @@ export default function UserProfilePage() {
         description: "프로필 정보를 불러오는데 실패했습니다.",
         variant: "destructive",
       })
+    }
+  }
+
+  const loadFeeds = async () => {
+    try {
+      setFeedsLoading(true)
+      console.log(`사용자 피드 요약 목록 조회 시작 (memberId: ${id})`)
+      const response = await fetchFeedSummaries({ page: 0, size: 20, sort: "createdAt,desc" })
+      console.log('피드 요약 목록 응답:', response)
+      
+      if (response.result?.feedSummaries) {
+        setFeeds(response.result.feedSummaries)
+      } else {
+        setFeeds([])
+      }
+    } catch (error) {
+      console.error('피드 목록 로드 실패:', error)
+      toast({
+        title: "피드 목록 로드 실패",
+        description: "피드 목록을 불러오는데 실패했습니다.",
+        variant: "destructive",
+      })
+    } finally {
+      setFeedsLoading(false)
     }
   }
 
@@ -376,6 +403,28 @@ export default function UserProfilePage() {
     </Card>
   );
 
+  const FeedCard = ({ feed }: { feed: FetchFeedSummaryResponse }) => (
+    <Card className="hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => router.push(`/feed/${feed.feedId}`)}>
+      <CardContent className="p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="font-medium text-sm">{feed.memberName}</span>
+          <span className="text-xs text-muted-foreground">
+            {new Date(feed.createdAt).toLocaleDateString()}
+          </span>
+        </div>
+        <p className="text-sm text-gray-700 line-clamp-3 whitespace-pre-line">
+          {feed.content}
+        </p>
+        <Button size="sm" className="mt-3" onClick={(e) => {
+          e.stopPropagation()
+          router.push(`/feed/${feed.feedId}`)
+        }}>
+          상세보기
+        </Button>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
@@ -385,6 +434,7 @@ export default function UserProfilePage() {
               <TabsTrigger value="profile">프로필</TabsTrigger>
               <TabsTrigger value="studies">스터디</TabsTrigger>
               <TabsTrigger value="questions">질문</TabsTrigger>
+              <TabsTrigger value="feeds">피드</TabsTrigger>
             </TabsList>
             {isMyProfile && !isEditing && (
               <Button onClick={handleEdit}>
@@ -655,6 +705,21 @@ export default function UserProfilePage() {
               </div>
             ) : (
               <p className="text-muted-foreground">작성한 질문이 없습니다.</p>
+            )}
+          </TabsContent>
+
+          <TabsContent value="feeds">
+            <h2 className="text-2xl font-bold mb-4">작성한 피드</h2>
+            {feedsLoading ? (
+              <div className="text-center text-muted-foreground">피드를 불러오는 중...</div>
+            ) : feeds.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {feeds.map((feed) => (
+                  <FeedCard key={feed.feedId} feed={feed} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground">작성한 피드가 없습니다.</p>
             )}
           </TabsContent>
         </Tabs>
