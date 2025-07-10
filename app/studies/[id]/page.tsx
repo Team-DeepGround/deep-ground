@@ -13,6 +13,7 @@ import { ParticipantList } from "@/components/studies/ParticipantList"
 import { CommentSection } from "@/components/studies/CommentSection"
 import { StudySchedule } from "@/components/studies/StudySchedule"
 import { Separator } from "@/components/ui/separator"
+import { fetchStudySchedulesByGroup } from "@/lib/api/studySchedule" 
 import { Card } from "@/components/ui/card"
 import { Calendar, Clock } from "lucide-react"
 import { formatDate } from "@/lib/utils"
@@ -192,6 +193,39 @@ export default function StudyDetailPage() {
       </div>
     )
   }
+  const handleTabChange = async (value: string) => {
+    if (value === "schedule") {
+      try {
+        const schedulesDto = await fetchStudySchedulesByGroup(Number(params.id))
+
+        const schedules: StudySession[] = schedulesDto
+        .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())  // ← 정렬 추가!
+        .map((dto) => ({
+          id: dto.id,
+          title: dto.title,
+          description: dto.description,
+          startDate: dto.startTime,
+          endDate: dto.endTime,
+          location: dto.location,
+          participants: [],
+        }))
+        setStudy((prev) => {
+          if (!prev) return prev // null이면 null 리턴
+        
+          return {
+            ...prev,
+            sessions: schedules as StudySession[],  // ← 필요 시 타입 캐스팅 추가
+          }
+        })
+      } catch (error) {
+        toast({
+          title: "스터디 일정 불러오기 실패",
+          description: error instanceof Error ? error.message : "잠시 후 다시 시도해주세요",
+          variant: "destructive",
+        })
+      }
+    }
+  }
 
   return (
     <div className="container max-w-4xl mx-auto py-8 space-y-8">
@@ -207,18 +241,18 @@ export default function StudyDetailPage() {
 
       <Separator />
 
-      <Tabs defaultValue="introduction" className="w-full">
-        <TabsList className="w-full justify-start">
-          <TabsTrigger value="introduction" className="flex-1 max-w-[200px]">
-            스터디 소개
-          </TabsTrigger>
-          <TabsTrigger value="schedule" className="flex-1 max-w-[200px]">
-            스터디 일정
-          </TabsTrigger>
-          <TabsTrigger value="participants" className="flex-1 max-w-[200px]">
-            참여자
-          </TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="introduction" className="w-full" onValueChange={handleTabChange}>
+      <TabsList className="w-full justify-between">
+        <TabsTrigger value="introduction" className="flex-1 text-center">
+          스터디 소개
+        </TabsTrigger>
+        <TabsTrigger value="schedule" className="flex-1 text-center">
+          스터디 일정
+        </TabsTrigger>
+        <TabsTrigger value="participants" className="flex-1 text-center">
+          참여자
+        </TabsTrigger>
+      </TabsList>
 
         <TabsContent value="introduction" className="mt-6">
           <div className="space-y-6">
