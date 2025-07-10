@@ -381,20 +381,8 @@ export default function QuestionDetailPage() {
       if (!res.ok) {
         throw new Error("댓글 등록 실패");
       }
-      // 새 댓글 데이터 생성 (실제 서비스에서는 서버에서 내려주는 댓글 객체를 사용해야 함)
-      const newComment = {
-        id: Date.now(),
-        content: answerComments[answerId],
-        member: {
-          nickname: user?.email?.split("@")[0] || "사용자",
-          avatar: "/placeholder.svg?height=40&width=40",
-        },
-        createdAt: new Date().toISOString(),
-      };
-      setAnswerCommentsData({
-        ...answerCommentsData,
-        [answerId]: [...(answerCommentsData[answerId] || []), newComment],
-      });
+      // 댓글 등록 후 서버에서 최신 데이터로 갱신
+      await fetchQuestion();
       setAnswerComments({
         ...answerComments,
         [answerId]: "",
@@ -467,7 +455,7 @@ export default function QuestionDetailPage() {
     if (!question) return;
     setStatusUpdating(true);
     try {
-      await api.patch(`/questions/${question.id}/status`, { status: newStatus });
+      await api.patch(`/questions/${question.id}/status`, { questionStatus: newStatus });
       setQuestion((prev: any) => ({ ...prev, status: newStatus }));
       toast({ title: "상태 변경 완료", description: `질문 상태가 '${statusLabel(newStatus)}'로 변경되었습니다.` });
     } catch (e: any) {
@@ -524,7 +512,7 @@ export default function QuestionDetailPage() {
                   {/* 상태 pill */}
                   <span
                     className={
-                      "text-base font-bold px-4 py-1.5 rounded-full border-4 shadow-sm text-black"
+                      "text-xs font-semibold px-2 py-0.5 rounded-full border-2 shadow-sm text-black bg-[#ffe5e5] border-[#dc2626] min-w-[48px] text-center"
                     }
                     style={{
                       color: '#111',
@@ -542,21 +530,21 @@ export default function QuestionDetailPage() {
                         : question?.status === "CLOSED"
                         ? "#16a34a"
                         : "#d1d5db",
-                      lineHeight: "1.5",
-                      fontWeight: 700,
-                      fontSize: "1rem",
-                      minWidth: "80px",
+                      lineHeight: "1.2",
+                      fontWeight: 600,
+                      fontSize: "0.75rem",
+                      minWidth: "48px",
                       textAlign: "center"
                     }}
                   >
                     {statusLabel(question?.status)}
                   </span>
                   {/* 상태 변경 드롭다운: 작성자만 노출 */}
-                  {user?.id && user.id === question?.memberId && (
+                  {user?.id && user.id == question?.memberId && (
                     <select
                       className="ml-4 text-lg font-bold border-4 border-blue-400 bg-white px-4 py-2 rounded-full shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      value={question?.status}
-                      disabled={statusUpdating}
+                      value={question?.status || 'OPEN'}
+                      disabled={!!statusUpdating}
                       onChange={e => handleStatusChange(e.target.value)}
                     >
                       <option value="OPEN">미해결</option>

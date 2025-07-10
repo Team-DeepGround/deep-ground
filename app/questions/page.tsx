@@ -339,7 +339,7 @@ function QuestionCard({ question, onTitleClick }: QuestionCardProps) {
           {/* 상태 pill */}
           <span
             className={
-              "text-base font-bold px-4 py-1.5 rounded-full border-4 shadow-sm text-black"
+              "text-xs font-semibold px-2 py-0.5 rounded-full border-2 shadow-sm text-black bg-[#ffe5e5] border-[#dc2626] min-w-[48px] text-center"
             }
             style={{
               color: '#111',
@@ -357,10 +357,10 @@ function QuestionCard({ question, onTitleClick }: QuestionCardProps) {
                 : question.status === "CLOSED"
                 ? "#16a34a"
                 : "#d1d5db",
-              lineHeight: "1.5",
-              fontWeight: 700,
-              fontSize: "1rem",
-              minWidth: "80px",
+              lineHeight: "1.2",
+              fontWeight: 600,
+              fontSize: "0.75rem",
+              minWidth: "48px",
               textAlign: "center"
             }}
           >
