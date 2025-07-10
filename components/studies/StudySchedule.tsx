@@ -23,19 +23,14 @@ export function StudySchedule({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Clock className="h-5 w-5 text-muted-foreground" />
-          <h3 className="text-lg font-semibold">스터디 세션 일정</h3>
+          <h3 className="text-lg font-semibold">스터디 일정</h3>
         </div>
-        {isParticipating && (
-          <Button variant="outline" size="sm" onClick={onAddSession}>
-            일정 추가
-          </Button>
-        )}
       </div>
 
       <div className="space-y-4">
         {sessions.length === 0 ? (
           <div className="text-sm text-muted-foreground">
-            스터디 세션 일정이 없습니다
+            스터디 일정이 없습니다
           </div>
         ) : (
           sessions.map((session) => (
@@ -49,18 +44,16 @@ export function StudySchedule({
                     </p>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {formatDate(session.startDate)} ~ {formatDate(session.endDate)}
+                    {formatDate(session.startDate)}{" "}
+                    {new Date(session.startDate).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} ~{" "}
+                    {new Date(session.endDate).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
 
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <MapPin className="h-4 w-4" />
-                    {session.location}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Users className="h-4 w-4" />
-                    {session.participants.length}명 참여
+                    {session.location ? session.location : "장소 미정"}
                   </div>
                 </div>
               </div>
