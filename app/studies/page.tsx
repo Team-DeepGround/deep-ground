@@ -5,7 +5,6 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import { api } from "@/lib/api-client"
-import { toServerTechTag } from "@/lib/constants/tech-tags"
 import { StudyList } from "@/components/studies/StudyList"
 
 interface StudyGroup {
@@ -14,7 +13,7 @@ interface StudyGroup {
   description: string;
   period: string;
   recruitmentPeriod: string;
-  tags: string[];
+  tags: { id: number; name: string }[];
   maxMembers: number;
   currentMembers: number;
   organizer: {
@@ -109,7 +108,7 @@ export default function StudiesPage() {
     }
 
     if (selectedTags.length > 0) {
-      params.techTags = selectedTags.map(toServerTechTag);
+      params.techStackNames = selectedTags;
     }
 
     return params;

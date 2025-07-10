@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AVAILABLE_TECH_TAGS } from "@/lib/constants/tech-tags"
+import { getTechStacks, TechStack } from "@/lib/api/techStack"
 import { Calendar, MapPin, Users } from "lucide-react"
 import { api } from "@/lib/api-client"
 
@@ -48,6 +48,7 @@ export default function StudyEditPage() {
   const params = useParams()
   const { toast } = useToast()
   const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [availableTags, setAvailableTags] = useState<TechStack[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   const {
@@ -59,25 +60,58 @@ export default function StudyEditPage() {
   } = useForm<StudySettingsForm>()
 
   useEffect(() => {
-    // 더미 데이터로 폼 초기화
-    setValue("title", dummyStudyData.title)
-    setValue("description", dummyStudyData.description)
-    setValue("isOnline", dummyStudyData.isOnline)
-    setValue("location", dummyStudyData.location)
-    setValue("groupLimit", dummyStudyData.groupLimit)
-    setValue("studyStartDate", dummyStudyData.studyStartDate)
-    setValue("studyEndDate", dummyStudyData.studyEndDate)
-    setValue("recruitStartDate", dummyStudyData.recruitStartDate)
-    setValue("recruitEndDate", dummyStudyData.recruitEndDate)
-    setSelectedTags(dummyStudyData.techTags)
-    setIsLoading(false)
-  }, [setValue])
+    getTechStacks().then((tags) => {
+      setAvailableTags(tags)
+    })
+  }, [])
+
+  useEffect(() => {
+    // 실제 스터디 데이터 불러오기
+    const fetchStudy = async () => {
+      try {
+        const response = await api.get(`/study-group/${params.id}`)
+        if (response.status === 200 && response.result) {
+          const study = response.result
+          setValue("title", study.title)
+          setValue("description", study.explanation)
+          setValue("isOnline", !study.offline)
+          setValue("location", study.location)
+          setValue("groupLimit", study.groupLimit)
+          setValue("studyStartDate", study.studyStartDate)
+          setValue("studyEndDate", study.studyEndDate)
+          setValue("recruitStartDate", study.recruitStartDate)
+          setValue("recruitEndDate", study.recruitEndDate)
+          setSelectedTags(study.techStacks.map((t: { name: string }) => t.name))
+        }
+      } catch (error) {
+        toast({
+          title: "스터디 정보를 불러오지 못했습니다.",
+          description: "잠시 후 다시 시도해주세요.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchStudy()
+  }, [params.id, setValue, toast])
 
   const onSubmit = async (data: StudySettingsForm) => {
     try {
-      // API 연동 전 더미 응답
-      console.log("Form submitted:", { ...data, techTags: selectedTags })
-      
+      const requestBody = {
+        id: Number(params.id),
+        title: data.title,
+        explanation: data.description,
+        studyStartDate: data.studyStartDate,
+        studyEndDate: data.studyEndDate,
+        recruitStartDate: data.recruitStartDate,
+        recruitEndDate: data.recruitEndDate,
+        groupMemberCount: data.groupLimit,
+        isOffline: !data.isOnline ? true : false,
+        studyLocation: data.location,
+        techStackNames: selectedTags,
+      }
+      await api.patch(`/study-group/${params.id}`, requestBody)
       toast({
         title: "설정 저장 완료",
         description: "스터디 설정이 저장되었습니다.",
@@ -193,14 +227,14 @@ export default function StudyEditPage() {
                 <div className="space-y-2">
                   <Label>기술 스택</Label>
                   <div className="flex flex-wrap gap-2">
-                    {AVAILABLE_TECH_TAGS.map((tag) => (
+                    {availableTags.map((tag) => (
                       <Badge
-                        key={tag}
-                        variant={selectedTags.includes(tag) ? "default" : "outline"}
+                        key={tag.id}
+                        variant={selectedTags.includes(tag.name) ? "default" : "outline"}
                         className="cursor-pointer"
-                        onClick={() => handleTagToggle(tag)}
+                        onClick={() => handleTagToggle(tag.name)}
                       >
-                        {tag}
+                        {tag.name}
                       </Badge>
                     ))}
                   </div>
