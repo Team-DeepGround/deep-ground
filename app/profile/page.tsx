@@ -21,6 +21,7 @@ import {
 import ProfileForm from "@/components/profile-form"
 import Link from "next/link"
 import { toast } from "sonner"
+import { auth } from "@/lib/auth"
 
 export default function ProfilePage() {
   const { isAuthenticated } = useAuth()
@@ -46,6 +47,7 @@ export default function ProfilePage() {
     jobTitle: "",
     company: "",
     education: "",
+    profileImage: "",
   })
 
   useEffect(() => {
@@ -70,6 +72,7 @@ export default function ProfilePage() {
             jobTitle: profileResponse.result.jobTitle || "",
             company: profileResponse.result.company || "",
             education: profileResponse.result.education || "",
+            profileImage: profileResponse.result.profileImage || "",
           })
         }
 
@@ -102,23 +105,43 @@ export default function ProfilePage() {
   }, [isAuthenticated])
 
   // 프로필 업데이트 핸들러
-  const handleProfileUpdate = async (updatedProfile) => {
+  const handleProfileUpdate = async (updatedProfile: any, profileImage: File | null) => {
     try {
-      const response = await api.post("/members/profile/me", updatedProfile)
-      if (response && response.result) {
-        setProfile(updatedProfile)
-        setIsEditing(false)
+      const formData = new FormData();
+      formData.append(
+        "profile",
+        new Blob([JSON.stringify(updatedProfile)], { type: "application/json" })
+      );
+      if (profileImage) formData.append("profileImage", profileImage);
+      const token = await auth.getToken();
+      const response = await fetch("/api/v1/members/profile", {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          // Content-Type은 FormData 사용 시 생략
+        },
+        body: formData,
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setProfile(data.result || updatedProfile);
+        setIsEditing(false);
         toast({
           title: "프로필 업데이트 성공",
           description: "프로필 정보가 성공적으로 업데이트되었습니다.",
-        })
+        });
+      } else {
+        toast({
+          title: "프로필 업데이트 실패",
+          description: data.message || "프로필 정보 업데이트에 실패했습니다.",
+        });
       }
     } catch (error) {
-      console.error("프로필 업데이트 실패:", error)
+      console.error("프로필 업데이트 실패:", error);
       toast({
         title: "프로필 업데이트 실패",
         description: "프로필 정보 업데이트에 실패했습니다.",
-      })
+      });
     }
   }
     // 스터디 카드 컴포넌트
@@ -190,7 +213,7 @@ export default function ProfilePage() {
                 </CardHeader>
                 <CardContent>
                   <ProfileForm 
-                    profile={profile} 
+                    initialProfile={profile} 
                     onSubmit={handleProfileUpdate} 
                     onCancel={() => setIsEditing(false)} 
                   />
@@ -202,7 +225,7 @@ export default function ProfilePage() {
                 <div className="flex flex-col md:flex-row gap-6 items-start mb-8">
                   <div className="relative">
                     <Avatar className="h-24 w-24">
-                      <AvatarImage src={profile.avatarUrl || "/placeholder.svg"} alt={profile.nickname} />
+                      <AvatarImage src={profile.profileImage || "/placeholder.svg"} alt={profile.nickname} />
                       <AvatarFallback>{profile.nickname[0]}</AvatarFallback>
                     </Avatar>
                   </div>
