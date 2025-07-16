@@ -22,7 +22,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { api } from "@/lib/api-client"
 import { auth } from "@/lib/auth"
 import { useAuth } from "@/components/auth-provider"
-import { AVAILABLE_TECH_TAGS, toServerTechTag } from "@/lib/constants/tech-tags"
 import { getTechStacks, TechStack } from "@/lib/api/techStack"
 
 interface CreateStudyGroupRequest {
@@ -35,7 +34,7 @@ interface CreateStudyGroupRequest {
   groupMemberCount: number;
   isOffline: boolean;
   studyLocation: string;
-  techTags: string[];
+  techStackNames: string[];
 }
 
 export default function CreateStudyPage() {
@@ -175,7 +174,7 @@ export default function CreateStudyPage() {
         groupMemberCount: parseInt(maxMembers),
         isOffline: !isOnline,
         studyLocation: location,
-        techTags: selectedTags,
+        techStackNames: selectedTags,
       }
 
       await api.post('/study-group', requestData)
