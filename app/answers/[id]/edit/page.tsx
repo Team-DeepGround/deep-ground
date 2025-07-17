@@ -23,27 +23,27 @@ export default function EditAnswerPage() {
   const [questionId, setQuestionId] = useState<number | null>(null)
   const answerId = params.id
 
-  async function fetchAnswer() {
-    setLoading(true)
-    try {
-      const res = await api.get(`/answers/${answerId}`)
+    async function fetchAnswer() {
+      setLoading(true)
+      try {
+        const res = await api.get(`/answers/${answerId}`)
       console.log('res 전체:', res)
       setContent(res.content || "")
-      let urls: string[] = [];
+        let urls: string[] = [];
       if (Array.isArray(res.imageUrls)) {
         urls = res.imageUrls.map((img: any) => {
-          const url = typeof img === 'string' ? img : img.url;
-          return url.replace(/^@/, '');
-        })
-      }
-      setExistingImages(urls)
+            const url = typeof img === 'string' ? img : img.url;
+            return url.replace(/^@/, '');
+          })
+        }
+        setExistingImages(urls)
       setQuestionId(res.questionId || null)
-    } catch (e) {
-      toast({ title: "답변 불러오기 실패", description: "답변 정보를 불러올 수 없습니다.", variant: "destructive" })
-    } finally {
-      setLoading(false)
+      } catch (e) {
+        toast({ title: "답변 불러오기 실패", description: "답변 정보를 불러올 수 없습니다.", variant: "destructive" })
+      } finally {
+        setLoading(false)
+      }
     }
-  }
   useEffect(() => {
     if (answerId) fetchAnswer()
   }, [answerId])
