@@ -8,8 +8,9 @@ declare global {
   }
 }
 
-const KAKAO_JAVASCRIPT_KEY = "c52623cf77688344fca417685b697139"
-const KAKAO_REST_API_KEY = "be68f1d6bafcf4656ae48dc9e2d7680f"
+const KAKAO_JAVASCRIPT_KEY = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
+const KAKAO_REST_API_KEY = process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY;
+
 
 export default function PlacePage() {
   const mapRef = useRef<HTMLDivElement>(null)
