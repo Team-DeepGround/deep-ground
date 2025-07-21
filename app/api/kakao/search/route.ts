@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 
 const KAKAO_REST_API_KEY = process.env.KAKAO_REST_API_KEY
-
-console.log(
-  "Server-side KAKAO_REST_API_KEY:",
-  process.env.KAKAO_REST_API_KEY
-)
+const ALLOWED_ENDPOINTS = ['keyword.json', 'address.json', 'category.json']
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -24,6 +20,11 @@ export async function GET(request: NextRequest) {
       { status: 400 }
     )
   }
+  if (!ALLOWED_ENDPOINTS.includes(endpoint)) {
+    return NextResponse.json(
+    { error: "Invalid endpoint parameter" },
+    { status: 400 }
+    )}
 
   if (!KAKAO_REST_API_KEY) {
     return NextResponse.json(

@@ -65,7 +65,7 @@ export function SearchInput({
           <ul className="absolute left-0 right-0 mt-2 bg-black/90 rounded-xl shadow-xl border border-gray-700 overflow-hidden max-h-60 z-20">
             {suggestions.map((s, i) => (
               <li
-                key={s.id || s.place_name + i}
+              key={s.id || `${s.place_name}-${s.x}-${s.y}-${i}`}
                 className={`px-4 py-2 cursor-pointer text-white hover:bg-blue-700 transition text-base ${
                   highlighted === i ? "bg-blue-700" : ""
                 }`}
