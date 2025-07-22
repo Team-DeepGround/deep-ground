@@ -22,8 +22,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { api } from "@/lib/api-client"
 import { auth } from "@/lib/auth"
 import { useAuth } from "@/components/auth-provider"
-import { AVAILABLE_TECH_TAGS, toServerTechTag } from "@/lib/constants/tech-tags"
 import { getTechStacks, TechStack } from "@/lib/api/techStack"
+import dynamic from "next/dynamic"
 
 interface CreateStudyGroupRequest {
   title: string;
@@ -35,7 +35,7 @@ interface CreateStudyGroupRequest {
   groupMemberCount: number;
   isOffline: boolean;
   studyLocation: string;
-  techTags: string[];
+  techStackNames: string[];
 }
 
 export default function CreateStudyPage() {
@@ -71,6 +71,7 @@ export default function CreateStudyPage() {
   const [isOnline, setIsOnline] = useState(true)
   const [location, setLocation] = useState("")
   const [maxMembers, setMaxMembers] = useState("6")
+  const [showPlaceModal, setShowPlaceModal] = useState(false)
 
   const [studyStartDate, setStudyStartDate] = useState<Date>()
   const [studyEndDate, setStudyEndDate] = useState<Date>()
@@ -175,7 +176,7 @@ export default function CreateStudyPage() {
         groupMemberCount: parseInt(maxMembers),
         isOffline: !isOnline,
         studyLocation: location,
-        techTags: selectedTags,
+        techStackNames: selectedTags,
       }
 
       await api.post('/study-group', requestData)

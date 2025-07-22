@@ -10,7 +10,7 @@ export function PlaceMap({ mapRef }: PlaceMapProps) {
   return (
     <div
       ref={mapRef}
-      className="w-full h-[70vh] mt-16 rounded shadow border relative z-0"
+      className="w-full h-[50vh] mt-16 rounded shadow border relative z-0"
     />
   )
 } 

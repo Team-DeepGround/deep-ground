@@ -16,6 +16,7 @@ import { format } from "date-fns"
 import TimePicker from "./TimePicker"
 import ScheduleDetailModal from "./ScheduleDetailModal"
 import ScheduleEditModal from "./ScheduleEditModal"
+import PlaceSelectModal from "@/app/components/place/PlaceSelectModal"
 
 interface Schedule {
   id: number
@@ -51,6 +52,8 @@ export function StudySchedule() {
 
   // 수정용 상태
   const [editSchedule, setEditSchedule] = useState<Schedule | null>(null)
+  const [showPlaceModal, setShowPlaceModal] = useState(false)
+  const [pendingLocation, setPendingLocation] = useState("")
 
   useEffect(() => {
     const loadSchedules = async () => {
@@ -390,12 +393,16 @@ export function StudySchedule() {
                 <Label htmlFor="location" className="text-right">
                   장소
                 </Label>
-                <Input
-                  id="location"
-                  value={newSchedule.location}
-                  onChange={(e) => setNewSchedule({ ...newSchedule, location: e.target.value })}
-                  className="col-span-3"
-                />
+                <div className="col-span-3 flex gap-2 items-center">
+                  <Input
+                    id="location"
+                    value={newSchedule.location}
+                    onChange={(e) => setNewSchedule({ ...newSchedule, location: e.target.value })}
+                  />
+                  <Button type="button" variant="outline" size="sm" onClick={() => setShowPlaceModal(true)}>
+                    장소 검색
+                  </Button>
+                </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="description" className="text-right">
@@ -476,6 +483,15 @@ export function StudySchedule() {
         setSchedule={setEditSchedule}
         onSubmit={handleEditSchedule}
       />
+      {showPlaceModal && (
+        <PlaceSelectModal
+          open={showPlaceModal}
+          onClose={() => setShowPlaceModal(false)}
+          onSelect={(place) => {
+            setNewSchedule((prev) => ({ ...prev, location: place.address || place.name }))
+          }}
+        />
+      )}
     </Card> 
   )
 }

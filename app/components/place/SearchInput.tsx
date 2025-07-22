@@ -16,6 +16,7 @@ interface SearchInputProps {
   highlighted: number
   handleSuggestionClick: (place: any) => void
   inputError: string
+  // myLocation?: { lat: number; lng: number } | null // 필요시 추가
 }
 
 export function SearchInput({
@@ -53,7 +54,9 @@ export function SearchInput({
           }}
           autoComplete="off"
           disabled={!isMapReady}
-          onKeyDown={handleKeyDown}
+          onKeyDown={e => {
+            handleKeyDown(e)
+          }}
           onCompositionStart={() => setIsComposing(true)}
           onCompositionEnd={e => {
             setIsComposing(false)
