@@ -611,7 +611,7 @@ export default function QuestionDetailPage() {
               <p className="whitespace-pre-line">{question?.content}</p>
 
               {/* 질문 이미지 */}
-              {question.mediaUrl && question.mediaUrl.length > 0 && (
+              {question?.mediaUrl && Array.isArray(question.mediaUrl) && question.mediaUrl.length > 0 && (
                 <div className="mt-4 space-y-4">
                   {question.mediaUrl.map((url: string, idx: number) => (
                     <div key={url || idx} className="rounded-md overflow-hidden">

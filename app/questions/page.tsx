@@ -205,11 +205,11 @@ export default function QuestionsPage() {
             <TabsContent value="all" className="mt-6">
               {paginatedQuestions.length > 0 ? (
                 <div className="space-y-4">
-                  {paginatedQuestions.map((question, idx) => (
+                  {paginatedQuestions.map((q, idx) => (
                     <QuestionCard
-                      key={(question.id ?? question.questionId ?? idx) + '-' + idx}
-                      question={question}
-                      onTitleClick={() => navigateToQuestion(question.id)}
+                      key={q.questionId}
+                      question={{ ...q, id: q.questionId }}
+                      onTitleClick={() => navigateToQuestion(q.questionId)}
                     />
                   ))}
 
@@ -293,7 +293,7 @@ interface QuestionCardProps {
 }
 
 function QuestionCard({ question, onTitleClick }: QuestionCardProps) {
-  const authorName = question.author?.name || question.memberId || "알 수 없음";
+  const authorName = question.nickname || "알 수 없음";
   const authorAvatar = question.author?.avatar || "/placeholder.svg";
   // 상태 한글 변환 함수
   const statusLabel = (status?: string) => {
@@ -383,10 +383,6 @@ function QuestionCard({ question, onTitleClick }: QuestionCardProps) {
           <div className="text-sm text-muted-foreground flex items-center">
             <MessageSquare className="h-3.5 w-3.5 mr-1" />
             {question.commentCount ?? question.answerCount ?? 0}
-          </div>
-          <div className="text-sm text-muted-foreground flex items-center">
-            <ThumbsUp className="h-3.5 w-3.5 mr-1" />
-            {question.likeCount ?? 0}
           </div>
         </div>
         <Button asChild size="sm">

@@ -19,6 +19,9 @@ export default function QuestionCard({ question, onTitleClick }: QuestionCardPro
     if (status === "CLOSED") return "해결완료";
     return "미해결";
   };
+  const qid = question?.questionId ?? question?.id;
+  console.log("[QuestionCard] question:", question);
+  console.log("[QuestionCard] question.id:", question?.id, "question.questionId:", question?.questionId);
   return (
     <Card>
       <CardHeader className="p-4 pb-0">
@@ -95,13 +98,19 @@ export default function QuestionCard({ question, onTitleClick }: QuestionCardPro
             <MessageSquare className="h-3.5 w-3.5 mr-1" />
             {question.commentCount ?? question.answerCount ?? 0}
           </div>
-          <div className="text-sm text-muted-foreground flex items-center">
-            <ThumbsUp className="h-3.5 w-3.5 mr-1" />
-            {question.likeCount ?? 0}
-          </div>
         </div>
-        <Button asChild size="sm">
-          <Link href={`/questions/${question.id}`}>답변하기</Link>
+        <Button
+          size="sm"
+          onClick={() => {
+            const qid = question?.questionId ?? question?.id;
+            console.log("[답변하기 클릭] question.id:", question?.id, "question.questionId:", question?.questionId, "qid:", qid);
+            if (qid) {
+              window.location.href = `/questions/${qid}`;
+            }
+          }}
+          disabled={!question?.questionId && !question?.id}
+        >
+          답변하기
         </Button>
       </CardFooter>
     </Card>
