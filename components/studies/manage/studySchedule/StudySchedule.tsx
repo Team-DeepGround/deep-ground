@@ -17,7 +17,7 @@ import TimePicker from "./TimePicker"
 import ScheduleDetailModal from "./ScheduleDetailModal"
 import ScheduleEditModal from "./ScheduleEditModal"
 import PlaceSelectModal from "@/app/components/place/PlaceSelectModal"
-import ReviewModal from "./ReviewModal"
+import ReviewModal from "../../../../components/studies/manage/studySchedule/ReviewModal"
 
 interface Schedule {
   id: number
