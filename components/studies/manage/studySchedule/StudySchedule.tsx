@@ -17,6 +17,7 @@ import TimePicker from "./TimePicker"
 import ScheduleDetailModal from "./ScheduleDetailModal"
 import ScheduleEditModal from "./ScheduleEditModal"
 import PlaceSelectModal from "@/app/components/place/PlaceSelectModal"
+import ReviewModal from "./ReviewModal"
 
 interface Schedule {
   id: number
@@ -38,6 +39,8 @@ export function StudySchedule() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [reviewModalOpen, setReviewModalOpen] = useState(false)
+  const [reviewTargetSchedule, setReviewTargetSchedule] = useState<Schedule | null>(null)
   const params = useParams()
 
   // 새 일정 추가용 상태
@@ -48,6 +51,8 @@ export function StudySchedule() {
     endTime: "",
     location: "",
     description: "",
+    lat: "",
+    lng: "",
   })
 
   // 수정용 상태
@@ -86,6 +91,8 @@ export function StudySchedule() {
             attendance,
             personalNote: item.memo ?? "",
             isImportant: item.isImportant ?? false,
+            lat: item.latitude, // 추가
+            lng: item.longitude, // 추가
           }
         }).sort((a, b) => a.startTime.getTime() - b.startTime.getTime()) 
   
@@ -144,6 +151,8 @@ export function StudySchedule() {
         endTime,
         description: newSchedule.description,
         location: newSchedule.location,
+        latitude: newSchedule.lat ? Number(newSchedule.lat) : undefined,
+        longitude: newSchedule.lng ? Number(newSchedule.lng) : undefined,
       })
       const fetched = await fetchStudySchedulesByGroup(studyGroupId)
 
@@ -160,7 +169,7 @@ export function StudySchedule() {
         }))
         .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
       )
-  
+
       setNewSchedule({
         title: "",
         date: "",
@@ -168,6 +177,8 @@ export function StudySchedule() {
         endTime: "",
         location: "",
         description: "",
+        lat: "",
+        lng: "",
       })
       setIsAddModalOpen(false)
       window.location.reload(); // 새로고침
@@ -442,6 +453,9 @@ export function StudySchedule() {
                   <div className="flex items-center gap-1">
                     <MapPin className="h-4 w-4" />
                     {schedule.location}
+                    <Button variant="ghost" size="sm" className="ml-2 px-2 py-1 text-xs" onClick={() => { setReviewTargetSchedule(schedule); setReviewModalOpen(true); }}>
+                      리뷰달기
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -488,10 +502,20 @@ export function StudySchedule() {
           open={showPlaceModal}
           onClose={() => setShowPlaceModal(false)}
           onSelect={(place) => {
-            setNewSchedule((prev) => ({ ...prev, location: place.address || place.name }))
+            setNewSchedule((prev) => ({
+              ...prev,
+              location: place.address || place.name,
+              lat: String(place.lat),
+              lng: String(place.lng),
+            }))
           }}
         />
       )}
+      <ReviewModal
+        open={reviewModalOpen}
+        onOpenChange={setReviewModalOpen}
+        schedule={reviewTargetSchedule}
+      />
     </Card> 
   )
 }
