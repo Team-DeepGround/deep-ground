@@ -91,17 +91,6 @@ export const StudyList = memo(function StudyList({
     })
   }, [studies, internalSortOrder])
 
-  const filteredAndSortedStudies = useMemo(() => {
-    return sortedStudies.filter((study) => {
-      const matchesLocation =
-        !locationFilter ||
-        (locationFilter === "online" && study.isOnline) ||
-        (locationFilter === "offline" && !study.isOnline)
-
-      return matchesLocation
-    })
-  }, [sortedStudies, locationFilter])
-
   const handleTabChange = useCallback((value: string) => {
     setInternalActiveTab(value as typeof activeTab)
     onPageChange(1)
@@ -125,10 +114,10 @@ export const StudyList = memo(function StudyList({
 
   // Memoize study cards to prevent unnecessary re-renders
   const studyCards = useMemo(() => {
-    return filteredAndSortedStudies.map((study) => (
+    return sortedStudies.map((study) => (
       <StudyCard key={study.id} study={study} />
     ))
-  }, [filteredAndSortedStudies])
+  }, [sortedStudies])
 
   if (isLoading) {
     return (
@@ -185,7 +174,7 @@ export const StudyList = memo(function StudyList({
               <TabsTrigger value="recruiting">모집중</TabsTrigger>
               <TabsTrigger value="ongoing">진행중</TabsTrigger>
             </TabsList>
-            <Select value={internalSortOrder} onValueChange={handleSortOrderChange}>
+            {/* <Select value={internalSortOrder} onValueChange={handleSortOrderChange}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="정렬" />
               </SelectTrigger>
@@ -194,12 +183,12 @@ export const StudyList = memo(function StudyList({
                 <SelectItem value="popular">인기순</SelectItem>
                 <SelectItem value="closing">마감임박순</SelectItem>
               </SelectContent>
-            </Select>
+            </Select> */}
           </div>
 
           {["all", "recruiting", "ongoing"].map((tab) => (
             <TabsContent key={tab} value={tab} className="mt-6">
-              {filteredAndSortedStudies.length > 0 ? (
+              {sortedStudies.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {studyCards}
                 </div>
