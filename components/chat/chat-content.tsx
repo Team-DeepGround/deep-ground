@@ -29,6 +29,7 @@ interface ChatContentProps {
   onMessageChange: (message: string) => void;
   onSendMessage: () => void;
   onImageLoad?: () => void;
+  isSending?: boolean; // 전송 중 상태 추가
 }
 
 export const ChatContent: React.FC<ChatContentProps> = ({
@@ -54,7 +55,8 @@ export const ChatContent: React.FC<ChatContentProps> = ({
   onFileChange,
   onMessageChange,
   onSendMessage,
-  onImageLoad
+  onImageLoad,
+  isSending = false // 기본값 false
 }) => {
   return (
     <div className="flex-1 flex flex-col relative">
@@ -96,6 +98,7 @@ export const ChatContent: React.FC<ChatContentProps> = ({
             isUploading={isUploading}
             uploadProgress={uploadProgress}
             uploadedFilesCount={uploadedFiles.length}
+            isSending={isSending}
           />
         </>
       )}
