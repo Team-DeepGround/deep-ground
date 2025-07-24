@@ -6,24 +6,13 @@ import { useAuth } from "@/components/auth-provider"
 import { api } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { toast } from "sonner"
-
-interface LoginResponse {
-  status: number;
-  message: string;
-  result: {
-    accessToken: string;
-    refreshToken: string;
-    memberId: number;
-    email: string;
-    nickname: string;
-  } | null;
-}
+import { useToast } from "@/hooks/use-toast" // ✅ 수정: toaster.tsx 기반
+import type { LoginResponse } from "@/types/auth" // 선택사항: 타입 분리했으면
 
 const SOCIAL_PROVIDERS = [
   { name: "Google", provider: "google", logo: "/google.svg" },
   { name: "Naver", provider: "naver", logo: "/naver.svg" },
-];
+]
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -31,6 +20,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const { login } = useAuth()
+  const { toast } = useToast() // ✅ 수정됨
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -45,7 +35,10 @@ export default function LoginPage() {
 
       if (response.result?.accessToken) {
         login(response.result.accessToken)
-        toast.success("로그인에 성공했습니다.")
+        toast({
+          title: "로그인 성공",
+          description: "성공적으로 로그인되었습니다.",
+        })
 
         try {
           const profileRes = await api.get("/members/profile/me")
@@ -54,14 +47,23 @@ export default function LoginPage() {
           } else {
             router.push("/profile/new")
           }
-        } catch (error: any) {
+        } catch {
           router.push("/profile/new")
         }
       } else {
-        toast.error("로그인에 실패했습니다.")
+        toast({
+          title: "로그인 실패",
+          description: "잘못된 응답입니다.",
+          variant: "destructive",
+        })
       }
-    } catch (error) {
-      toast.error("로그인에 실패했습니다.")
+    } catch (error: any) {
+      console.error("로그인 에러:", error)
+      toast({
+        title: "로그인 실패",
+        description: error?.message || "이메일 또는 비밀번호가 올바르지 않습니다.",
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }
@@ -74,10 +76,18 @@ export default function LoginPage() {
       if (redirectUrl) {
         window.location.href = `http://localhost:8080/api/v1${redirectUrl}`
       } else {
-        toast.error("소셜 로그인 URL을 가져오지 못했습니다.")
+        toast({
+          title: "소셜 로그인 실패",
+          description: "소셜 로그인 URL을 가져오지 못했습니다.",
+          variant: "destructive",
+        })
       }
-    } catch (error) {
-      toast.error("소셜 로그인에 실패했습니다.")
+    } catch {
+      toast({
+        title: "소셜 로그인 실패",
+        description: "알 수 없는 오류가 발생했습니다.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -92,9 +102,7 @@ export default function LoginPage() {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm space-y-4">
             <div>
-              <label htmlFor="email" className="sr-only">
-                이메일
-              </label>
+              <label htmlFor="email" className="sr-only">이메일</label>
               <Input
                 id="email"
                 name="email"
@@ -106,9 +114,7 @@ export default function LoginPage() {
               />
             </div>
             <div>
-              <label htmlFor="password" className="sr-only">
-                비밀번호
-              </label>
+              <label htmlFor="password" className="sr-only">비밀번호</label>
               <Input
                 id="password"
                 name="password"
@@ -122,11 +128,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading}
-            >
+            <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "로그인 중..." : "로그인"}
             </Button>
             <Button
