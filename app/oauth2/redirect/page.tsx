@@ -3,6 +3,7 @@
 import { useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/components/auth-provider"
+import { api } from "@/lib/api-client"
 import { toast } from "sonner"
 
 export default function OAuth2RedirectPage() {
@@ -16,14 +17,36 @@ export default function OAuth2RedirectPage() {
     const email = searchParams.get("email")
     const nickname = searchParams.get("nickname")
 
-    if (accessToken) {
-      login(accessToken)
-      toast.success(`${nickname || email}님, 소셜 로그인에 성공했습니다.`)
-      router.replace("/") // 홈으로 이동
-    } else {
-      toast.error("소셜 로그인에 실패했습니다.")
-      router.replace("/auth/login")
+    const handleRedirect = async () => {
+      if (accessToken) {
+        login(accessToken)
+        toast.success(`${nickname || email}님, 소셜 로그인에 성공했습니다.`)
+
+        try {
+          // 프로필 존재 여부 확인 API 호출
+          const profileRes = await api.get("/members/profile/me", {
+            headers: { Authorization: `Bearer ${accessToken}` }
+          })
+
+          if (profileRes.result && Object.keys(profileRes.result).length > 0) {
+            // 프로필 있음 → 홈으로 이동
+            router.replace("/")
+          } else {
+            // 프로필 없음 → 프로필 생성 페이지로 이동
+            router.replace("/profile/new")
+          }
+        } catch (error) {
+          console.error("프로필 조회 중 에러:", error)
+          // 에러 발생 시도 프로필 생성 페이지로 이동 (보수적 처리)
+          router.replace("/profile/new")
+        }
+      } else {
+        toast.error("소셜 로그인에 실패했습니다.")
+        router.replace("/auth/login")
+      }
     }
+
+    handleRedirect()
   }, [searchParams, login, router])
 
   return (
