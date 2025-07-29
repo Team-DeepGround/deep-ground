@@ -23,12 +23,12 @@ interface ProfileFormProps {
       website?: string
       twitter?: string
     }
-    location?: string
+    liveIn?: string
     jobTitle?: string
     company?: string
     education?: string
   }
-  onSubmit: (profile: any, profileImage: File | null) => void
+  onSubmit: (profileDto: any, profileImage: File | null) => void
   onCancel?: () => void
   loading?: boolean
 }
@@ -40,6 +40,11 @@ export default function ProfileForm({
   loading,
 }: ProfileFormProps) {
   const [availableTags, setAvailableTags] = useState<TechStack[]>([])
+  const [profileImage, setProfileImage] = useState<File | null>(null)
+  const [isCheckingNickname, setIsCheckingNickname] = useState(false)
+  const [isNicknameAvailable, setIsNicknameAvailable] = useState<boolean | null>(null)
+  const { toast } = useToast()
+
   useEffect(() => {
     getTechStacks().then(setAvailableTags)
   }, [])
@@ -50,17 +55,11 @@ export default function ProfileForm({
     bio: initialProfile?.bio || "",
     techStack: initialProfile?.techStack || [],
     links: initialProfile?.links || {},
-    location: initialProfile?.location || "",
+    liveIn: initialProfile?.liveIn || "",
     jobTitle: initialProfile?.jobTitle || "",
     company: initialProfile?.company || "",
     education: initialProfile?.education || "",
   })
-  const [profileImage, setProfileImage] = useState<File | null>(null)
-
-  const [isCheckingNickname, setIsCheckingNickname] = useState(false)
-  const [isNicknameAvailable, setIsNicknameAvailable] = useState<boolean | null>(null)
-
-  const { toast } = useToast()
 
   const handleProfileImageUpload = (file: File) => {
     setProfileImage(file)
@@ -130,12 +129,29 @@ export default function ProfileForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSubmit(formData, profileImage)
+
+    const dto = {
+      nickname: formData.nickname,
+      introduction: formData.bio,
+      job: formData.jobTitle,
+      company: formData.company,
+      liveIn: formData.liveIn,
+      education: formData.education,
+      techStack: formData.techStack,
+      githubUrl: formData.links.github,
+      linkedInUrl: formData.links.linkedin,
+      websiteUrl: formData.links.website,
+      twitterUrl: formData.links.twitter,
+    }
+
+    console.log("🔥 전송할 프로필 데이터:", dto)
+    console.log("🖼️ 전송할 프로필 이미지:", profileImage)
+
+    onSubmit(dto, profileImage)
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* 프로필 이미지 */}
       <div className="space-y-2">
         <Label htmlFor="profileImage">프로필 이미지</Label>
         <div className="flex items-center gap-4">
@@ -144,7 +160,6 @@ export default function ProfileForm({
         </div>
       </div>
 
-      {/* 닉네임 + 중복 확인 */}
       <div className="space-y-2">
         <Label htmlFor="nickname">닉네임</Label>
         <div className="flex gap-2">
@@ -178,13 +193,11 @@ export default function ProfileForm({
         {isNicknameAvailable === false && <p className="text-xs text-red-500">이미 사용 중인 닉네임입니다.</p>}
       </div>
 
-      {/* 자기소개 */}
       <div className="space-y-2">
         <Label htmlFor="bio">자기소개</Label>
         <Textarea id="bio" name="bio" value={formData.bio} onChange={handleInputChange} rows={4} />
       </div>
 
-      {/* 직업/소속 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="jobTitle">직업</Label>
@@ -196,11 +209,10 @@ export default function ProfileForm({
         </div>
       </div>
 
-      {/* 위치/학력 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="location">위치</Label>
-          <Input id="location" name="location" value={formData.location || ""} onChange={handleInputChange} />
+          <Label htmlFor="liveIn">사는 지역</Label>
+          <Input id="liveIn" name="liveIn" value={formData.liveIn || ""} onChange={handleInputChange} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="education">학력</Label>
@@ -208,7 +220,6 @@ export default function ProfileForm({
         </div>
       </div>
 
-      {/* 기술 스택 */}
       <div className="space-y-2">
         <Label htmlFor="techStack">기술 스택</Label>
         <TechStackSelector
@@ -218,28 +229,26 @@ export default function ProfileForm({
         />
       </div>
 
-      {/* 링크 */}
       <div className="space-y-4">
         <Label>소셜 링크</Label>
         <div className="space-y-2">
           <Label htmlFor="github" className="text-sm">GitHub</Label>
-          <Input id="github" name="github" value={formData.links.github || ""} onChange={handleLinkChange} placeholder="https://github.com/username" />
+          <Input id="github" name="github" value={formData.links.github || ""} onChange={handleLinkChange} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="linkedin" className="text-sm">LinkedIn</Label>
-          <Input id="linkedin" name="linkedin" value={formData.links.linkedin || ""} onChange={handleLinkChange} placeholder="https://linkedin.com/in/username" />
+          <Input id="linkedin" name="linkedin" value={formData.links.linkedin || ""} onChange={handleLinkChange} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="website" className="text-sm">웹사이트</Label>
-          <Input id="website" name="website" value={formData.links.website || ""} onChange={handleLinkChange} placeholder="https://mywebsite.com" />
+          <Input id="website" name="website" value={formData.links.website || ""} onChange={handleLinkChange} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="twitter" className="text-sm">Twitter</Label>
-          <Input id="twitter" name="twitter" value={formData.links.twitter || ""} onChange={handleLinkChange} placeholder="https://twitter.com/username" />
+          <Input id="twitter" name="twitter" value={formData.links.twitter || ""} onChange={handleLinkChange} />
         </div>
       </div>
 
-      {/* 버튼 */}
       <div className="flex justify-end gap-4">
         {onCancel && (
           <Button type="button" variant="outline" onClick={onCancel}>
