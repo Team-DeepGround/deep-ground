@@ -19,7 +19,7 @@ import {
   Search,
   LogIn,
 } from "lucide-react"
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/components/auth-provider"
 import { useNotificationContext } from "./notification/notification-provider"
@@ -63,6 +63,7 @@ export default function Header() {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="pr-0">
+              <SheetTitle className="sr-only">메뉴</SheetTitle>
               <div className="px-7">
                 <Link href="/" className="flex items-center gap-2">
                   <BookOpen className="h-5 w-5" />
