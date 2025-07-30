@@ -41,7 +41,6 @@ const navigation = [
   { name: "캘린더", href: "/calendar", icon: Calendar },
   { name: "Q&A", href: "/questions", icon: MessageSquare },
   { name: "피드", href: "/feed", icon: Users },
-  { name: "모임장소", href: "/place", icon: Calendar }, // 마지막으로 이동
 ]
 
 export default function Header() {
