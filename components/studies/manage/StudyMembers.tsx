@@ -1,6 +1,12 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { UserPlus } from "lucide-react"
@@ -12,7 +18,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,6 +25,7 @@ import { useToast } from "@/hooks/use-toast"
 
 interface StudyMember {
   memberId: number
+  profileId: number // ✅ 추가됨
   nickname: string
   joinedAt: string
   owner: boolean
@@ -70,42 +76,7 @@ export function StudyMembers({ members, onInviteMember, onKickMember }: StudyMem
           <CardTitle>참여자 관리</CardTitle>
           <CardDescription>스터디 참여자를 관리하세요</CardDescription>
         </div>
-        {/* <Dialog>
-          <DialogTrigger asChild>
-            <Button>
-              <UserPlus className="mr-2 h-4 w-4" />
-              멤버 초대
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>멤버 초대</DialogTitle>
-              <DialogDescription>
-                초대할 멤버의 이메일 주소를 입력하세요.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="email">이메일</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="example@email.com"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setInviteEmail("")}>
-                취소
-              </Button>
-              <Button onClick={handleInviteMember}>
-                초대하기
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog> */}
+        {/* 초대 UI는 주석처리된 상태 */}
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -127,7 +98,9 @@ export function StudyMembers({ members, onInviteMember, onKickMember }: StudyMem
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="sm" asChild>
-                  <Link href={`/profile/${member.memberId}`}>프로필</Link>
+                  <Link href={`/profile/${member.profileId}`}> {/* ✅ profileId 사용 */}
+                    프로필
+                  </Link>
                 </Button>
                 {!member.owner && (
                   <Button
@@ -165,4 +138,4 @@ export function StudyMembers({ members, onInviteMember, onKickMember }: StudyMem
       </Dialog>
     </Card>
   )
-} 
+}

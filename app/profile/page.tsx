@@ -311,7 +311,7 @@ export default function ProfilePage() {
                       ))}
                     </div>
                     <div className="flex flex-wrap gap-4 mt-6">
-                      {profile.links.github && (
+                      {profile.links?.github && (
                         <Link
                           href={profile.links.github}
                           target="_blank"
@@ -321,7 +321,7 @@ export default function ProfilePage() {
                           <Github className="h-5 w-5" />
                         </Link>
                       )}
-                      {profile.links.website && (
+                      {profile.links?.website && (
                         <Link
                           href={profile.links.website}
                           target="_blank"
@@ -331,7 +331,7 @@ export default function ProfilePage() {
                           <Globe className="h-5 w-5" />
                         </Link>
                       )}
-                      {profile.links.linkedin && (
+                      {profile.links?.linkedin && (
                         <Link
                           href={profile.links.linkedin}
                           target="_blank"
@@ -341,7 +341,7 @@ export default function ProfilePage() {
                           <Linkedin className="h-5 w-5" />
                         </Link>
                       )}
-                      {profile.links.twitter && (
+                      {profile.links?.twitter && (
                         <Link
                           href={profile.links.twitter}
                           target="_blank"

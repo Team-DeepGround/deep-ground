@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
 import { api } from "@/lib/api-client"
-import { StudyGroupDetail, StudySession } from "@/types/study"
+import { StudyGroupDetail, StudySession, Participant } from "@/types/study"
 import { StudyHeader } from "@/components/studies/StudyHeader"
 import { StudyInfo } from "@/components/studies/StudyInfo"
 import { ParticipantList } from "@/components/studies/ParticipantList"
@@ -19,7 +19,6 @@ import { Calendar, Clock } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
-// 더미 데이터
 const dummySessions: StudySession[] = [
   {
     id: 1,
@@ -56,17 +55,20 @@ export default function StudyDetailPage() {
   const { toast } = useToast()
   const { user } = useAuth()
   const [study, setStudy] = useState<StudyGroupDetail | null>(null)
+  const [participants, setParticipants] = useState<Participant[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const fetchStudy = async () => {
       try {
         const response = await api.get(`/study-group/${params.id}`)
-        // 더미 데이터 추가
         setStudy({
           ...response.result,
           sessions: dummySessions,
         })
+
+        const participantResponse = await api.get(`/study-group/${params.id}/participants`)
+        setParticipants(participantResponse.result)
       } catch (error) {
         toast({
           title: "스터디 정보를 불러오는데 실패했습니다",
@@ -99,7 +101,6 @@ export default function StudyDetailPage() {
         title: "스터디 참여 신청이 완료되었습니다",
         description: "스터디장의 승인을 기다려주세요",
       })
-      // 스터디 정보를 다시 불러와서 memberStatus 업데이트
       const response = await api.get(`/study-group/${params.id}`)
       setStudy({
         ...response.result,
@@ -193,28 +194,27 @@ export default function StudyDetailPage() {
       </div>
     )
   }
+
   const handleTabChange = async (value: string) => {
     if (value === "schedule") {
       try {
         const schedulesDto = await fetchStudySchedulesByGroup(Number(params.id))
-
         const schedules: StudySession[] = schedulesDto
-        .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())  // ← 정렬 추가!
-        .map((dto) => ({
-          id: dto.id,
-          title: dto.title,
-          description: dto.description,
-          startDate: dto.startTime,
-          endDate: dto.endTime,
-          location: dto.location,
-          participants: [],
-        }))
+          .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+          .map((dto) => ({
+            id: dto.id,
+            title: dto.title,
+            description: dto.description,
+            startDate: dto.startTime,
+            endDate: dto.endTime,
+            location: dto.location,
+            participants: [],
+          }))
         setStudy((prev) => {
-          if (!prev) return prev // null이면 null 리턴
-        
+          if (!prev) return prev
           return {
             ...prev,
-            sessions: schedules as StudySession[],  // ← 필요 시 타입 캐스팅 추가
+            sessions: schedules,
           }
         })
       } catch (error) {
@@ -242,17 +242,17 @@ export default function StudyDetailPage() {
       <Separator />
 
       <Tabs defaultValue="introduction" className="w-full" onValueChange={handleTabChange}>
-      <TabsList className="w-full justify-between">
-        <TabsTrigger value="introduction" className="flex-1 text-center">
-          스터디 소개
-        </TabsTrigger>
-        <TabsTrigger value="schedule" className="flex-1 text-center">
-          스터디 일정
-        </TabsTrigger>
-        <TabsTrigger value="participants" className="flex-1 text-center">
-          참여자
-        </TabsTrigger>
-      </TabsList>
+        <TabsList className="w-full justify-between">
+          <TabsTrigger value="introduction" className="flex-1 text-center">
+            스터디 소개
+          </TabsTrigger>
+          <TabsTrigger value="schedule" className="flex-1 text-center">
+            스터디 일정
+          </TabsTrigger>
+          <TabsTrigger value="participants" className="flex-1 text-center">
+            참여자
+          </TabsTrigger>
+        </TabsList>
 
         <TabsContent value="introduction" className="mt-6">
           <div className="space-y-6">
@@ -286,7 +286,13 @@ export default function StudyDetailPage() {
         </TabsContent>
 
         <TabsContent value="participants" className="mt-6">
-          <ParticipantList study={study} />
+          {study?.id && (
+          <ParticipantList
+            studyId={Number(study.id)}
+            writerId={study.writerId}
+            groupLimit={study.groupLimit}
+          />
+        )}
         </TabsContent>
       </Tabs>
     </div>

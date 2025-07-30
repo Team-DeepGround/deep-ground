@@ -16,6 +16,7 @@ import { ApiError } from "@/lib/api-client"
 interface Friend {
   friendId: number;
   otherMemberName: string;
+  profileId?: number | null; // ✅ 추가됨
   status: 'REQUEST' | 'CANCEL' | 'ACCEPT' | 'REFUSAL';
 }
 
@@ -47,6 +48,7 @@ export default function FriendsPage() {
       try {
         const friendsRes = await api.get('/friends')
         if (friendsRes?.result) {
+          console.log("✅ 친구 목록 응답:", friendsRes.result) // ← 여기에 로그 찍기
           setFriends(friendsRes.result as Friend[])
         }
       } catch (error) {
@@ -361,9 +363,15 @@ function FriendListCard({ isLoading, friends, searchTerm, setSearchTerm, isSubmi
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
+                  {/* ✅ 프로필 보기 버튼 - 프로필 ID가 있을 경우만 렌더링 */}
+                  {friend.profileId != null && (
+                    <Button variant="ghost" size="sm" asChild>
+                      <a href={`/profile/${friend.profileId}`}>프로필</a>
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => onRemoveFriend(friend.friendId)}
                     disabled={isSubmitting}
                   >
@@ -373,6 +381,7 @@ function FriendListCard({ isLoading, friends, searchTerm, setSearchTerm, isSubmi
               </div>
             ))}
           </div>
+
         ) : (
           <div className="text-center py-12">
             <UserPlus className="mx-auto h-12 w-12 text-muted-foreground" />
@@ -386,6 +395,7 @@ function FriendListCard({ isLoading, friends, searchTerm, setSearchTerm, isSubmi
     </Card>
   )
 }
+
 
 function FriendRequestsCard({ isLoading, friendRequests, isSubmitting, onAccept, onReject }: {
   isLoading: boolean;

@@ -6,8 +6,8 @@ import { useAuth } from "@/components/auth-provider"
 import { api } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useToast } from "@/hooks/use-toast" // ✅ 수정: toaster.tsx 기반
-import type { LoginResponse } from "@/types/auth" // 선택사항: 타입 분리했으면
+import { useToast } from "@/hooks/use-toast"
+import type { LoginResponse } from "@/types/auth"
 
 const SOCIAL_PROVIDERS = [
   { name: "Google", provider: "google", logo: "/google.svg" },
@@ -20,7 +20,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const { login } = useAuth()
-  const { toast } = useToast() // ✅ 수정됨
+  const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,8 +33,30 @@ export default function LoginPage() {
         { requireAuth: false }
       )
 
+      console.log("👉 로그인 응답 데이터:", response?.result)
+      console.log("👉 role:", response?.result?.role)
+      console.log("👉 email:", response?.result?.email)
+
       if (response.result?.accessToken) {
-        login(response.result.accessToken)
+        // ✅ role, email, memberId 추가 저장
+        login(
+          response.result.accessToken,
+          response.result.role,
+          response.result.email,
+          response.result.memberId
+        )
+
+        const role = response.result.role
+
+        if (role === "ROLE_GUEST") {
+          toast({
+            title: "이메일 인증 필요",
+            description: "계정을 사용하려면 이메일 인증을 완료해주세요.",
+          })
+          router.push(`/auth/verify-email?email=${email}`)
+          return
+        }
+
         toast({
           title: "로그인 성공",
           description: "성공적으로 로그인되었습니다.",
@@ -101,30 +123,24 @@ export default function LoginPage() {
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm space-y-4">
-            <div>
-              <label htmlFor="email" className="sr-only">이메일</label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="이메일"
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="sr-only">비밀번호</label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="비밀번호"
-              />
-            </div>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="이메일"
+            />
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="비밀번호"
+            />
           </div>
 
           <div>
