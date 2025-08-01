@@ -15,6 +15,9 @@ import {
   Settings,
   Shield,
   LogOut,
+  HelpCircle,
+  Search,
+  LogIn,
 } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
@@ -30,6 +33,7 @@ import {
   DropdownMenuGroup,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
 import { NotificationDropdown } from "./notification/notification-dropdown"
 
 const navigation = [
@@ -43,6 +47,8 @@ export default function Header() {
   const pathname = usePathname()
   const { isAuthenticated, logout } = useAuth()
   const { unreadCount, isConnected } = useNotificationContext()
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [notificationOpen, setNotificationOpen] = useState(false)
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -100,12 +106,13 @@ export default function Header() {
           </nav>
         </div>
         <div className="flex items-center gap-2">
+        
           <Button
             variant="ghost"
             size="icon"
             className="relative group hover:bg-accent/50 transition-colors"
             onClick={() => {
-              // 알림 드롭다운 토글 핸들러 (상태 관리 외부에서 처리)
+              setNotificationOpen(!notificationOpen)
             }}
           >
             <Bell className="h-5 w-5 group-hover:scale-110 transition-transform" />
@@ -120,10 +127,11 @@ export default function Header() {
             <span className="sr-only">알림</span>
           </Button>
 
+          {/* 로그인 전: 로그인 버튼, 로그인 후: 프로필 드롭다운 */}
           {!isAuthenticated ? (
             <Button asChild variant="default" size="sm">
               <Link href="/auth/login">
-                <LogOut className="mr-2 h-4 w-4" />
+                <LogIn className="mr-2 h-4 w-4" />
                 로그인
               </Link>
             </Button>
@@ -164,6 +172,7 @@ export default function Header() {
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
+            
                 <DropdownMenuItem
                   onClick={logout}
                   className="cursor-pointer text-destructive focus:text-destructive"
@@ -177,7 +186,8 @@ export default function Header() {
         </div>
       </div>
 
-      <NotificationDropdown isOpen={false} onClose={() => {}} />
+      {/* 알림 드롭다운 */}
+      <NotificationDropdown isOpen={notificationOpen} onClose={() => setNotificationOpen(false)} />
     </header>
   )
 }
