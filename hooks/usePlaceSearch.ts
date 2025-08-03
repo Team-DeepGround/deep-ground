@@ -10,11 +10,15 @@ declare global {
 
 export function usePlaceSearch(
   mapInstance: React.MutableRefObject<any>,
-  isMapReady: boolean
+  isMapReady: boolean,
+  setShowSuggestions?: (show: boolean) => void, // 인자 추가
+  myLocation?: { lat: number; lng: number } | null // 내 위치 추가
 ) {
   const [searchInput, setSearchInput] = useState("")
   const [suggestions, setSuggestions] = useState<any[]>([])
-  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [showSuggestionsState, _setShowSuggestions] = useState(false)
+  const showSuggestions = showSuggestionsState
+  const setShowSuggestionsSafe = setShowSuggestions ?? _setShowSuggestions
   const [highlighted, setHighlighted] = useState(-1)
   const [isComposing, setIsComposing] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -34,26 +38,18 @@ export function usePlaceSearch(
 
   // 지도 이동 이벤트 리스너 등록
   useEffect(() => {
-    if (!mapInstance.current) return
-
-    const map = mapInstance.current
-    const onDragEnd = () => {
-      const center = map.getCenter()
-      setCenterLatLng({ lat: center.getLat(), lng: center.getLng() })
-    }
-    const onZoomChanged = () => {
-      const center = map.getCenter()
-      setCenterLatLng({ lat: center.getLat(), lng: center.getLng() })
-    }
-
-    window.kakao.maps.event.addListener(map, "dragend", onDragEnd)
-    window.kakao.maps.event.addListener(map, "zoom_changed", onZoomChanged)
-
+    if (!mapInstance.current) return;
+    const map = mapInstance.current;
+    const closeSuggestions = () => setShowSuggestionsSafe(false);
+    window.kakao.maps.event.addListener(map, "dragstart", closeSuggestions);
+    window.kakao.maps.event.addListener(map, "dragend", closeSuggestions);
+    window.kakao.maps.event.addListener(map, "zoom_changed", closeSuggestions);
     return () => {
-      window.kakao.maps.event.removeListener(map, "dragend", onDragEnd)
-      window.kakao.maps.event.removeListener(map, "zoom_changed", onZoomChanged)
-    }
-  }, [mapInstance.current])
+      window.kakao.maps.event.removeListener(map, "dragstart", closeSuggestions);
+      window.kakao.maps.event.removeListener(map, "dragend", closeSuggestions);
+      window.kakao.maps.event.removeListener(map, "zoom_changed", closeSuggestions);
+    };
+  }, [mapInstance, setShowSuggestionsSafe]);
 
   // 입력값에 따라 지역명인지 아닌지 판별
   useEffect(() => {
@@ -75,7 +71,7 @@ export function usePlaceSearch(
     const [locationPart] = searchInput.trim().split(/\s+/)
     if (!locationPart || locationPart.length < 2) {
       setSuggestions([])
-      setShowSuggestions(false)
+      setShowSuggestionsSafe(false)
       return
     }
     const timeout = setTimeout(() => {
@@ -88,10 +84,10 @@ export function usePlaceSearch(
         .then(data => {
           if (data.documents && data.documents.length > 0) {
             setSuggestions(data.documents.slice(0, 8))
-            setShowSuggestions(true)
+            setShowSuggestionsSafe(true)
           } else {
             setSuggestions([])
-            setShowSuggestions(false)
+            setShowSuggestionsSafe(false)
           }
         })
         .catch(() => {})
@@ -142,12 +138,31 @@ export function usePlaceSearch(
 
   // 통합 검색 실행
   const handleUnifiedSearch = async (input?: string, suggestionPlace?: any) => {
-    const value = (input ?? searchInput).trim()
+    setShowSuggestionsSafe(false); // 무조건 가장 먼저!
+    const value = (input ?? searchInput).trim();
     if (value.length < 2) {
-      setInputError("2글자 이상 입력해 주세요.")
-      return
+      setInputError("2글자 이상 입력해 주세요.");
+      return;
     }
-    setInputError("")
+    setInputError("");
+    // 카테고리만 입력(공백 없는 한 단어, 예: '카페')일 때는 현재 지도 중심 기준으로만 검색, 중심 이동 X
+    const categories = [
+      "음식점", "카페", "편의점", "주차장", "주유소", "약국", "마트", "은행", "술집", "스터디카페"
+    ];
+    if (categories.includes(value) && value.split(/\s+/).length === 1) {
+      setSelectedPlace(null); // 카테고리 검색 시 단일 마커/선택 해제
+      let center = null;
+      if (myLocation) {
+        center = myLocation;
+      } else if (mapInstance.current) {
+        const c = mapInstance.current.getCenter();
+        center = { lat: c.getLat(), lng: c.getLng() };
+      }
+      if (center) {
+        searchNearbyPlaces(value, true, { lat: center.lat, lng: center.lng }, true);
+      }
+      return;
+    }
     // 지역명만 입력(공백 없는 한 단어)일 때만 Polygon 표시/중심 이동
     const isOnlyRegion =
       (await checkIfRegionName(value)) && value.split(/\s+/).length === 1
@@ -392,16 +407,16 @@ export function usePlaceSearch(
   // 추천 클릭
   const handleSuggestionClick = (place: any) => {
     handleUnifiedSearch(searchInput, place)
-    setShowSuggestions(false)
+    setShowSuggestionsSafe(false)
     setHighlighted(-1)
   }
 
   // 엔터/키보드
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !isComposing) {
+      setShowSuggestionsSafe(false); // 엔터 시 드롭다운 닫기
       if (showSuggestions && suggestions.length > 0) {
         const idx = highlighted === -1 ? 0 : highlighted
-        setShowSuggestions(false)
         setHighlighted(-1)
         ;(e.target as HTMLInputElement).blur()
         // 정확히 일치하는 장소 우선
@@ -412,10 +427,12 @@ export function usePlaceSearch(
         } else {
           handleUnifiedSearch(searchInput, suggestions[idx])
         }
+        setHighlighted(-1)
         return
       }
       if (showSuggestions && highlighted >= 0 && suggestions[highlighted]) {
         handleUnifiedSearch(searchInput, suggestions[highlighted])
+        setHighlighted(-1)
       } else if (showSuggestions && suggestions.length > 0) {
         // 입력값과 정확히 일치하는 지하철역 우선
         const [locationPart] = searchInput.trim().split(/\s+/)
@@ -435,17 +452,18 @@ export function usePlaceSearch(
             handleUnifiedSearch(searchInput, suggestions[0])
           }
         }
+        setHighlighted(-1)
       } else {
         handleUnifiedSearch()
+        setHighlighted(-1)
       }
-      setShowSuggestions(false)
-      setHighlighted(-1)
+      return
     } else if (e.key === "ArrowDown") {
       setHighlighted(h => Math.min(h + 1, suggestions.length - 1))
     } else if (e.key === "ArrowUp") {
       setHighlighted(h => Math.max(h - 1, 0))
     } else if (e.key === "Escape") {
-      setShowSuggestions(false)
+      setShowSuggestionsSafe(false)
       setHighlighted(-1)
     }
   }
@@ -634,18 +652,7 @@ export function usePlaceSearch(
 
   // 입력값이 바뀔 때마다 장소 이동 없이 주변 장소만 검색(카테고리만 입력 시)
   useEffect(() => {
-    if (showSuggestions) return // 추천 리스트가 보이면 주변 장소 검색 실행 X
-    if (justMovedOnly) {
-      setJustMovedOnly(false)
-      return
-    }
-    if (
-      !isComposing &&
-      isMapReady &&
-      mapInstance.current &&
-      searchInput.trim().length >= 2 &&
-      !isLoading
-    ) {
+    if (isMapReady && mapInstance.current && searchInput.trim().length >= 2 && !isLoading) {
       const parts = searchInput.trim().split(/\s+/)
       // 카테고리만 입력(공백 없는 한 단어, 카테고리 키워드)일 때만
       if (parts.length === 1 && isCategoryKeyword(parts[0])) {
@@ -659,16 +666,7 @@ export function usePlaceSearch(
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchInput, isComposing, isMapReady, showSuggestions, justMovedOnly])
-
-  // 장소 이동 시 마커 숨김, 다시 돌아오면 마커 표시
-  useEffect(() => {
-    if (!isLocationMoved && placeMarkers.length > 0) {
-      placeMarkers.forEach((m: any) => m.marker.setMap(null))
-      setPlaceMarkers([])
-      setSelectedPlace(null)
-    }
-  }, [isLocationMoved, placeMarkers])
+  }, [searchInput, isComposing, isMapReady, justMovedOnly])
 
   // 인포윈도우 표시 (기존과 동일)
   useEffect(() => {
@@ -709,6 +707,8 @@ export function usePlaceSearch(
     if (markerObj) {
       iw.open(mapInstance.current, markerObj.marker)
       infoWindowInstance.current = iw
+      // 인포윈도우 닫기 이벤트에서 selectedPlace를 null로 만드는 코드가 있다면 제거!
+      // (아무것도 하지 않음)
     }
   }, [selectedPlace, placeMarkers, mapInstance])
 
@@ -726,7 +726,7 @@ export function usePlaceSearch(
     setSearchInput,
     suggestions,
     showSuggestions,
-    setShowSuggestions,
+    setShowSuggestions: setShowSuggestionsSafe,
     highlighted,
     setHighlighted,
     isComposing,

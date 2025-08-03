@@ -430,43 +430,48 @@ export function PlaceMap({ mapRef, onCafeSelect }: PlaceMapProps) {
     setSelectedCafeName(cafe.name)
   }
 
-  return (
-    <div className="flex gap-4">
-      {/* 지도 */}
-      <div
-        ref={mapRef}
-        className="w-full h-[70vh] mt-16 rounded shadow border relative z-0"
-        style={{ minHeight: '400px', minWidth: '300px' }}
-      />
-      {/* 카페 리스트 사이드바 */}
-      <div className="w-80 bg-white rounded shadow p-4 h-[70vh] overflow-y-auto mt-16">
-        <div className="flex gap-2 mb-4">
-          <button
-            className={`px-3 py-1 rounded ${sortBy === 'rating' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-            onClick={() => setSortBy('rating')}
-          >별점순</button>
-          <button
-            className={`px-3 py-1 rounded ${sortBy === 'reviewCount' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-            onClick={() => setSortBy('reviewCount')}
-          >리뷰순</button>
-        </div>
-        <ul>
-          {sortedCafeList.map((cafe) => (
-            <li
-              key={cafe.name}
-              className={`mb-4 p-2 rounded cursor-pointer border ${selectedCafeName === cafe.name ? 'border-blue-500 bg-blue-50' : 'border-transparent hover:bg-gray-50'}`}
-              onClick={() => handleListCafeClick(cafe)}
-            >
-              <div className="font-bold text-lg">{cafe.name}</div>
-              <div className="flex items-center gap-2 text-sm">
-                <span>⭐ {cafe.rating}</span>
-                <span className="text-gray-400">/ 리뷰 {cafe.reviewCount}개</span>
-              </div>
-              <div className="text-xs text-gray-500">{cafe.address}</div>
-            </li>
-          ))}
-        </ul>
+return (
+  <div className="flex gap-4">
+    {/* 지도 */}
+    <div
+      ref={mapRef}
+      className="w-full h-[70vh] mt-16 rounded shadow border relative z-0"
+      style={{ minHeight: '400px', minWidth: '300px' }}
+    />
+    {/* 카페 리스트 사이드바 */}
+    <div className="w-80 bg-white rounded shadow p-4 h-[70vh] overflow-y-auto mt-16">
+      <div className="flex gap-2 mb-4">
+        <button
+          className={`px-3 py-1 rounded ${sortBy === 'rating' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+          onClick={() => setSortBy('rating')}
+        >
+          별점순
+        </button>
+        <button
+          className={`px-3 py-1 rounded ${sortBy === 'reviewCount' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+          onClick={() => setSortBy('reviewCount')}
+        >
+          리뷰순
+        </button>
       </div>
+      <ul>
+        {sortedCafeList.map((cafe) => (
+          <li
+            key={cafe.name}
+            className={`mb-4 p-2 rounded cursor-pointer border ${
+              selectedCafeName === cafe.name ? 'border-blue-500 bg-blue-50' : 'border-transparent hover:bg-gray-50'
+            }`}
+            onClick={() => handleListCafeClick(cafe)}
+          >
+            <div className="font-bold text-lg">{cafe.name}</div>
+            <div className="flex items-center gap-2 text-sm">
+              <span>⭐ {cafe.rating}</span>
+              <span className="text-gray-400">/ 리뷰 {cafe.reviewCount}개</span>
+            </div>
+            <div className="text-xs text-gray-500">{cafe.address}</div>
+          </li>
+        ))}
+      </ul>
     </div>
-  )
-} 
+  </div>
+)

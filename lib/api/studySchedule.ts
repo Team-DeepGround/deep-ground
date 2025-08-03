@@ -10,6 +10,8 @@ export interface CreateStudyScheduleRequest {
     isAvailable?: boolean | null
     isImportant?: boolean
     memo?: string
+    latitude?: number
+    longitude?: number
   }
 
   export interface StudyScheduleResponseDto {
@@ -34,6 +36,8 @@ export interface CreateStudyScheduleRequest {
     isAvailable?: boolean | null
     isImportant?: boolean
     memo?: string
+    latitude?: number
+    longitude?: number
   }
 
   export interface Schedule {

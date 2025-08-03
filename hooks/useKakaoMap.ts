@@ -9,10 +9,12 @@ declare global {
 }
 
 const KAKAO_JAVASCRIPT_KEY = process.env.NEXT_PUBLIC_KAKAO_JS_KEY
+console.log('KAKAO_JAVASCRIPT_KEY:', KAKAO_JAVASCRIPT_KEY)
 
 export function useKakaoMap(mapContainerRef: React.RefObject<HTMLDivElement | null>) {
   const [isMapReady, setIsMapReady] = useState(false)
   const mapInstance = useRef<any>(null)
+  const [myLocation, setMyLocation] = useState<{ lat: number; lng: number } | null>(null)
 
   useEffect(() => {
     const scriptId = "kakao-map-script"
@@ -22,13 +24,16 @@ export function useKakaoMap(mapContainerRef: React.RefObject<HTMLDivElement | nu
         let lng = 126.9780
 
         const createMap = (lat: number, lng: number) => {
-          if (!mapContainerRef.current) return
-          const map = new window.kakao.maps.Map(mapContainerRef.current, {
-            center: new window.kakao.maps.LatLng(lat, lng),
-            level: 3,
-          })
-          mapInstance.current = map
-          setIsMapReady(true)
+          setTimeout(() => {
+            if (!mapContainerRef.current) return
+            const map = new window.kakao.maps.Map(mapContainerRef.current, {
+              center: new window.kakao.maps.LatLng(lat, lng),
+              level: 3,
+            })
+            mapInstance.current = map
+            setIsMapReady(true)
+            setMyLocation({ lat, lng })
+          }, 100); // 100ms 지연
         }
 
         if (navigator.geolocation) {
@@ -62,5 +67,5 @@ export function useKakaoMap(mapContainerRef: React.RefObject<HTMLDivElement | nu
     }
   }, [mapContainerRef])
 
-  return { mapInstance, isMapReady }
+  return { mapInstance, isMapReady, myLocation }
 } 

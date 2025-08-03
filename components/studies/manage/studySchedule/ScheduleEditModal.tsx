@@ -7,6 +7,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import TimePicker from "./TimePicker"
 import { format } from "date-fns"
+import PlaceSelectModal from "@/app/components/place/PlaceSelectModal"
+import { useState } from "react"
 
 interface Schedule {
     id: number
@@ -32,6 +34,8 @@ interface Props {
 
 export default function ScheduleEditModal({ open, onOpenChange, schedule, setSchedule, onSubmit }: Props) {
   if (!schedule) return null
+
+  const [showPlaceModal, setShowPlaceModal] = useState(false)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -106,12 +110,17 @@ export default function ScheduleEditModal({ open, onOpenChange, schedule, setSch
             <Label htmlFor="edit-location" className="text-right">
               장소
             </Label>
-            <Input
-              id="edit-location"
-              value={schedule.location}
-              onChange={(e) => setSchedule({ ...schedule, location: e.target.value })}
-              className="col-span-3"
-            />
+            <div className="col-span-3 flex gap-2 items-center">
+              <Input
+                id="edit-location"
+                value={schedule.location}
+                onChange={(e) => setSchedule({ ...schedule, location: e.target.value })}
+                className="flex-1"
+              />
+              <Button type="button" variant="outline" size="sm" onClick={() => setShowPlaceModal(true)}>
+                장소 검색
+              </Button>
+            </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="edit-description" className="text-right">
@@ -134,6 +143,15 @@ export default function ScheduleEditModal({ open, onOpenChange, schedule, setSch
           <Button onClick={onSubmit}>수정하기</Button>
         </DialogFooter>
       </DialogContent>
+      {showPlaceModal && (
+        <PlaceSelectModal
+          open={showPlaceModal}
+          onClose={() => setShowPlaceModal(false)}
+          onSelect={(place) => {
+            setSchedule({ ...schedule, location: place.address || place.name })
+          }}
+        />
+      )}
     </Dialog>
   )
 }
