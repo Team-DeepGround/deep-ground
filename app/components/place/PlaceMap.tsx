@@ -408,7 +408,7 @@ export function PlaceMap({ mapRef, onCafeSelect }: PlaceMapProps) {
     if (!isMapReady || !mapInstance.current || !window.kakao || !window.kakao.maps) return;
     const map = mapInstance.current;
 
-    // 기존 마커/오버레이 모두 제거
+    // 기존 마커/오버레이 모두 제거해야함
     markerRefs.current.forEach(marker => marker.setMap(null));
     overlayRefs.current.forEach(overlay => overlay.setMap(null));
     markerRefs.current = [];
