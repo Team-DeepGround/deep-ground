@@ -10,7 +10,9 @@ import { Notification } from '@/types/notification'
 import { fetchNotificationsApi, fetchUnreadCountApi, markAsReadApi, markAllAsReadApi } from '@/lib/api/notification'
 import { getNotificationMessage } from './notification-utils'
 
-const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/sse/subscribe`
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL && process.env.NEXT_PUBLIC_API_VERSION 
+  ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/sse/subscribe`
+  : null
 
 // SSE 설정 상수
 const SSE_CONFIG = {
@@ -88,6 +90,12 @@ const updateNotificationState = (
 const createGlobalSSEConnection = async (): Promise<boolean> => {
     if (globalEventSource) {
         return true
+    }
+
+    // SSE URL이 설정되지 않은 경우 연결하지 않음
+    if (!SSE_CONFIG.URL) {
+        console.log('SSE URL이 설정되지 않아 연결을 건너뜁니다.')
+        return false
     }
 
     let hasReceivedMessage = false

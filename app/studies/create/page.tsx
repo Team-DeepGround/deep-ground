@@ -23,6 +23,8 @@ import { api } from "@/lib/api-client"
 import { auth } from "@/lib/auth"
 import { useAuth } from "@/components/auth-provider"
 import { getTechStacks, TechStack } from "@/lib/api/techStack"
+import dynamic from "next/dynamic"
+import { AddressSelector } from "@/components/studies/AddressSelector"
 import TechStackSelector from "@/components/TechStackSelector"
 
 interface CreateStudyGroupRequest {
@@ -34,8 +36,10 @@ interface CreateStudyGroupRequest {
   recruitEndDate: string;
   groupMemberCount: number;
   isOffline: boolean;
-  studyLocation: string;
-  techStackNames: string[];
+  addressIds: number[];
+  techTags: string[];
+
+
 }
 
 export default function CreateStudyPage() {
@@ -69,8 +73,9 @@ export default function CreateStudyPage() {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [isOnline, setIsOnline] = useState(true)
-  const [location, setLocation] = useState("")
+  const [selectedAddressIds, setSelectedAddressIds] = useState<number[]>([])
   const [maxMembers, setMaxMembers] = useState("6")
+  const [showPlaceModal, setShowPlaceModal] = useState(false)
 
   const [studyStartDate, setStudyStartDate] = useState<Date>()
   const [studyEndDate, setStudyEndDate] = useState<Date>()
@@ -145,7 +150,7 @@ export default function CreateStudyPage() {
     }
 
     // 오프라인 스터디인 경우 장소 검증
-    if (!isOnline && !location) {
+    if (!isOnline && selectedAddressIds.length === 0) {
       toast({
         title: "장소 정보 누락",
         description: "오프라인 스터디의 경우 장소 정보를 입력해주세요.",
@@ -174,8 +179,9 @@ export default function CreateStudyPage() {
         recruitEndDate: format(recruitEndDate, 'yyyy-MM-dd'),
         groupMemberCount: parseInt(maxMembers),
         isOffline: !isOnline,
-        studyLocation: location,
-        techStackNames: selectedTags,
+        addressIds: selectedAddressIds,
+        techTags: selectedTags,
+
       }
 
       await api.post('/study-group', requestData)
@@ -350,16 +356,12 @@ export default function CreateStudyPage() {
               </div>
 
               {!isOnline && (
-                <div className="space-y-2">
-                  <Label htmlFor="location">스터디 장소</Label>
-                  <Input
-                    id="location"
-                    placeholder="스터디 장소를 입력하세요 (예: 서울 강남구)"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                  />
-                </div>
+                <AddressSelector
+                  selectedAddressIds={selectedAddressIds}
+                  onChange={setSelectedAddressIds}
+                />
               )}
+
 
               <div className="space-y-2">
                 <Label htmlFor="maxMembers">모집 인원</Label>
