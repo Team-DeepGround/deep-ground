@@ -148,4 +148,12 @@ export function convertToSchedule(dto: StudyScheduleResponseDto): Schedule {
     date: dto.startTime.split("T")[0],
   }
   }
+
+// 스터디 그룹 집계 조회 API
+export const getStudyGroupAggregation = async (city: string, gu: string) => {
+  const response = await api.get('/study-group/aggregation', {
+    params: { city, gu }
+  });
+  return response;
+};
   

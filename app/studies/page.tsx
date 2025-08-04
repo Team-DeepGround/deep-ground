@@ -3,9 +3,10 @@
 import { useState, useEffect, useMemo, useCallback } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
+import { Plus, Map } from "lucide-react"
 import { api } from "@/lib/api-client"
 import { StudyList } from "@/components/studies/StudyList"
+import { StudyMap } from "@/components/studies/StudyMap"
 
 interface StudyGroup {
   id: number;
@@ -88,6 +89,9 @@ export default function StudiesPage() {
   const [totalPages, setTotalPages] = useState(1);
 
   const [isLoading, setIsLoading] = useState(false)
+  
+  // 지도 모달 상태
+  const [showMap, setShowMap] = useState(false)
 
   // Debounce search term to reduce API calls
   const debouncedSearchTerm = useDebounce(searchTerm, 300)
@@ -205,15 +209,26 @@ export default function StudiesPage() {
           <h1 className="text-3xl font-bold">스터디 찾기</h1>
           <p className="text-muted-foreground mt-1">관심 있는 스터디를 찾아보세요</p>
         </div>
-        <Button asChild>
-          <Link href="/studies/create">
-            <Plus className="mr-2 h-4 w-4" />
-            스터디 개설하기
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowMap(true)}>
+            <Map className="mr-2 h-4 w-4" />
+            지도에서 스터디 찾기
+          </Button>
+          <Button asChild>
+            <Link href="/studies/create">
+              <Plus className="mr-2 h-4 w-4" />
+              스터디 개설하기
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <StudyList {...studyListProps} />
+      
+      {/* 지도 모달 */}
+      {showMap && (
+        <StudyMap onClose={() => setShowMap(false)} />
+      )}
     </div>
   )
 }
