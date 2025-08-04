@@ -414,7 +414,7 @@ export function PlaceMap({ mapRef, onCafeSelect }: PlaceMapProps) {
     markerRefs.current = [];
     overlayRefs.current = [];
 
-    // visibleCafes만큼 마커/오버레이 생성
+    // visibleCafes만큼 마커/오버레이 생성함
     visibleCafes.forEach((cafe: CafeData) => {
       const { customMarker, overlay } = addMarker(cafe, map);
       markerRefs.current.push(customMarker);
