@@ -13,6 +13,12 @@ export interface Comment {
   replies: Reply[]
 }
 
+export interface Participant {
+  memberId: number
+  profileId: number
+  nickname: string
+}
+
 export interface StudyGroupDetail {
   id: number
   title: string
@@ -26,7 +32,7 @@ export interface StudyGroupDetail {
   studyStartDate: string
   studyEndDate: string
   commentCount: number
-  participants: string[]
+  participants: Participant[]
   comments: Comment[]
   offline: boolean
   sessions: StudySession[]
@@ -41,4 +47,4 @@ export interface StudySession {
   endDate: string
   location: string
   participants: string[]
-} 
+}

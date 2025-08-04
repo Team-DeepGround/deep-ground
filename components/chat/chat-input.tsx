@@ -15,6 +15,7 @@ interface ChatInputProps {
   isUploading: boolean;
   uploadProgress: Record<string, number>;
   uploadedFilesCount: number;
+  isSending?: boolean; // 전송 중 상태 추가
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
@@ -26,10 +27,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onFileChange,
   isUploading,
   uploadProgress,
-  uploadedFilesCount
+  uploadedFilesCount,
+  isSending = false // 기본값 false
 }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const [isComposing, setIsComposing] = useState(false); // IME 입력 중 상태
 
   useEffect(() => {
     if (!showEmojiPicker) return;
@@ -50,13 +53,31 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   }, [showEmojiPicker]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // 전송 중이거나 업로드 중이면 키보드 이벤트 무시
+    if (isSending || isUploading) {
+      return;
+    }
+    
+    // IME 입력 중이면 Enter 키 무시
+    if (isComposing) {
+      return;
+    }
+    
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       onSendMessage();
     }
   };
 
-  const isSendDisabled = isUploading || (uploadedFilesCount > 0 && Object.values(uploadProgress).some(v => v < 100));
+  const handleCompositionStart = () => {
+    setIsComposing(true);
+  };
+
+  const handleCompositionEnd = () => {
+    setIsComposing(false);
+  };
+
+  const isSendDisabled = isSending || isUploading || (uploadedFilesCount > 0 && Object.values(uploadProgress).some(v => v < 100));
 
   return (
     <div className="p-3 border-t">
@@ -105,6 +126,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           onChange={(e) => onMessageChange(e.target.value)}
           className="flex-1 min-h-[40px] resize-none"
           onKeyDown={handleKeyDown}
+          onCompositionStart={handleCompositionStart}
+          onCompositionEnd={handleCompositionEnd}
         />
         
         <Button 

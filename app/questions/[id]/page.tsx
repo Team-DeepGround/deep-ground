@@ -15,6 +15,9 @@ import { useAuth } from "@/hooks/use-auth"
 import { ThumbsUp, CheckCircle2, Calendar, ArrowLeft, X, Pencil, Trash } from "lucide-react"
 import FileUpload from "@/components/file-upload"
 import { api } from "@/lib/api-client"
+import QuestionDetailCard from "@/components/questions/QuestionDetailCard";
+import AnswerList from "@/components/questions/AnswerList";
+import AnswerForm from "@/components/questions/AnswerForm";
 
 // 이미지 Object URL 캐싱용 커스텀 훅
 function useAuthImageUrls(urls: string[] | undefined) {
@@ -483,380 +486,63 @@ export default function QuestionDetailPage() {
           질문 목록으로 돌아가기
         </Button>
 
-        {/* 질문 카드 */}
-        <Card className="mb-8">
-          <CardHeader className="pb-3">
-            <div className="flex justify-between items-start">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  {question?.techStacks.map((tag: any, idx: number) => (
-                    <Badge key={tag ? String(tag) : idx} variant="secondary" className="font-normal">
-                      {tag}
-                    </Badge>
-                  ))}
-                  {question?.isResolved && (
-                    <Badge variant="secondary" className="ml-2">
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                      해결됨
-                    </Badge>
-                  )}
-                </div>
-                <CardTitle className="text-2xl">{question?.title}</CardTitle>
-                <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
-                  <Calendar className="h-3.5 w-3.5" />
-                  <span>{question?.createdAt ? new Date(question.createdAt).toISOString().slice(0, 10) : ''}</span>
-                </div>
-              </div>
-              <div className="flex flex-col gap-2 items-end">
-                <div className="flex items-center gap-2">
-                  {/* 상태 pill */}
-                  <span
-                    className={
-                      "text-xs font-semibold px-2 py-0.5 rounded-full border-2 shadow-sm text-black bg-[#ffe5e5] border-[#dc2626] min-w-[48px] text-center"
-                    }
-                    style={{
-                      color: '#111',
-                      background: question?.status === "OPEN"
-                        ? "#ffe5e5"
-                        : question?.status === "RESOLVED"
-                        ? "#fff9db"
-                        : question?.status === "CLOSED"
-                        ? "#e6ffe5"
-                        : "#f5f5f5",
-                      borderColor: question?.status === "OPEN"
-                        ? "#dc2626"
-                        : question?.status === "RESOLVED"
-                        ? "#eab308"
-                        : question?.status === "CLOSED"
-                        ? "#16a34a"
-                        : "#d1d5db",
-                      lineHeight: "1.2",
-                      fontWeight: 600,
-                      fontSize: "0.75rem",
-                      minWidth: "48px",
-                      textAlign: "center"
-                    }}
-                  >
-                    {statusLabel(question?.status)}
-                  </span>
-                  {/* 상태 변경 드롭다운: 작성자만 노출 */}
-                  {user?.id && user.id == question?.memberId && (
-                    <select
-                      className="ml-4 text-lg font-bold border-4 border-blue-400 bg-white px-4 py-2 rounded-full shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      value={question?.status || 'OPEN'}
-                      disabled={!!statusUpdating}
-                      onChange={e => handleStatusChange(e.target.value)}
-                    >
-                      <option value="OPEN">미해결</option>
-                      <option value="RESOLVED">해결중</option>
-                      <option value="CLOSED">해결완료</option>
-                    </select>
-                  )}
-                </div>
-                {/* 기존 수정/삭제 버튼 */}
-                <div className="flex gap-2 items-center mt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-1"
-                    onClick={() => router.push(`/questions/${params.id}/edit`)}
-                    aria-label="질문 수정하기"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-1"
-                    aria-label="질문 삭제하기"
-                    onClick={async () => {
-                      if (window.confirm("정말로 이 질문을 삭제하시겠습니까?")) {
-                        try {
-                          const res = await api.delete(`/questions/${params.id}`)
-                          toast({ title: "질문 삭제 완료", description: `질문이 삭제되었습니다. (ID: ${res?.result ?? params.id})` })
-                          router.push("/questions")
-                        } catch (e: any) {
-                          toast({ title: "질문 삭제 실패", description: e?.message || "삭제 중 오류가 발생했습니다.", variant: "destructive" })
-                        }
-                      }
-                    }}
-                  >
-                    <Trash className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="flex items-center gap-3 mb-4">
-              <Avatar>
-                <AvatarImage src={question?.author?.avatar || "/placeholder.svg"} alt={question?.author?.name || "알 수 없음"} />
-                <AvatarFallback>{question?.author?.name ? question.author.name[0] : "?"}</AvatarFallback>
-              </Avatar>
-              <div>
-                <div className="font-medium">
-                  {question?.author?.name
-                    ? question.author.name
-                    : question?.nickname
-                    ? question.nickname
-                    : question?.memberId
-                    ? `ID: ${question.memberId}`
-                    : "알 수 없음"}
-                </div>
-                <div className="text-xs text-muted-foreground">작성자</div>
-              </div>
-            </div>
-
-            <div className="prose max-w-none">
-              <p className="whitespace-pre-line">{question?.content}</p>
-
-              {/* 질문 이미지 */}
-              {question.mediaUrl && question.mediaUrl.length > 0 && (
-                <div className="mt-4 space-y-4">
-                  {question.mediaUrl.map((url: string, idx: number) => (
-                    <div key={url || idx} className="rounded-md overflow-hidden">
-                      <AuthImage imageUrl={url} alt={`질문 이미지 ${idx + 1}`} />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        {/* 질문 카드 컴포넌트 */}
+        <QuestionDetailCard
+          question={question}
+          user={user}
+          statusUpdating={statusUpdating}
+          handleStatusChange={handleStatusChange}
+          onEdit={() => router.push(`/questions/${params.id}/edit`)}
+          onDelete={async () => {
+            if (window.confirm("정말로 이 질문을 삭제하시겠습니까?")) {
+              try {
+                const res = await api.delete(`/questions/${params.id}`)
+                toast({ title: "질문 삭제 완료", description: `질문이 삭제되었습니다. (ID: ${res?.result ?? params.id})` })
+                router.push("/questions")
+              } catch (e: any) {
+                toast({ title: "질문 삭제 실패", description: e?.message || "삭제 중 오류가 발생했습니다.", variant: "destructive" })
+              }
+            }
+          }}
+        />
 
         {/* 답변 수 */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold">{answers.length}개의 답변</h2>
         </div>
 
-        {/* 답변 목록 */}
-        <div className="space-y-6 mb-8">
-          {answers.map((answer) => (
-            <Card key={answer.answerId ? String(answer.answerId) : JSON.stringify(answer)} className={answer.isAccepted ? "border-green-500" : ""}>
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarImage src="/placeholder.svg" alt={`User ${answer.memberId}`} />
-                      <AvatarFallback>{answer.memberId}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="font-medium">User {answer.memberId}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {answer.createdAt ? new Date(answer.createdAt).toISOString().slice(0, 10) : ''}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    {answer.isAccepted && (
-                      <Badge variant="secondary">
-                        <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                        채택된 답변
-                      </Badge>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={answerLikeLoading[answer.answerId]}
-                      className={`flex items-center gap-1 transition-colors duration-150 ${likedAnswers.includes(answer.answerId) ? "text-black" : "text-gray-300"}`}
-                      onClick={() => handleLikeAnswer(answer.answerId)}
-                      aria-label={likedAnswers.includes(answer.answerId) ? "좋아요 취소" : "좋아요"}
-                    >
-                      <ThumbsUp className={`h-4 w-4 ${likedAnswers.includes(answer.answerId) ? "text-black" : "text-gray-300"}`} />
-                      <span>{typeof answer.likeCount === 'number' ? answer.likeCount : 0}</span>
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="prose max-w-none">
-                  <p className="whitespace-pre-line">{answer.answerContent}</p>
+        {/* 답변 리스트 컴포넌트 */}
+        <AnswerList
+          answers={answers}
+          likedAnswers={likedAnswers}
+          answerLikeLoading={answerLikeLoading}
+          showCommentInput={showCommentInput}
+          answerComments={answerComments}
+          setAnswerComments={setAnswerComments}
+          answerCommentsData={answerCommentsData}
+          editingCommentId={editingCommentId}
+          editingCommentContent={editingCommentContent}
+          setEditingCommentContent={setEditingCommentContent}
+          handleLikeAnswer={handleLikeAnswer}
+          handleAddComment={handleAddComment}
+          handleEditComment={handleEditComment}
+          handleDeleteComment={handleDeleteComment}
+          setShowCommentInput={setShowCommentInput}
+          setEditingCommentId={setEditingCommentId}
+          question={question}
+          toast={toast}
+        />
 
-                  {answer.mediaUrls && answer.mediaUrls.length > 0 && (
-                    <AnswerImagesWithAuth images={answer.mediaUrls} />
-                  )}
-                </div>
-              </CardContent>
-              <CardFooter className="flex flex-col items-start gap-4 pt-0">
-                <div className="flex justify-end gap-2 w-full">
-                  {!answer.isAccepted && question?.isResolved === false && (
-                    <Button variant="outline" size="sm">
-                      답변 채택하기
-                    </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => router.push(`/answers/${answer.answerId}/edit`)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={async () => {
-                      if (window.confirm('정말로 이 답변을 삭제하시겠습니까?')) {
-                        try {
-                          await api.delete(`/answers/${answer.answerId}`)
-                          toast({
-                            title: "답변 삭제 성공",
-                            description: "답변이 성공적으로 삭제되었습니다.",
-                          })
-                          fetchQuestion()
-                        } catch (error: any) {
-                          toast({
-                            title: "답변 삭제 실패",
-                            description: error?.message || "답변 삭제 중 오류가 발생했습니다.",
-                            variant: "destructive"
-                          })
-                        }
-                      }
-                    }}
-                  >
-                    <Trash className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowCommentInput(showCommentInput === answer.answerId ? null : answer.answerId)}
-                  >
-                    댓글 달기
-                  </Button>
-                </div>
-
-                {(answerCommentsData[answer.answerId]?.length > 0 || showCommentInput === answer.answerId) && (
-                  <div className="w-full border-t pt-4 mt-2">
-                    <h4 className="text-sm font-medium mb-3">댓글</h4>
-
-                    {answerCommentsData[answer.answerId]?.length > 0 && (
-                      <div className="space-y-3 mb-4">
-                        {answerCommentsData[answer.answerId].map((comment: any, idx: number) => (
-                          <div key={comment.commentId ? String(comment.commentId) : idx} className="flex gap-2 items-center">
-                            <Avatar className="h-6 w-6">
-                              <AvatarImage
-                                src={"/placeholder.svg"}
-                                alt={comment.memberId ? `User ${comment.memberId}` : "알 수 없음"}
-                              />
-                              <AvatarFallback>{comment.memberId ? String(comment.memberId)[0] : "?"}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-medium">{comment.memberId ? `User ${comment.memberId}` : "알 수 없음"}</span>
-                              </div>
-                              {editingCommentId === comment.commentId ? (
-                                <div className="flex gap-2 items-center mt-1">
-                                  <Textarea
-                                    value={editingCommentContent}
-                                    onChange={e => setEditingCommentContent(e.target.value)}
-                                    className="text-sm min-h-[32px] resize-none"
-                                  />
-                                  <Button size="sm" onClick={() => handleEditComment(comment.commentId, answer.answerId)}>저장</Button>
-                                  <Button size="sm" variant="outline" onClick={() => setEditingCommentId(null)}>취소</Button>
-                                </div>
-                              ) : (
-                                <p className="text-sm">{comment.content}</p>
-                              )}
-                            </div>
-                            {/* 댓글 수정/삭제 버튼 */}
-                            <div className="flex gap-1">
-                              <Button variant="ghost" size="icon" aria-label="댓글 수정" onClick={() => {
-                                setEditingCommentId(comment.commentId);
-                                setEditingCommentContent(comment.content);
-                              }}>
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" aria-label="댓글 삭제" onClick={() => {
-                                if (window.confirm('정말로 이 댓글을 삭제하시겠습니까?')) {
-                                  handleDeleteComment(comment.commentId, answer.answerId);
-                                }
-                              }}>
-                                <Trash className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {showCommentInput === answer.answerId && (
-                      <div className="flex gap-2">
-                        <Textarea
-                          placeholder="댓글을 입력하세요..."
-                          value={answerComments[answer.answerId] || ""}
-                          onChange={(e) =>
-                            setAnswerComments({
-                              ...answerComments,
-                              [answer.answerId]: e.target.value,
-                            })
-                          }
-                          className="text-sm min-h-[60px] resize-none"
-                        />
-                        <Button size="sm" className="self-end" onClick={() => handleAddComment(answer.answerId)}>
-                          등록
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-
-        {/* 답변 작성 폼 */}
-        <Card>
-          <CardHeader>
-            <CardTitle>답변 작성하기</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Textarea
-              placeholder="답변을 작성해주세요..."
-              value={answerContent}
-              onChange={(e) => setAnswerContent(e.target.value)}
-              rows={6}
-            />
-
-            <div className="space-y-2">
-              <Label htmlFor="answer-images">이미지 첨부</Label>
-              <FileUpload
-                onFilesSelect={handleImageUpload}
-                accept="image/*"
-                maxSize={5}
-                multiple={true}
-                buttonText="이미지 선택"
-              />
-
-              {uploadedImages.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  <Label htmlFor="uploaded-image-list">첨부된 이미지 ({uploadedImages.length})</Label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                    {uploadedImages.map((image, index) => (
-                      <div key={index} className="relative group">
-                        <img
-                          src={URL.createObjectURL(image) || "/placeholder.svg"}
-                          alt={`Uploaded ${index + 1}`}
-                          className="h-24 w-full object-cover rounded-md"
-                        />
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => removeImage(index)}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                        <p className="text-xs truncate mt-1">{image.name}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </CardContent>
-          <CardFooter className="flex justify-end">
-            <Button onClick={handleSubmitAnswer}>답변 등록하기</Button>
-          </CardFooter>
-        </Card>
+        {/* 답변 작성 폼 컴포넌트 */}
+        <AnswerForm
+          answerContent={answerContent}
+          setAnswerContent={setAnswerContent}
+          uploadedImages={uploadedImages}
+          handleImageUpload={handleImageUpload}
+          removeImage={removeImage}
+          handleSubmitAnswer={handleSubmitAnswer}
+          loading={loading}
+        />
       </div>
     </div>
   )

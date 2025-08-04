@@ -29,6 +29,7 @@ export default function ChatPopup({ isOpen, onClose }: ChatPopupProps) {
   const { toast } = useToast();
   const [message, setMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [isSending, setIsSending] = useState(false); // 메시지 전송 중 상태 추가
 
   // 채팅 관련 훅들
   const {
@@ -150,6 +151,8 @@ export default function ChatPopup({ isOpen, onClose }: ChatPopupProps) {
     // 메시지 전송 핸들러
     const handleSendMessage = async () => {
         if (!message.trim() && uploadedFiles.length === 0) return;
+        if (isSending) return; // 이미 전송 중이면 중복 전송 방지
+        
         if (!stompClientState || !isConnected) {
             toast({
                 title: "채팅 서버 연결 끊김",
@@ -161,6 +164,10 @@ export default function ChatPopup({ isOpen, onClose }: ChatPopupProps) {
         const currentChatRoomId = selectedChatRoom?.chatRoomId;
         if (!currentChatRoomId) return;
 
+        setIsSending(true); // 전송 시작
+        const messageToSend = message.trim(); // 전송할 메시지 미리 저장
+        setMessage(""); // 입력창 즉시 초기화
+
         let mediaIds: string[] = [];
         if (uploadedFiles.length > 0) {
             try {
@@ -171,13 +178,13 @@ export default function ChatPopup({ isOpen, onClose }: ChatPopupProps) {
                     description: "파일 업로드 중 오류가 발생했습니다.",
                     variant: "destructive",
                 });
+                setIsSending(false); // 전송 실패 시 상태 초기화
                 return;
             }
         }
 
         try {
-      sendMessage(stompClientState, currentChatRoomId, message, mediaIds);
-            setMessage("");
+      sendMessage(stompClientState, currentChatRoomId, messageToSend, mediaIds);
       clearUploadedFiles();
         } catch (error) {
             console.error("메시지 전송 실패:", error);
@@ -186,6 +193,8 @@ export default function ChatPopup({ isOpen, onClose }: ChatPopupProps) {
                 description: "메시지를 보내는 도중 오류가 발생했습니다.",
                 variant: "destructive",
             });
+        } finally {
+            setIsSending(false); // 전송 완료 후 상태 초기화
         }
     };
 
@@ -321,6 +330,7 @@ export default function ChatPopup({ isOpen, onClose }: ChatPopupProps) {
             onMessageChange={setMessage}
             onSendMessage={handleSendMessage}
             onImageLoad={handleImageLoad}
+            isSending={isSending}
           />
                 </CardContent>
             </Card>

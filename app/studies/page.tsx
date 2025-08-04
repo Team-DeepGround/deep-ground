@@ -99,10 +99,13 @@ export default function StudiesPage() {
   // Memoize API parameters to prevent unnecessary API calls
   const apiParams = useMemo(() => {
     const params: any = {
-      keyword: debouncedSearchTerm,
       page: String(currentPage - 1),
       size: String(itemsPerPage),
     };
+
+    if (debouncedSearchTerm) {
+      params.keyword = debouncedSearchTerm;
+    }
 
     // 탭에 따른 상태 필터링
     if (activeTab === "recruiting") {
@@ -115,8 +118,16 @@ export default function StudiesPage() {
       params.techStackNames = selectedTags;
     }
 
+    if (locationFilter === 'online') {
+      params.onOffline = 'ONLINE';
+    } else if (locationFilter === 'offline') {
+      params.onOffline = 'OFFLINE';
+    } else {
+      params.onOffline = 'ALL';
+    }
+
     return params;
-  }, [debouncedSearchTerm, currentPage, selectedTags, activeTab]);
+  }, [debouncedSearchTerm, currentPage, selectedTags, activeTab, locationFilter]);
 
   // Memoize fetch function to prevent unnecessary re-creation
   const fetchStudyGroups = useCallback(async () => {

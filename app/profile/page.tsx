@@ -1,5 +1,6 @@
 "use client"
 
+import { format, parseISO } from "date-fns";
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/components/auth-provider"
@@ -90,7 +91,6 @@ export default function ProfilePage() {
         if (joinedStudiesResponse && joinedStudiesResponse.result) {
           setJoinedStudies(joinedStudiesResponse.result)
         }
-
       } catch (error) {
         console.error("사용자 데이터 로딩 실패:", error)
         toast({
@@ -112,10 +112,7 @@ export default function ProfilePage() {
   const loadFeeds = async () => {
     try {
       setFeedsLoading(true)
-      console.log('내 피드 요약 목록 조회 시작')
       const response = await fetchFeedSummaries({ page: 0, size: 20, sort: "createdAt,desc" })
-      console.log('피드 요약 목록 응답:', response)
-      
       if (response.result?.feedSummaries) {
         setFeeds(response.result.feedSummaries)
       } else {
@@ -146,7 +143,6 @@ export default function ProfilePage() {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
-          // Content-Type은 FormData 사용 시 생략
         },
         body: formData,
       });
@@ -172,7 +168,8 @@ export default function ProfilePage() {
       });
     }
   }
-    // 스터디 카드 컴포넌트
+
+  // 스터디 카드 컴포넌트 (tags 배지 완전 제거!)
   const StudyCard = ({ study, isCreated = false }) => (
     <Card className="hover:bg-accent/50 transition-colors">
       <CardContent className="p-4">
@@ -183,24 +180,18 @@ export default function ProfilePage() {
           </div>
           <Badge variant={study.isOnline ? "default" : "outline"}>{study.isOnline ? "온라인" : "오프라인"}</Badge>
         </div>
-
-        <div className="flex flex-wrap gap-1.5 mt-3">
-          {study.tags.map((tag) => (
-            <Badge key={tag} variant="secondary" className="font-normal">
-              {tag}
-            </Badge>
-          ))}
-        </div>
-
+        {/* 태그 부분 삭제 */}
         <div className="flex items-center justify-between mt-4">
           <div className="flex items-center gap-4">
             <p className="text-sm text-muted-foreground flex items-center">
               <CalendarIcon className="h-3.5 w-3.5 mr-1" />
-              {study.dates}
+              {study.studyStartDate && study.studyEndDate
+                ? `${format(parseISO(study.studyStartDate), "yyyy.MM.dd")} ~ ${format(parseISO(study.studyEndDate), "yyyy.MM.dd")}`
+                : ""}
             </p>
             <p className="text-sm text-muted-foreground flex items-center">
               <Users className="h-3.5 w-3.5 mr-1" />
-              {study.members}/{study.maxMembers}명
+              {(study.currentMemberCount ?? 0)}/{(study.groupMemberCount ?? 0)}명
             </p>
           </div>
           <Button
@@ -251,7 +242,6 @@ export default function ProfilePage() {
             <TabsTrigger value="profile">프로필</TabsTrigger>
             <TabsTrigger value="feeds">피드</TabsTrigger>
           </TabsList>
-
           <TabsContent value="profile">
             {isLoading ? (
               <div className="flex justify-center items-center min-h-[400px]">
@@ -294,21 +284,18 @@ export default function ProfilePage() {
                     </div>
                     <div className="mt-4 space-y-2">
                       <p>{profile.bio}</p>
-
                       {profile.jobTitle && profile.company && (
                         <p className="text-sm text-muted-foreground flex items-center gap-1">
                           <Briefcase className="h-4 w-4" />
                           {profile.jobTitle} at {profile.company}
                         </p>
                       )}
-
                       {profile.location && (
                         <p className="text-sm text-muted-foreground flex items-center gap-1">
                           <MapPin className="h-4 w-4" />
                           {profile.location}
                         </p>
                       )}
-
                       {profile.education && (
                         <p className="text-sm text-muted-foreground flex items-center gap-1">
                           <GraduationCap className="h-4 w-4" />
@@ -324,7 +311,7 @@ export default function ProfilePage() {
                       ))}
                     </div>
                     <div className="flex flex-wrap gap-4 mt-6">
-                      {profile.links.github && (
+                      {profile.links?.github && (
                         <Link
                           href={profile.links.github}
                           target="_blank"
@@ -334,7 +321,7 @@ export default function ProfilePage() {
                           <Github className="h-5 w-5" />
                         </Link>
                       )}
-                      {profile.links.website && (
+                      {profile.links?.website && (
                         <Link
                           href={profile.links.website}
                           target="_blank"
@@ -344,7 +331,7 @@ export default function ProfilePage() {
                           <Globe className="h-5 w-5" />
                         </Link>
                       )}
-                      {profile.links.linkedin && (
+                      {profile.links?.linkedin && (
                         <Link
                           href={profile.links.linkedin}
                           target="_blank"
@@ -354,7 +341,7 @@ export default function ProfilePage() {
                           <Linkedin className="h-5 w-5" />
                         </Link>
                       )}
-                      {profile.links.twitter && (
+                      {profile.links?.twitter && (
                         <Link
                           href={profile.links.twitter}
                           target="_blank"
@@ -367,7 +354,6 @@ export default function ProfilePage() {
                     </div>
                   </div>
                 </div>
-
                 {/* 스터디 섹션 */}
                 <div className="space-y-6">
                   {/* 내가 만든 스터디 */}
@@ -390,7 +376,6 @@ export default function ProfilePage() {
                       </Card>
                     )}
                   </div>
-
                   {/* 내가 참여한 스터디 */}
                   <div>
                     <h2 className="text-xl font-bold mb-4">내가 참여한 스터디</h2>
@@ -411,7 +396,6 @@ export default function ProfilePage() {
                       </Card>
                     )}
                   </div>
-
                   <div className="flex justify-center mt-6">
                     <Button asChild variant="outline">
                       <Link href="/studies">다른 스터디 찾기</Link>
@@ -421,7 +405,6 @@ export default function ProfilePage() {
               </>
             )}
           </TabsContent>
-
           <TabsContent value="feeds">
             <h2 className="text-xl font-bold mb-4">내가 작성한 피드</h2>
             {feedsLoading ? (

@@ -108,18 +108,7 @@ export default function Header() {
           </nav>
         </div>
         <div className="flex items-center gap-2">
-          {searchOpen ? (
-            <div className="relative hidden md:block">
-              <Input placeholder="검색..." className="w-[200px] pl-8" autoFocus onBlur={() => setSearchOpen(false)} />
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            </div>
-          ) : (
-            <Button variant="ghost" size="icon" onClick={() => setSearchOpen(true)} className="hidden md:flex">
-              <Search className="h-5 w-5" />
-              <span className="sr-only">검색</span>
-            </Button>
-          )}
-
+        
           <Button
             variant="ghost"
             size="icon"
@@ -185,13 +174,7 @@ export default function Header() {
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/help" className="cursor-pointer">
-                    <HelpCircle className="mr-2 h-4 w-4" />
-                    <span>도움말</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
+            
                 <DropdownMenuItem
                   onClick={logout}
                   className="cursor-pointer text-destructive focus:text-destructive"
