@@ -188,6 +188,31 @@ export default function QuestionDetailPage() {
       console.log('user.name:', user?.name)
       console.log('user.email:', user?.email)
       console.log('user.id:', user?.id)
+      
+      // 날짜 관련 필드 디버깅
+      console.log('question.createdAt:', q?.createdAt)
+      console.log('question.createDate:', q?.createDate)
+      console.log('question.regDate:', q?.regDate)
+      console.log('question.writeDate:', q?.writeDate)
+      console.log('question.date:', q?.date)
+      console.log('question.time:', q?.time)
+      console.log('question.created_at:', q?.created_at)
+      console.log('question.updated_at:', q?.updated_at)
+      console.log('question 전체 필드:', Object.keys(q || {}))
+      
+      if (q?.answers) {
+        console.log('첫 번째 답변:', q.answers[0])
+        console.log('첫 번째 답변 날짜 필드들:', {
+          createdAt: q.answers[0]?.createdAt,
+          createDate: q.answers[0]?.createDate,
+          regDate: q.answers[0]?.regDate,
+          writeDate: q.answers[0]?.writeDate,
+          date: q.answers[0]?.date,
+          time: q.answers[0]?.time,
+          created_at: q.answers[0]?.created_at,
+          updated_at: q.answers[0]?.updated_at
+        })
+      }
     } catch (e) {
       setQuestion(null)
       setAnswers([])

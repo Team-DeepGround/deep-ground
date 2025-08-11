@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { MessageSquare, ThumbsUp, CheckCircle2, Search, Plus, SortAsc, SortDesc } from "lucide-react"
+import { MessageSquare, ThumbsUp, CheckCircle2, Search, Plus, SortAsc, SortDesc, Calendar } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/pagination"
 
 import { api } from "@/lib/api-client"
+import { formatReadableDate } from "@/lib/utils";
 
 // 미리 정의된 태그 목록 (질문 생성과 동일)
 const predefinedTags = [
@@ -314,8 +315,9 @@ function QuestionCard({ question, onTitleClick }: QuestionCardProps) {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">{authorName}</span>
-                <span className="text-xs text-muted-foreground">
-                  {new Date(question.createdAt).toISOString().slice(0, 10)}
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {question.createdAt ? formatReadableDate(question.createdAt) : ''}
                 </span>
               </div>
               <h3 className="text-lg font-semibold mt-1 flex items-center gap-2">

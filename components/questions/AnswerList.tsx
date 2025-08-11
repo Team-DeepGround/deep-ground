@@ -3,11 +3,20 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { ThumbsUp, Pencil, Trash, CheckCircle2 } from "lucide-react";
+import { ThumbsUp, Pencil, Trash, CheckCircle2, Calendar } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { formatDateTime, formatReadableDate } from "@/lib/utils";
 
 export default function AnswerList({ answers, likedAnswers, answerLikeLoading, showCommentInput, answerComments, setAnswerComments, answerCommentsData, editingCommentId, editingCommentContent, setEditingCommentContent, handleLikeAnswer, handleAddComment, handleEditComment, handleDeleteComment, setShowCommentInput, setEditingCommentId, question, toast }) {
   const router = useRouter();
+  
+  // 디버깅을 위한 로그
+  console.log('AnswerList - answers:', answers);
+  if (answers.length > 0) {
+    console.log('AnswerList - 첫 번째 답변 전체:', answers[0]);
+    console.log('AnswerList - 첫 번째 답변 키들:', Object.keys(answers[0]));
+  }
+  
   return (
     <div className="space-y-6 mb-8">
       {answers.map((answer) => (
@@ -20,9 +29,140 @@ export default function AnswerList({ answers, likedAnswers, answerLikeLoading, s
                   <AvatarFallback>{answer.memberId}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <div className="font-medium">User {answer.memberId}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {answer.createdAt ? new Date(answer.createdAt).toISOString().slice(0, 10) : ''}
+                  <div className="font-medium">
+                    {answer.nickname || answer.author?.nickname || answer.author?.name || `User ${answer.memberId}`}
+                  </div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    {answer.createdAt ? (
+                      <>
+                        {new Date(answer.createdAt).toLocaleDateString('ko-KR', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                        <span className="text-muted-foreground/70 ml-1">
+                          ({(() => {
+                            const now = new Date();
+                            const created = new Date(answer.createdAt);
+                            const diffTime = Math.abs(now.getTime() - created.getTime());
+                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                            
+                            if (diffDays === 1) return '오늘';
+                            if (diffDays === 2) return '어제';
+                            if (diffDays <= 7) return `${diffDays - 1}일 전`;
+                            
+                            const year = created.getFullYear();
+                            const month = created.getMonth() + 1;
+                            const day = created.getDate();
+                            
+                            if (year !== now.getFullYear()) {
+                              return `${year}년 ${month}월 ${day}일`;
+                            }
+                            return `${month}월 ${day}일`;
+                          })()})
+                        </span>
+                      </>
+                    ) : answer.created_at ? (
+                      <>
+                        {new Date(answer.created_at).toLocaleDateString('ko-KR', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                        <span className="text-muted-foreground/70 ml-1">
+                          ({(() => {
+                            const now = new Date();
+                            const created = new Date(answer.created_at);
+                            const diffTime = Math.abs(now.getTime() - created.getTime());
+                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                            
+                            if (diffDays === 1) return '오늘';
+                            if (diffDays === 2) return '어제';
+                            if (diffDays <= 7) return `${diffDays - 1}일 전`;
+                            
+                            const year = created.getFullYear();
+                            const month = created.getMonth() + 1;
+                            const day = created.getDate();
+                            
+                            if (year !== now.getFullYear()) {
+                              return `${year}년 ${month}월 ${day}일`;
+                            }
+                            return `${month}월 ${day}일`;
+                          })()})
+                        </span>
+                      </>
+                    ) : answer.createDate ? (
+                      <>
+                        {new Date(answer.createDate).toLocaleDateString('ko-KR', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                        <span className="text-xs text-muted-foreground/70 ml-1">
+                          ({(() => {
+                            const now = new Date();
+                            const created = new Date(answer.createDate);
+                            const diffTime = Math.abs(now.getTime() - created.getTime());
+                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                            
+                            if (diffDays === 1) return '오늘';
+                            if (diffDays === 2) return '어제';
+                            if (diffDays <= 7) return `${diffDays - 1}일 전`;
+                            
+                            const year = created.getFullYear();
+                            const month = created.getMonth() + 1;
+                            const day = created.getDate();
+                            
+                            if (year !== now.getFullYear()) {
+                              return `${year}년 ${month}월 ${day}일`;
+                            }
+                            return `${month}월 ${day}일`;
+                          })()})
+                        </span>
+                      </>
+                    ) : answer.regDate ? (
+                      <>
+                        {new Date(answer.regDate).toLocaleDateString('ko-KR', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                        <span className="text-xs text-muted-foreground/70 ml-1">
+                          ({(() => {
+                            const now = new Date();
+                            const created = new Date(answer.regDate);
+                            const diffTime = Math.abs(now.getTime() - created.getTime());
+                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                            
+                            if (diffDays === 1) return '오늘';
+                            if (diffDays === 2) return '어제';
+                            if (diffDays <= 7) return `${diffDays - 1}일 전`;
+                            
+                            const year = created.getFullYear();
+                            const month = created.getMonth() + 1;
+                            const day = created.getDate();
+                            
+                            if (year !== now.getFullYear()) {
+                              return `${year}년 ${month}월 ${day}일`;
+                            }
+                            return `${month}월 ${day}일`;
+                          })()})
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-muted-foreground">
+                        작성 시간: 방금 전 | 답변 ID: {answer.answerId} | 작성자: {answer.memberId}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -115,7 +255,17 @@ export default function AnswerList({ answers, likedAnswers, answerLikeLoading, s
                     ) : (
                       <>
                         <span className="text-xs flex-1">{comment.content}</span>
-                        <div className="ml-auto flex gap-1">
+                        <div className="ml-auto flex gap-1 items-center">
+                          {comment.createdAt && (
+                            <span className="text-xs text-muted-foreground mr-2">
+                              {new Date(comment.createdAt).toLocaleDateString('ko-KR', {
+                                month: 'long',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          )}
                           <Button size="icon" variant="ghost" aria-label="댓글 수정" onClick={() => {
                             setEditingCommentId(comment.commentId);
                             setEditingCommentContent(comment.content);
