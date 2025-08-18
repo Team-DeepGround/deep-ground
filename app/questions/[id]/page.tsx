@@ -116,7 +116,7 @@ export default function QuestionDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
-  const { user } = useAuth()
+  const { memberId, email } = useAuth()
   const [answerContent, setAnswerContent] = useState("")
   const [uploadedImages, setUploadedImages] = useState<File[]>([])
 
@@ -152,6 +152,11 @@ export default function QuestionDetailPage() {
       )
       const data = await res.json()
       const q = data.result?.question || data.result
+      
+      console.log('fetchQuestion 응답 데이터:', data);
+      console.log('질문 상태 (status):', q?.status);
+      console.log('질문 상태 (questionStatus):', q?.questionStatus);
+      
       setQuestion(q)
       if (q?.answers) {
         setAnswers(q.answers)
@@ -162,7 +167,7 @@ export default function QuestionDetailPage() {
         });
         setAnswerCommentsData(commentsData);
         console.log('answers:', q.answers) // 디버깅용
-        console.log('user.id:', user?.id) // 디버깅용
+        console.log('memberId:', memberId) // 디버깅용
         
         // localStorage에서 내가 좋아요 누른 답변 목록 불러오기
         const storedLikedAnswers = localStorage.getItem(`likedAnswers_${params.id}`);
@@ -178,16 +183,14 @@ export default function QuestionDetailPage() {
         setLikedAnswers([])
       }
       // 디버깅: 유저와 질문 작성자 정보 콘솔 출력
-      console.log('user:', user)
+      console.log('memberId:', memberId)
+      console.log('email:', email)
       console.log('question:', q)
       console.log('question.author:', q?.author)
       console.log('question.memberId:', q?.memberId)
       console.log('question.email:', q?.email)
       console.log('question.nickname:', q?.nickname)
       console.log('question.author.name:', q?.author?.name)
-      console.log('user.name:', user?.name)
-      console.log('user.email:', user?.email)
-      console.log('user.id:', user?.id)
       
       // 날짜 관련 필드 디버깅
       console.log('question.createdAt:', q?.createdAt)
@@ -483,10 +486,25 @@ export default function QuestionDetailPage() {
     if (!question) return;
     setStatusUpdating(true);
     try {
-      await api.patch(`/questions/${question.id}/status`, { questionStatus: newStatus });
-      setQuestion((prev: any) => ({ ...prev, status: newStatus }));
+      console.log('상태 변경 시작:', { 현재상태: question.status, 변경할상태: newStatus });
+      
+      const response = await api.patch(`/questions/${params.id}/status`, { status: newStatus });
+      console.log('상태 변경 API 응답:', response);
+      
+      // 상태 변경 후 즉시 UI 업데이트
+      setQuestion((prev: any) => ({ ...prev, questionStatus: newStatus }));
+      console.log('UI 상태 업데이트 완료:', newStatus);
+      
       toast({ title: "상태 변경 완료", description: `질문 상태가 '${statusLabel(newStatus)}'로 변경되었습니다.` });
+      
+      // 백그라운드에서 서버 데이터 새로고침 제거 (status 필드가 없어서 문제 발생)
+      // setTimeout(async () => {
+      //   console.log('백그라운드 데이터 새로고침 시작');
+      //   await fetchQuestion();
+      //   console.log('백그라운드 데이터 새로고침 완료');
+      // }, 1000);
     } catch (e: any) {
+      console.error('상태 변경 오류:', e);
       toast({ title: "상태 변경 실패", description: e?.message || "상태 변경 중 오류가 발생했습니다.", variant: "destructive" });
     } finally {
       setStatusUpdating(false);
@@ -514,7 +532,7 @@ export default function QuestionDetailPage() {
         {/* 질문 카드 컴포넌트 */}
         <QuestionDetailCard
           question={question}
-          user={user}
+          memberId={memberId}
           statusUpdating={statusUpdating}
           handleStatusChange={handleStatusChange}
           onEdit={() => router.push(`/questions/${params.id}/edit`)}

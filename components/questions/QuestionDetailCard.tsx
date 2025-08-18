@@ -6,7 +6,7 @@ import { Calendar, CheckCircle2, Pencil, Trash, Clock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { formatDateTime, formatReadableDate } from "@/lib/utils";
 
-export default function QuestionDetailCard({ question, user, statusUpdating, handleStatusChange, onEdit, onDelete }) {
+export default function QuestionDetailCard({ question, memberId, statusUpdating, handleStatusChange, onEdit, onDelete }) {
   const router = useRouter();
   
   // 디버깅을 위한 로그
@@ -197,18 +197,18 @@ export default function QuestionDetailCard({ question, user, statusUpdating, han
                   textAlign: "center"
                 }}
               >
-                {question?.status === "OPEN"
+                {question?.questionStatus === "OPEN"
                   ? "미해결"
-                  : question?.status === "RESOLVED"
+                  : question?.questionStatus === "RESOLVED"
                   ? "해결중"
-                  : question?.status === "CLOSED"
+                  : question?.questionStatus === "CLOSED"
                   ? "해결완료"
                   : "미해결"}
               </span>
-              {user?.id && user.id == question?.memberId && (
+              {memberId && memberId == question?.memberId && (
                 <select
                   className="ml-4 text-lg font-bold border-4 border-blue-400 bg-white px-4 py-2 rounded-full shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  value={question?.status || 'OPEN'}
+                  value={question?.questionStatus || 'OPEN'}
                   disabled={!!statusUpdating}
                   onChange={e => handleStatusChange(e.target.value)}
                 >
