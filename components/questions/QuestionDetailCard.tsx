@@ -6,7 +6,23 @@ import { Calendar, CheckCircle2, Pencil, Trash, Clock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { formatDateTime, formatReadableDate } from "@/lib/utils";
 
-export default function QuestionDetailCard({ question, memberId, statusUpdating, handleStatusChange, onEdit, onDelete }) {
+interface QuestionDetailCardProps {
+  question: any;
+  memberId: number | null;
+  statusUpdating: boolean;
+  handleStatusChange: (status: string) => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+export default function QuestionDetailCard({ 
+  question, 
+  memberId, 
+  statusUpdating, 
+  handleStatusChange, 
+  onEdit, 
+  onDelete 
+}: QuestionDetailCardProps) {
   const router = useRouter();
   
   // 디버깅을 위한 로그
@@ -20,7 +36,7 @@ export default function QuestionDetailCard({ question, memberId, statusUpdating,
         <div className="flex justify-between items-start">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              {question?.techStacks.map((tag, idx) => (
+              {question?.techStacks?.map((tag: any, idx: number) => (
                 <Badge key={tag ? String(tag) : idx} variant="secondary" className="font-normal">
                   {tag}
                 </Badge>
@@ -264,7 +280,7 @@ export default function QuestionDetailCard({ question, memberId, statusUpdating,
           <p className="whitespace-pre-line">{question?.content}</p>
           {question?.mediaUrl && Array.isArray(question.mediaUrl) && question.mediaUrl.length > 0 && (
             <div className="mt-4 space-y-4">
-              {question.mediaUrl.map((url, idx) => (
+              {question.mediaUrl.map((url: string, idx: number) => (
                 <div key={url || idx} className="rounded-md overflow-hidden">
                   {/* AuthImage는 부모에서 import해서 넘겨주거나, 이곳에서 직접 구현 필요 */}
                   <img src={url} alt={`질문 이미지 ${idx + 1}`} style={{ maxWidth: "100%" }} />

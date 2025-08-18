@@ -45,7 +45,7 @@ export default function QuestionsPage() {
       console.log('질문 개수:', questions.length);
       
       // 각 질문의 상태 정보 상세 로깅
-      questions.forEach((q, idx) => {
+      questions.forEach((q: any, idx: number) => {
         console.log(`질문 ${idx + 1}:`, {
           id: q.questionId,
           title: q.title,
