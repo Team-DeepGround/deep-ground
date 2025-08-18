@@ -360,6 +360,16 @@ export default function QuestionsPage() {
                 미해결
               </TabsTrigger>
               <TabsTrigger 
+                value="RESOLVED"
+                onClick={() => {
+                  console.log('해결중 탭 클릭됨!');
+                  setStatusFilter("RESOLVED");
+                  setCurrentPage(1);
+                }}
+              >
+                해결중
+              </TabsTrigger>
+              <TabsTrigger 
                 value="CLOSED"
                 onClick={() => {
                   console.log('해결됨 탭 클릭됨!');
@@ -418,6 +428,59 @@ export default function QuestionsPage() {
               ) : (
                 <div className="text-center py-12">
                   <p className="text-muted-foreground">검색 결과가 없습니다.</p>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="RESOLVED" className="mt-6">
+              {filteredQuestions.length > 0 ? (
+                <div className="space-y-4">
+                  {filteredQuestions
+                    .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                    .map((q, idx) => (
+                      <QuestionCard
+                        key={q.questionId}
+                        question={{ ...q, id: q.questionId }}
+                        onTitleClick={() => navigateToQuestion(q.questionId)}
+                      />
+                    ))}
+
+                  {/* 페이지네이션 */}
+                  {Math.ceil(filteredQuestions.length / itemsPerPage) > 1 && (
+                    <Pagination className="mt-6">
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                            className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          />
+                        </PaginationItem>
+
+                        {Array.from({ length: Math.ceil(filteredQuestions.length / itemsPerPage) }, (_, i) => i + 1).map((page, idx) => (
+                          <PaginationItem key={page + '-' + idx}>
+                            <PaginationLink
+                              isActive={page === currentPage}
+                              onClick={() => setCurrentPage(page)}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+
+                        <PaginationItem>
+                          <PaginationNext
+                            onClick={() => setCurrentPage(Math.min(Math.ceil(filteredQuestions.length / itemsPerPage), currentPage + 1))}
+                            className={currentPage === Math.ceil(filteredQuestions.length / itemsPerPage) ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">해결중인 질문이 없습니다.</p>
                 </div>
               )}
             </TabsContent>
