@@ -2,8 +2,9 @@ import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Calendar } from "lucide-react";
 import Link from "next/link";
+import { formatReadableDate } from "@/lib/utils";
 
 interface QuestionCardProps {
   question: any;
@@ -31,8 +32,9 @@ export default function QuestionCard({ question, onTitleClick }: QuestionCardPro
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">{authorName}</span>
-                <span className="text-xs text-muted-foreground">
-                  {new Date(question.createdAt).toISOString().slice(0, 10)}
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {question.createdAt ? formatReadableDate(question.createdAt) : ''}
                 </span>
               </div>
               <h3 className="text-lg font-semibold mt-1 flex items-center gap-2">
