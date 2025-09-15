@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import type { LoginResponse } from "@/types/auth"
+import { getTokenExp } from "@/lib/auth";
 
 const SOCIAL_PROVIDERS = [
   { name: "Google", provider: "google", logo: "/google.svg" },
@@ -47,6 +48,11 @@ export default function LoginPage() {
         )
 
         const role = response.result.role
+
+        if (role === "ROLE_ADMIN") {
+          router.push("/admin")
+          return
+        }
 
         if (role === "ROLE_GUEST") {
           toast({

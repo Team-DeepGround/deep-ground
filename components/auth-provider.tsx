@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { auth } from "@/lib/auth"
+import { auth, getTokenExp } from "@/lib/auth"
 
 interface AuthContextType {
   isAuthenticated: boolean
@@ -43,9 +43,25 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     const checkAuth = async () => {
       const token = await auth.getToken()
+      const exp = token ? getTokenExp(token) : null;
       const savedRole = await auth.getRole()
       const savedEmail = await auth.getEmail()
       const savedMemberId = await auth.getMemberId()
+
+      if (exp && Date.now() / 1000 > exp) {
+            // 만료됨: 로그아웃 처리 및 저장소 정리
+            auth.removeToken();
+            auth.removeRole();
+            auth.removeEmail();
+            auth.removeMemberId();
+            localStorage.removeItem("token_exp");
+            setIsAuthenticated(false);
+            setRole(null);
+            setEmail(null);
+            setMemberId(null);
+            router.push("/auth/login");
+            return;
+        }
 
       setIsAuthenticated(!!token)
       setRole(savedRole)
@@ -72,6 +88,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       auth.setRole(role)
       setRole(role)
     }
+    const exp = getTokenExp(token);
+    if (exp) localStorage.setItem("token_exp", exp.toString());
     if (email) {
       auth.setEmail(email)
       setEmail(email)

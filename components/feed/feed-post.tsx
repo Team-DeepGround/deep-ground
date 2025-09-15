@@ -20,6 +20,7 @@ import {
 import { FeedComments } from "./feed-comments"
 import { ShareFeedDialog } from "./share-feed-dialog"
 import { AuthImage } from "@/components/ui/auth-image"
+import { ReportModal } from "@/components/report/report-modal"
 
 interface FeedPostProps {
   post: FetchFeedResponse
@@ -33,6 +34,7 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
   const [post, setPost] = useState(initialPost)
   const [showComments, setShowComments] = useState(false)
   const [showShareDialog, setShowShareDialog] = useState(false)
+  const [showReportModal, setShowReportModal] = useState(false)
 
   // 좋아요/좋아요 취소
   const handleLike = async (feedId: number, liked: boolean) => {
@@ -158,7 +160,7 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem>저장하기</DropdownMenuItem>
-                <DropdownMenuItem>신고하기</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowReportModal(true)}>신고하기</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -237,6 +239,15 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
         originalFeed={post}
         onSuccess={handleShareSuccess}
       />
+      {/* 신고 모달 */}
+      <ReportModal
+        targetId={post.feedId}
+        targetType="FEED"
+        open={showReportModal}
+        setOpen={setShowReportModal}
+        triggerText={""}
+      />
+
     </>
   )
 } 
