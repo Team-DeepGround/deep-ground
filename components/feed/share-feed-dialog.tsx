@@ -7,6 +7,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useToast } from "@/hooks/use-toast"
 import { shareFeed } from "@/lib/api/feed"
 import { FetchFeedResponse } from "@/lib/api/feed"
+import ReactMarkdown from "react-markdown"
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
+import { api } from "@/lib/api-client"
 
 interface ShareFeedDialogProps {
   isOpen: boolean
@@ -19,6 +22,10 @@ export function ShareFeedDialog({ isOpen, onClose, originalFeed, onSuccess }: Sh
   const { toast } = useToast()
   const [content, setContent] = useState("")
   const [isSharing, setIsSharing] = useState(false)
+  const [friendPopoverOpen, setFriendPopoverOpen] = useState(false)
+  const [friendLoading, setFriendLoading] = useState(false)
+  const [friendError, setFriendError] = useState<string | null>(null)
+  const [friendSuccess, setFriendSuccess] = useState<string | null>(null)
 
   const handleShare = async () => {
     if (!content.trim()) {
@@ -47,6 +54,27 @@ export function ShareFeedDialog({ isOpen, onClose, originalFeed, onSuccess }: Sh
     onClose()
   }
 
+  const handleAddFriend = async (memberId: number, memberName: string) => {
+    setFriendLoading(true)
+    setFriendError(null)
+    setFriendSuccess(null)
+    try {
+      const res = await api.get(`/members/${memberId}`)
+      const email = res?.result?.email
+      if (!email) throw new Error("이메일 정보를 찾을 수 없습니다.")
+      const response = await api.post('/friends/request', { receiverEmail: email })
+      if (response?.status === 200) {
+        setFriendSuccess(`${memberName}님에게 친구 요청을 보냈습니다.`)
+      } else {
+        setFriendError(response?.message || "친구 요청에 실패했습니다.")
+      }
+    } catch (e: any) {
+      setFriendError(e?.message || "친구 요청에 실패했습니다.")
+    } finally {
+      setFriendLoading(false)
+    }
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px]">
@@ -58,9 +86,35 @@ export function ShareFeedDialog({ isOpen, onClose, originalFeed, onSuccess }: Sh
           {/* 원본 피드 미리보기 */}
           <div className="p-3 bg-gray-50 rounded-lg">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-sm font-medium text-gray-600">원본 피드</span>
+              {originalFeed.memberId && originalFeed.memberName ? (
+                <Popover open={friendPopoverOpen} onOpenChange={setFriendPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <button className="text-sm font-medium text-gray-600 hover:underline focus:outline-none" type="button">
+                      {originalFeed.memberName}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-56 p-4">
+                    <div className="mb-2 font-semibold">친구 추가</div>
+                    <div className="mb-2 text-xs text-muted-foreground">{originalFeed.memberName}님과 친구를 맺어보세요.</div>
+                    <Button
+                      size="sm"
+                      disabled={friendLoading}
+                      onClick={() => handleAddFriend(originalFeed.memberId, originalFeed.memberName)}
+                      className="w-full"
+                    >
+                      {friendLoading ? "요청 중..." : "친구 요청 보내기"}
+                    </Button>
+                    {friendSuccess && <div className="text-green-600 text-xs mt-2">{friendSuccess}</div>}
+                    {friendError && <div className="text-destructive text-xs mt-2">{friendError}</div>}
+                  </PopoverContent>
+                </Popover>
+              ) : (
+                <span className="text-sm font-medium text-gray-600">원본 피드</span>
+              )}
             </div>
-            <p className="text-sm text-gray-700 line-clamp-3">{originalFeed.content}</p>
+            <div className="prose max-w-none text-sm text-gray-700 line-clamp-3">
+              <ReactMarkdown>{originalFeed.content}</ReactMarkdown>
+            </div>
             {originalFeed.mediaIds && originalFeed.mediaIds.length > 0 && (
               <p className="text-xs text-gray-500 mt-1">📷 이미지 {originalFeed.mediaIds.length}개</p>
             )}
