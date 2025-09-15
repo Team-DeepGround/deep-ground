@@ -6,8 +6,49 @@ import { Textarea } from "@/components/ui/textarea";
 import { ThumbsUp, Pencil, Trash, CheckCircle2, Calendar } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { formatDateTime, formatReadableDate } from "@/lib/utils";
+import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 
-export default function AnswerList({ answers, likedAnswers, answerLikeLoading, showCommentInput, answerComments, setAnswerComments, answerCommentsData, editingCommentId, editingCommentContent, setEditingCommentContent, handleLikeAnswer, handleAddComment, handleEditComment, handleDeleteComment, setShowCommentInput, setEditingCommentId, question, toast }) {
+interface AnswerListProps {
+  answers: any[];
+  likedAnswers: number[];
+  answerLikeLoading: Record<number, boolean>;
+  showCommentInput: number | null;
+  answerComments: Record<number, string>;
+  setAnswerComments: (comments: Record<number, string>) => void;
+  answerCommentsData: Record<number, any[]>;
+  editingCommentId: number | null;
+  editingCommentContent: string;
+  setEditingCommentContent: (content: string) => void;
+  handleLikeAnswer: (answerId: number) => void;
+  handleAddComment: (answerId: number) => void;
+  handleEditComment: (commentId: number, answerId: number) => void;
+  handleDeleteComment: (commentId: number, answerId?: number) => void;
+  setShowCommentInput: (answerId: number | null) => void;
+  setEditingCommentId: (commentId: number | null) => void;
+  question: any;
+  toast: any;
+}
+
+export default function AnswerList({ 
+  answers, 
+  likedAnswers, 
+  answerLikeLoading, 
+  showCommentInput, 
+  answerComments, 
+  setAnswerComments, 
+  answerCommentsData, 
+  editingCommentId, 
+  editingCommentContent, 
+  setEditingCommentContent, 
+  handleLikeAnswer, 
+  handleAddComment, 
+  handleEditComment, 
+  handleDeleteComment, 
+  setShowCommentInput, 
+  setEditingCommentId, 
+  question, 
+  toast 
+}: AnswerListProps) {
   const router = useRouter();
   
   // 디버깅을 위한 로그
@@ -19,7 +60,7 @@ export default function AnswerList({ answers, likedAnswers, answerLikeLoading, s
   
   return (
     <div className="space-y-6 mb-8">
-      {answers.map((answer) => (
+      {answers.map((answer: any) => (
         <Card key={answer.answerId ? String(answer.answerId) : JSON.stringify(answer)} className={answer.isAccepted ? "border-green-500" : ""}>
           <CardHeader className="pb-3">
             <div className="flex justify-between items-start">
@@ -188,11 +229,11 @@ export default function AnswerList({ answers, likedAnswers, answerLikeLoading, s
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="prose max-w-none">
-              <p className="whitespace-pre-line">{answer.answerContent}</p>
+            <div className="space-y-4">
+              <MarkdownRenderer content={answer.answerContent || ""} />
               {answer.mediaUrls && answer.mediaUrls.length > 0 && (
-                <div className="mt-4 space-y-4">
-                  {answer.mediaUrls.map((url, idx) => (
+                <div className="space-y-4">
+                  {answer.mediaUrls.map((url: string, idx: number) => (
                     <div key={url || idx} className="rounded-md overflow-hidden">
                       <img src={url} alt={`답변 이미지 ${idx + 1}`} style={{ maxWidth: "100%" }} />
                     </div>

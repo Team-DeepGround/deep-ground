@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, CheckCircle2, Pencil, Trash, Clock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { formatDateTime, formatReadableDate } from "@/lib/utils";
+import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 
 interface QuestionDetailCardProps {
   question: any;
@@ -276,10 +277,10 @@ export default function QuestionDetailCard({
             <div className="text-xs text-muted-foreground">작성자</div>
           </div>
         </div>
-        <div className="prose max-w-none">
-          <p className="whitespace-pre-line">{question?.content}</p>
+        <div className="space-y-4">
+          <MarkdownRenderer content={question?.content || ""} />
           {question?.mediaUrl && Array.isArray(question.mediaUrl) && question.mediaUrl.length > 0 && (
-            <div className="mt-4 space-y-4">
+            <div className="space-y-4">
               {question.mediaUrl.map((url: string, idx: number) => (
                 <div key={url || idx} className="rounded-md overflow-hidden">
                   {/* AuthImage는 부모에서 import해서 넘겨주거나, 이곳에서 직접 구현 필요 */}
