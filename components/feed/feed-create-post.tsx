@@ -1,13 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ImageIcon, X } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { useAuth } from "@/hooks/use-auth"
+import { api } from "@/lib/api-client"
 import { createFeed } from "@/lib/api/feed"
 
 interface FeedCreatePostProps {
@@ -16,9 +16,40 @@ interface FeedCreatePostProps {
 
 export function FeedCreatePost({ onPostCreated }: FeedCreatePostProps) {
   const { toast } = useToast()
-  const { user } = useAuth()
+  const [user, setUser] = useState<{
+    nickname: string
+    email: string
+    profileImage: string
+  } | null>(null)
+  const [userLoading, setUserLoading] = useState(true)
+  const [userError, setUserError] = useState<string | null>(null)
   const [newPostContent, setNewPostContent] = useState("")
   const [newPostImages, setNewPostImages] = useState<File[]>([])
+
+  const loadUser = useCallback(async () => {
+    setUserLoading(true)
+    setUserError(null)
+    try {
+      const res = await api.get("/members/profile/me")
+      if (res && res.result) {
+        setUser({
+          nickname: res.result.nickname || "",
+          email: res.result.email || "",
+          profileImage: res.result.profileImage || "",
+        })
+      } else {
+        setUserError("유저 정보를 불러오지 못했습니다.")
+      }
+    } catch (e) {
+      setUserError("유저 정보를 불러오지 못했습니다.")
+    } finally {
+      setUserLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadUser()
+  }, [loadUser])
 
   // 피드 생성
   const handleNewPost = async () => {
@@ -48,11 +79,21 @@ export function FeedCreatePost({ onPostCreated }: FeedCreatePostProps) {
       <CardHeader className="p-4 pb-0">
         <div className="flex items-center gap-3">
           <Avatar className="h-10 w-10">
-            <AvatarImage src="/placeholder.svg?height=40&width=40" alt={user?.email || "사용자"} />
+            {user?.profileImage ? (
+              <AvatarImage src={user.profileImage} alt={user.nickname || user.email} />
+            ) : (
+              <AvatarImage src="/placeholder.svg?height=40&width=40" alt={user?.email || "사용자"} />
+            )}
             <AvatarFallback>{user?.email?.charAt(0).toUpperCase() || "U"}</AvatarFallback>
           </Avatar>
           <div>
-            <h3 className="font-medium">{user?.email || "게스트"}</h3>
+            {userLoading ? (
+              <span className="text-muted-foreground text-sm">로딩 중...</span>
+            ) : userError ? (
+              <span className="text-destructive text-sm">{userError}</span>
+            ) : (
+              <h3 className="font-medium">{user?.email || "게스트"}</h3>
+            )}
           </div>
         </div>
       </CardHeader>

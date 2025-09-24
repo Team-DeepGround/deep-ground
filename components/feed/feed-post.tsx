@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -21,6 +20,10 @@ import { FeedComments } from "./feed-comments"
 import { ShareFeedDialog } from "./share-feed-dialog"
 import { AuthImage } from "@/components/ui/auth-image"
 import { ReportModal } from "@/components/report/report-modal"
+import ReactMarkdown from "react-markdown"
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
+import { useState } from "react"
+import { api } from "@/lib/api-client"
 
 interface FeedPostProps {
   post: FetchFeedResponse
@@ -35,6 +38,10 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
   const [showComments, setShowComments] = useState(false)
   const [showShareDialog, setShowShareDialog] = useState(false)
   const [showReportModal, setShowReportModal] = useState(false)
+  const [friendPopoverOpen, setFriendPopoverOpen] = useState(false)
+  const [friendLoading, setFriendLoading] = useState(false)
+  const [friendError, setFriendError] = useState<string | null>(null)
+  const [friendSuccess, setFriendSuccess] = useState<string | null>(null)
 
   // 좋아요/좋아요 취소
   const handleLike = async (feedId: number, liked: boolean) => {
@@ -73,6 +80,29 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
     setShowComments(!showComments)
   }
 
+  const handleAddFriend = async (memberId: number, memberName: string) => {
+    setFriendLoading(true)
+    setFriendError(null)
+    setFriendSuccess(null)
+    try {
+      // 1. memberId로 이메일 조회
+      const res = await api.get(`/members/${memberId}`)
+      const email = res?.result?.email
+      if (!email) throw new Error("이메일 정보를 찾을 수 없습니다.")
+      // 2. 친구 추가 요청
+      const response = await api.post('/friends/request', { receiverEmail: email })
+      if (response?.status === 200) {
+        setFriendSuccess(`${memberName}님에게 친구 요청을 보냈습니다.`)
+      } else {
+        setFriendError(response?.message || "친구 요청에 실패했습니다.")
+      }
+    } catch (e: any) {
+      setFriendError(e?.message || "친구 요청에 실패했습니다.")
+    } finally {
+      setFriendLoading(false)
+    }
+  }
+
   // 공유된 피드 렌더링
   const renderSharedFeed = (sharedFeed: FetchFeedResponse) => (
     <Card className="mt-3 border-l-4 border-l-blue-500 bg-blue-50/50">
@@ -97,12 +127,31 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
             )}
             <AvatarFallback className="text-xs">{sharedFeed.memberName[0]}</AvatarFallback>
           </Avatar>
-          <span className="text-sm font-medium">{sharedFeed.memberName}</span>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="text-sm font-medium hover:underline focus:outline-none" type="button">
+                {sharedFeed.memberName}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-56 p-4">
+              <div className="mb-2 font-semibold">친구 추가</div>
+              <div className="mb-2 text-xs text-muted-foreground">{sharedFeed.memberName}님과 친구를 맺어보세요.</div>
+              <Button
+                size="sm"
+                onClick={() => handleAddFriend(sharedFeed.memberId, sharedFeed.memberName)}
+                className="w-full"
+              >
+                친구 요청 보내기
+              </Button>
+            </PopoverContent>
+          </Popover>
           <span className="text-xs text-muted-foreground">
             {new Date(sharedFeed.createdAt).toLocaleDateString()}
           </span>
         </div>
-        <p className="text-sm text-gray-700 whitespace-pre-line">{sharedFeed.content}</p>
+        <div className="prose max-w-none text-sm text-gray-700">
+          <ReactMarkdown>{sharedFeed.content}</ReactMarkdown>
+        </div>
         {sharedFeed.mediaIds && sharedFeed.mediaIds.length > 0 && (
           <div className="mt-2 rounded-md overflow-hidden">
             {sharedFeed.mediaIds.map((id) => (
@@ -140,7 +189,27 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
                 <AvatarFallback>{post.memberName[0]}</AvatarFallback>
               </Avatar>
               <div>
-                <h3 className="font-medium">{post.memberName}</h3>
+                <Popover open={friendPopoverOpen} onOpenChange={setFriendPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <button className="font-medium hover:underline focus:outline-none" type="button">
+                      {post.memberName}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-56 p-4">
+                    <div className="mb-2 font-semibold">친구 추가</div>
+                    <div className="mb-2 text-xs text-muted-foreground">{post.memberName}님과 친구를 맺어보세요.</div>
+                    <Button
+                      size="sm"
+                      disabled={friendLoading}
+                      onClick={() => handleAddFriend(post.memberId, post.memberName)}
+                      className="w-full"
+                    >
+                      {friendLoading ? "요청 중..." : "친구 요청 보내기"}
+                    </Button>
+                    {friendSuccess && <div className="text-green-600 text-xs mt-2">{friendSuccess}</div>}
+                    {friendError && <div className="text-destructive text-xs mt-2">{friendError}</div>}
+                  </PopoverContent>
+                </Popover>
                 <p className="text-xs text-muted-foreground">{new Date(post.createdAt).toLocaleDateString()}</p>
                 {post.isShared && post.sharedBy && (
                   <div className="flex items-center gap-1 mt-1">
@@ -169,7 +238,9 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
           className="p-4 cursor-pointer hover:bg-gray-50/50 transition-colors" 
           onClick={() => router.push(`/feed/${post.feedId}`)}
         >
-          <p className="text-sm whitespace-pre-line">{post.content}</p>
+          <div className="prose max-w-none text-sm">
+            <ReactMarkdown>{post.content}</ReactMarkdown>
+          </div>
           {post.mediaIds && post.mediaIds.length > 0 && (
             <div className="mt-3 rounded-md overflow-hidden">
               {post.mediaIds.map((id) => (
