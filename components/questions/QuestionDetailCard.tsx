@@ -5,8 +5,25 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, CheckCircle2, Pencil, Trash, Clock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { formatDateTime, formatReadableDate } from "@/lib/utils";
+import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 
-export default function QuestionDetailCard({ question, user, statusUpdating, handleStatusChange, onEdit, onDelete }) {
+interface QuestionDetailCardProps {
+  question: any;
+  memberId: number | null;
+  statusUpdating: boolean;
+  handleStatusChange: (status: string) => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+export default function QuestionDetailCard({ 
+  question, 
+  memberId, 
+  statusUpdating, 
+  handleStatusChange, 
+  onEdit, 
+  onDelete 
+}: QuestionDetailCardProps) {
   const router = useRouter();
   
   // 디버깅을 위한 로그
@@ -20,7 +37,7 @@ export default function QuestionDetailCard({ question, user, statusUpdating, han
         <div className="flex justify-between items-start">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              {question?.techStacks.map((tag, idx) => (
+              {question?.techStacks?.map((tag: any, idx: number) => (
                 <Badge key={tag ? String(tag) : idx} variant="secondary" className="font-normal">
                   {tag}
                 </Badge>
@@ -197,18 +214,18 @@ export default function QuestionDetailCard({ question, user, statusUpdating, han
                   textAlign: "center"
                 }}
               >
-                {question?.status === "OPEN"
+                {question?.questionStatus === "OPEN"
                   ? "미해결"
-                  : question?.status === "RESOLVED"
+                  : question?.questionStatus === "RESOLVED"
                   ? "해결중"
-                  : question?.status === "CLOSED"
+                  : question?.questionStatus === "CLOSED"
                   ? "해결완료"
                   : "미해결"}
               </span>
-              {user?.id && user.id == question?.memberId && (
+              {memberId && memberId == question?.memberId && (
                 <select
                   className="ml-4 text-lg font-bold border-4 border-blue-400 bg-white px-4 py-2 rounded-full shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  value={question?.status || 'OPEN'}
+                  value={question?.questionStatus || 'OPEN'}
                   disabled={!!statusUpdating}
                   onChange={e => handleStatusChange(e.target.value)}
                 >
@@ -260,11 +277,11 @@ export default function QuestionDetailCard({ question, user, statusUpdating, han
             <div className="text-xs text-muted-foreground">작성자</div>
           </div>
         </div>
-        <div className="prose max-w-none">
-          <p className="whitespace-pre-line">{question?.content}</p>
+        <div className="space-y-4">
+          <MarkdownRenderer content={question?.content || ""} />
           {question?.mediaUrl && Array.isArray(question.mediaUrl) && question.mediaUrl.length > 0 && (
-            <div className="mt-4 space-y-4">
-              {question.mediaUrl.map((url, idx) => (
+            <div className="space-y-4">
+              {question.mediaUrl.map((url: string, idx: number) => (
                 <div key={url || idx} className="rounded-md overflow-hidden">
                   {/* AuthImage는 부모에서 import해서 넘겨주거나, 이곳에서 직접 구현 필요 */}
                   <img src={url} alt={`질문 이미지 ${idx + 1}`} style={{ maxWidth: "100%" }} />

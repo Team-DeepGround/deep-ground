@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,6 +14,8 @@ import { useToast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
 import FileUpload from "@/components/file-upload"
 import { Checkbox } from "@/components/ui/checkbox"
+import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
+import { MarkdownToolbar } from "@/components/ui/markdown-toolbar"
 import { api } from "@/lib/api-client"
 
 export default function CreateQuestionPage() {
@@ -22,6 +24,8 @@ export default function CreateQuestionPage() {
 
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
+  const [showPreview, setShowPreview] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const [tags, setTags] = useState<string[]>([])
   const [uploadedImages, setUploadedImages] = useState<File[]>([])
@@ -38,6 +42,33 @@ export default function CreateQuestionPage() {
       setTags([...tags, tag])
     }
   }
+
+  const insertMarkdown = (before: string, after: string = "", placeholder: string = "텍스트") => {
+    try {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+
+      const start = textarea.selectionStart || 0;
+      const end = textarea.selectionEnd || 0;
+      const selectedText = content.substring(start, end);
+      const text = selectedText || placeholder;
+      
+      const newText = content.substring(0, start) + before + text + after + content.substring(end);
+      setContent(newText);
+      
+      // 커서 위치 조정
+      setTimeout(() => {
+        if (textarea) {
+          textarea.focus();
+          const newCursorPos = start + before.length + text.length;
+          textarea.setSelectionRange(newCursorPos, newCursorPos);
+        }
+      }, 0);
+    } catch (error) {
+      console.error('마크다운 삽입 중 오류:', error);
+      // 에러 발생 시에도 계속 진행할 수 있도록 함
+    }
+  };
 
   // 여러 파일 업로드 핸들러 (FileUpload의 onFilesSelect와 연결)
   const handleImageUpload = (files: File[]) => {
@@ -171,13 +202,49 @@ export default function CreateQuestionPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="content">내용</Label>
-                <Textarea
-                  id="content"
-                  placeholder="질문 내용을 상세히 작성해주세요"
-                  rows={10}
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                />
+                <div className="flex gap-2 mb-2">
+                  <Button
+                    type="button"
+                    variant={!showPreview ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setShowPreview(false)}
+                  >
+                    작성
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={showPreview ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setShowPreview(true)}
+                  >
+                    미리보기
+                  </Button>
+                </div>
+                
+                {showPreview ? (
+                  <div className="min-h-[200px] border rounded-md p-4 bg-gray-50 dark:bg-gray-900">
+                    {content ? (
+                      <MarkdownRenderer content={content} />
+                    ) : (
+                      <div className="text-muted-foreground italic">
+                        미리보기할 내용이 없습니다.
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <MarkdownToolbar onInsert={insertMarkdown} />
+                    <Textarea
+                      ref={textareaRef}
+                      id="content"
+                      placeholder="질문 내용을 마크다운 형식으로 상세히 작성해주세요... (위의 버튼들을 사용하면 쉽게 마크다운을 작성할 수 있습니다!)"
+                      rows={10}
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      className="font-mono text-sm"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
