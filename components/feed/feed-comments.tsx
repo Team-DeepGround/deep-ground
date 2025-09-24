@@ -14,20 +14,19 @@ import {
   deleteFeedComment,
   likeFeedComment,
   unlikeFeedComment,
-  getFeedCommentMediaUrl,
-  getProfileMediaUrl,
   createFeedReply,
   updateFeedReply,
   deleteFeedReply,
   likeFeedReply,
   unlikeFeedReply,
   fetchFeedReplies,
-  getFeedReplyMediaUrl,
   FetchFeedCommentResponse,
   FetchFeedReplyResponse
 } from "@/lib/api/feed"
 import { FeedReplies } from "./feed-replies"
-import { AuthImage } from "@/components/ui/auth-image"
+import ReactMarkdown from "react-markdown"
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
+import { api } from "@/lib/api-client"
 
 interface FeedCommentsProps {
   feedId: number
@@ -46,6 +45,10 @@ export function FeedComments({ feedId, onShow }: FeedCommentsProps) {
   const [editCommentContent, setEditCommentContent] = useState("")
   const [editCommentImages, setEditCommentImages] = useState<File[]>([])
   const [editCommentOriginImages, setEditCommentOriginImages] = useState<number[]>([])
+  const [friendPopoverOpen, setFriendPopoverOpen] = useState<number | null>(null)
+  const [friendLoading, setFriendLoading] = useState(false)
+  const [friendError, setFriendError] = useState<string | null>(null)
+  const [friendSuccess, setFriendSuccess] = useState<string | null>(null)
 
   // 컴포넌트가 마운트되거나 onShow가 true일 때 댓글 로드
   useEffect(() => {
@@ -83,29 +86,19 @@ export function FeedComments({ feedId, onShow }: FeedCommentsProps) {
     setCommentInputs((prev) => ({ ...prev, [feedId]: value }))
   }
 
-  // 댓글 이미지 선택
-  const handleCommentImageChange = (feedId: number, files: FileList | null) => {
-    setCommentImages((prev) => ({ ...prev, [feedId]: files ? Array.from(files) : [] }))
-  }
-
   // 댓글 작성
   const handleCreateComment = async (feedId: number) => {
     const content = commentInputs[feedId]?.trim() || ""
-    const currentImages = commentImages[feedId] || []
-    if (!content && currentImages.length === 0) {
-      toast({ title: "댓글 내용 필요", description: "댓글 내용을 입력하거나 이미지를 첨부해주세요.", variant: "destructive" })
+    if (!content) {
+      toast({ title: "댓글 내용 필요", description: "댓글 내용을 입력해주세요.", variant: "destructive" })
       return
     }
     const formData = new FormData()
     formData.append("feedId", String(feedId))
     formData.append("content", content)
-    if (currentImages.length > 0) {
-      currentImages.forEach((file) => formData.append("images", file))
-    }
     await createFeedComment(formData)
     toast({ title: "댓글 등록", description: "댓글이 등록되었습니다." })
     setCommentInputs((prev) => ({ ...prev, [feedId]: "" }))
-    setCommentImages((prev) => ({ ...prev, [feedId]: [] }))
     await loadComments(feedId)
   }
 
@@ -154,7 +147,7 @@ export function FeedComments({ feedId, onShow }: FeedCommentsProps) {
   const handleEditComment = (comment: FetchFeedCommentResponse) => {
     setEditingCommentId(comment.feedCommentId)
     setEditCommentContent(comment.content)
-    setEditCommentOriginImages(comment.mediaIds || [])
+    setEditCommentOriginImages([])
     setEditCommentImages([])
   }
 
@@ -186,6 +179,27 @@ export function FeedComments({ feedId, onShow }: FeedCommentsProps) {
     await loadComments(feedId)
   }
 
+  const handleAddFriend = async (memberId: number, memberName: string) => {
+    setFriendLoading(true)
+    setFriendError(null)
+    setFriendSuccess(null)
+    try {
+      const res = await api.get(`/members/${memberId}`)
+      const email = res?.result?.email
+      if (!email) throw new Error("이메일 정보를 찾을 수 없습니다.")
+      const response = await api.post('/friends/request', { receiverEmail: email })
+      if (response?.status === 200) {
+        setFriendSuccess(`${memberName}님에게 친구 요청을 보냈습니다.`)
+      } else {
+        setFriendError(response?.message || "친구 요청에 실패했습니다.")
+      }
+    } catch (e: any) {
+      setFriendError(e?.message || "친구 요청에 실패했습니다.")
+    } finally {
+      setFriendLoading(false)
+    }
+  }
+
   return (
     <div className="px-4 pb-4">
       {/* 댓글 목록 */}
@@ -196,21 +210,32 @@ export function FeedComments({ feedId, onShow }: FeedCommentsProps) {
           {comments[feedId].map((comment) => (
             <div key={comment.feedCommentId} className="flex gap-2 items-start">
               <Avatar className="h-8 w-8">
-                {comment.profileImageId ? (
-                  <AuthImage 
-                    mediaId={comment.profileImageId} 
-                    type="profile" 
-                    alt={comment.memberName} 
-                    className="h-8 w-8 rounded-full object-cover"
-                  />
-                ) : (
-                  <AvatarImage src="/placeholder.svg" alt={comment.memberName} />
-                )}
+                <AvatarImage src="/placeholder.svg" alt={comment.memberName} />
                 <AvatarFallback>{comment.memberName[0]}</AvatarFallback>
               </Avatar>
               <div className="flex-1 bg-muted rounded-md px-3 py-2">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-sm">{comment.memberName}</span>
+                  <Popover open={friendPopoverOpen === comment.feedCommentId} onOpenChange={open => setFriendPopoverOpen(open ? comment.feedCommentId : null)}>
+                    <PopoverTrigger asChild>
+                      <button className="font-medium text-sm hover:underline focus:outline-none" type="button">
+                        {comment.memberName}
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="w-56 p-4">
+                      <div className="mb-2 font-semibold">친구 추가</div>
+                      <div className="mb-2 text-xs text-muted-foreground">{comment.memberName}님과 친구를 맺어보세요.</div>
+                      <Button
+                        size="sm"
+                        disabled={friendLoading}
+                        onClick={() => handleAddFriend(comment.memberId, comment.memberName)}
+                        className="w-full"
+                      >
+                        {friendLoading ? "요청 중..." : "친구 요청 보내기"}
+                      </Button>
+                      {friendSuccess && <div className="text-green-600 text-xs mt-2">{friendSuccess}</div>}
+                      {friendError && <div className="text-destructive text-xs mt-2">{friendError}</div>}
+                    </PopoverContent>
+                  </Popover>
                   <span className="text-xs text-muted-foreground">{new Date(comment.createdAt).toLocaleDateString()}</span>
                   {/* 좋아요 버튼 */}
                   <Button
@@ -239,73 +264,16 @@ export function FeedComments({ feedId, onShow }: FeedCommentsProps) {
                       rows={2}
                       className="resize-none"
                     />
-                    {/* 기존 이미지 미리보기 */}
-                    {(editCommentOriginImages || []).length > 0 && (
-                      <div className="flex gap-2 mt-1">
-                        {(editCommentOriginImages || []).map((id, idx) => (
-                          <AuthImage 
-                            key={id} 
-                            mediaId={id} 
-                            type="comment" 
-                            alt="댓글 이미지" 
-                            className="h-12 rounded" 
-                          />
-                        ))}
-                      </div>
-                    )}
-                    {/* 새로 첨부한 이미지 미리보기 */}
-                    {(editCommentImages || []).length > 0 && (
-                      <div className="flex gap-2 mt-1">
-                        {(editCommentImages || []).map((file, idx) => (
-                          <div key={idx} className="relative">
-                            <img src={URL.createObjectURL(file)} alt="첨부 이미지" className="h-12 rounded" />
-                            <button
-                              type="button"
-                              className="absolute top-0 right-0 bg-white/80 rounded-full p-0.5"
-                              onClick={() => setEditCommentImages((prev) => (prev || []).filter((_, i) => i !== idx))}
-                            >
-                              <X className="h-3 w-3 text-muted-foreground" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      id={`edit-comment-image-input-${comment.feedCommentId}`}
-                      style={{ display: "none" }}
-                      onChange={(e) => setEditCommentImages(e.target.files ? Array.from(e.target.files) : [])}
-                    />
                     <div className="flex gap-2 mt-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => document.getElementById(`edit-comment-image-input-${comment.feedCommentId}`)?.click()}
-                      >
-                        <ImageIcon className="h-4 w-4" />
-                      </Button>
                       <Button size="sm" onClick={() => handleUpdateComment(feedId, comment.feedCommentId)}>저장</Button>
                       <Button size="sm" variant="secondary" onClick={handleCancelEditComment}>취소</Button>
                     </div>
                   </div>
                 ) : (
                   <>
-                    <div className="text-sm whitespace-pre-line">{comment.content}</div>
-                    {comment.mediaIds && comment.mediaIds.length > 0 && (
-                      <div className="flex gap-2 mt-1">
-                        {comment.mediaIds.map((id) => (
-                          <AuthImage 
-                            key={id} 
-                            mediaId={id} 
-                            type="comment" 
-                            alt="댓글 이미지" 
-                            className="h-16 rounded" 
-                          />
-                        ))}
-                      </div>
-                    )}
+                    <div className="prose max-w-none text-sm">
+                      <ReactMarkdown>{comment.content}</ReactMarkdown>
+                    </div>
                     {/* 답글 n개 불러오기 버튼 */}
                     {comment.replyCount > 0 && (
                       <button
@@ -343,40 +311,7 @@ export function FeedComments({ feedId, onShow }: FeedCommentsProps) {
             onChange={(e) => handleCommentInputChange(feedId, e.target.value)}
             className="resize-none"
           />
-          {/* 이미지 미리보기 */}
-          {(commentImages[feedId] || []).length > 0 && (
-            <div className="flex gap-2 mt-1">
-              {(commentImages[feedId] || []).map((file, idx) => (
-                <div key={idx} className="relative">
-                  <img src={URL.createObjectURL(file)} alt="첨부 이미지" className="h-12 rounded" />
-                  <button
-                    type="button"
-                    className="absolute top-0 right-0 bg-white/80 rounded-full p-0.5"
-                    onClick={() => setCommentImages((prev) => ({ ...prev, [feedId]: (prev[feedId] || []).filter((_, i) => i !== idx) }))}
-                  >
-                    <X className="h-3 w-3 text-muted-foreground" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
-        <input
-          type="file"
-          accept="image/*"
-          multiple
-          id={`comment-image-input-${feedId}`}
-          style={{ display: "none" }}
-          onChange={(e) => handleCommentImageChange(feedId, e.target.files)}
-        />
-        <Button
-          variant="outline"
-          size="icon"
-          className="mb-2"
-          onClick={() => document.getElementById(`comment-image-input-${feedId}`)?.click()}
-        >
-          <ImageIcon className="h-4 w-4" />
-        </Button>
         <Button
           size="icon"
           className="mb-2"
