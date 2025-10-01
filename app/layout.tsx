@@ -6,7 +6,10 @@ import { ThemeProvider } from "@/components/theme-provider"
 import Header from "@/components/header"
 import { Toaster } from "@/components/ui/toaster"
 import AuthProvider from "@/components/auth-provider"
+import { NotificationProvider } from "@/components/notification/notification-provider"
+import OnlineStatusProvider from "@/components/online-status-provider"
 import FloatingChatButton from "@/components/floating-chat-button"
+import { ChatProvider } from "@/components/chat/chat-context"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -25,12 +28,18 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <AuthProvider>
-            <div className="flex min-h-screen flex-col">
-              <Header />
-              <main className="flex-1">{children}</main>
-              <Toaster />
-              <FloatingChatButton />
-            </div>
+            <NotificationProvider>
+              <OnlineStatusProvider>
+                <ChatProvider>
+                  <div className="flex min-h-screen flex-col">
+                    <Header />
+                    <main className="flex-1">{children}</main>
+                    <Toaster />
+                    <FloatingChatButton />
+                  </div>
+                </ChatProvider>
+              </OnlineStatusProvider>
+            </NotificationProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

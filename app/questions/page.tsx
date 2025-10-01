@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { MessageSquare, ThumbsUp, CheckCircle2, Search, Plus, SortAsc, SortDesc } from "lucide-react"
+import { MessageSquare, ThumbsUp, CheckCircle2, Search, Plus, SortAsc, SortDesc, Calendar } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -20,156 +20,77 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 
-// 임시 데이터
-const allQuestions = [
-  {
-    id: 1,
-    title: "React에서 상태 관리 라이브러리 추천해주세요",
-    content:
-      "React 프로젝트에서 상태 관리를 위한 라이브러리를 고민 중입니다. Redux, MobX, Recoil 등 어떤 것이 좋을까요?",
-    tags: ["React", "상태관리", "Frontend"],
-    author: {
-      name: "김리액트",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-    createdAt: "2023-05-10T09:30:00Z",
-    commentCount: 8,
-    likeCount: 12,
-    isResolved: false,
-  },
-  {
-    id: 2,
-    title: "Spring Security와 JWT 인증 구현 방법",
-    content: "Spring Boot 프로젝트에서 JWT를 이용한 인증 시스템을 구현하려고 합니다. 좋은 예제나 방법이 있을까요?",
-    tags: ["Spring", "Security", "JWT", "Backend"],
-    author: {
-      name: "박스프링",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-    createdAt: "2023-05-09T14:20:00Z",
-    commentCount: 5,
-    likeCount: 7,
-    isResolved: true,
-  },
-  {
-    id: 3,
-    title: "TypeScript에서 제네릭 사용 시 주의사항",
-    content: "TypeScript에서 제네릭을 사용할 때 자주 발생하는 실수나 주의해야 할 점이 있을까요?",
-    tags: ["TypeScript", "Generic", "JavaScript"],
-    author: {
-      name: "이타입",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-    createdAt: "2023-05-08T11:15:00Z",
-    commentCount: 3,
-    likeCount: 5,
-    isResolved: false,
-  },
-  {
-    id: 4,
-    title: "Docker 컨테이너 간 통신 문제",
-    content: "Docker 컨테이너 간 네트워크 통신이 되지 않는 문제가 있습니다. 네트워크 설정을 어떻게 해야 할까요?",
-    tags: ["Docker", "Network", "DevOps"],
-    author: {
-      name: "최도커",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-    createdAt: "2023-05-07T16:45:00Z",
-    commentCount: 6,
-    likeCount: 9,
-    isResolved: true,
-  },
-  {
-    id: 5,
-    title: "Next.js 13 App Router에서 데이터 페칭 방법",
-    content: "Next.js 13의 App Router에서 서버 컴포넌트를 사용할 때 가장 효율적인 데이터 페칭 방법은 무엇인가요?",
-    tags: ["Next.js", "React", "Server Components"],
-    author: {
-      name: "정넥스트",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-    createdAt: "2023-05-06T10:30:00Z",
-    commentCount: 4,
-    likeCount: 15,
-    isResolved: false,
-  },
-  {
-    id: 6,
-    title: "Python에서 비동기 프로그래밍 구현 방법",
-    content: "Python에서 asyncio를 사용한 비동기 프로그래밍 구현 시 주의할 점과 좋은 패턴이 있을까요?",
-    tags: ["Python", "Asyncio", "Backend"],
-    author: {
-      name: "한파이썬",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-    createdAt: "2023-05-05T13:20:00Z",
-    commentCount: 7,
-    likeCount: 11,
-    isResolved: true,
-  },
-  {
-    id: 7,
-    title: "React Native와 Flutter 중 어떤 것을 선택���야 할까요?",
-    content: "크로스 플랫폼 모바일 앱 개발을 위해 React Native와 Flutter 중 어떤 것이 더 적합할까요?",
-    tags: ["React Native", "Flutter", "Mobile"],
-    author: {
-      name: "모바일개발자",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-    createdAt: "2023-05-04T15:20:00Z",
-    commentCount: 9,
-    likeCount: 14,
-    isResolved: false,
-  },
-  {
-    id: 8,
-    title: "MongoDB vs PostgreSQL 선택 기준",
-    content: "새 프로젝트를 시작하는데 MongoDB와 PostgreSQL 중 어떤 데이터베이스를 선택해야 할지 고민입니다.",
-    tags: ["MongoDB", "PostgreSQL", "Database"],
-    author: {
-      name: "디비전문가",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-    createdAt: "2023-05-03T11:10:00Z",
-    commentCount: 6,
-    likeCount: 8,
-    isResolved: true,
-  },
-  {
-    id: 9,
-    title: "AWS Lambda vs EC2 비용 효율성",
-    content: "서버리스 아키텍처와 전통적인 서버 기반 아키텍처 중 어떤 것이 비용 효율적인가요?",
-    tags: ["AWS", "Lambda", "EC2", "Cloud"],
-    author: {
-      name: "클라우드엔지니어",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-    createdAt: "2023-05-02T09:45:00Z",
-    commentCount: 5,
-    likeCount: 10,
-    isResolved: false,
-  },
-  {
-    id: 10,
-    title: "CI/CD 파이프라인 최적화 방법",
-    content: "CI/CD 파이프라인의 빌드 및 배포 시간을 줄이기 위한 최적화 방법이 궁금합니다.",
-    tags: ["CI/CD", "DevOps", "Pipeline"],
-    author: {
-      name: "데브옵스",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-    createdAt: "2023-05-01T14:30:00Z",
-    commentCount: 4,
-    likeCount: 7,
-    isResolved: true,
-  },
+import { api } from "@/lib/api-client"
+import { formatReadableDate } from "@/lib/utils";
+
+// 미리 정의된 태그 목록 (질문 생성과 동일)
+const predefinedTags = [
+  "Java", "JavaScript", "TypeScript", "React", "Next.js", "Vue.js", "Angular", "Node.js", "Express", "NestJS", "Spring", "Django", "Flask", "Java", "Python", "C#", "Go", "Rust", "PHP", "Ruby", "HTML", "CSS", "Tailwind", "Bootstrap", "SASS", "GraphQL", "REST API", "SQL", "NoSQL", "MongoDB", "PostgreSQL", "MySQL", "AWS", "Azure", "GCP", "Docker", "Kubernetes", "CI/CD", "Git", "GitHub", "GitLab", "Testing", "TDD", "DevOps", "Algorithm", "Data Structure", "Machine Learning", "AI", "Frontend", "Backend", "Database", "Mobile", "Web"
 ]
 
 export default function QuestionsPage() {
+  const [allQuestions, setAllQuestions] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const fetchQuestions = async () => {
+    console.log('fetchQuestions 함수 시작');
+    setLoading(true)
+    try {
+      console.log('API 호출 시작');
+      const res = await api.get("/questions", { params: { size: "100" } })
+      console.log('API 응답:', res);
+      
+      const questions = res.result?.questions || []
+      console.log('질문 리스트 데이터:', questions)
+      console.log('질문 개수:', questions.length);
+      
+      // 각 질문의 상태 정보 상세 로깅
+      questions.forEach((q: any, idx: number) => {
+        console.log(`질문 ${idx + 1}:`, {
+          id: q.questionId,
+          title: q.title,
+          questionStatus: q.questionStatus,
+          status: q.status,
+          isResolved: q.isResolved
+        });
+      });
+      
+      setAllQuestions(questions)
+      console.log('allQuestions 상태 업데이트 완료');
+    } catch (e) {
+      console.error('fetchQuestions 오류:', e);
+      setAllQuestions([])
+    } finally {
+      setLoading(false)
+      console.log('fetchQuestions 함수 완료');
+    }
+  }
+
+  useEffect(() => {
+    console.log('useEffect 실행됨 - fetchQuestions 호출');
+    fetchQuestions()
+  }, [])
+
+  // 페이지 포커스 시 데이터 새로고침 (질문 상세보기에서 돌아올 때)
+  useEffect(() => {
+    const handleFocus = () => {
+      fetchQuestions()
+    }
+
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [])
+
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [sortOrder, setSortOrder] = useState<string>("latest")
+  const [statusFilter, setStatusFilter] = useState<string>("all") // 상태별 필터 추가
   const router = useRouter()
+
+  // statusFilter 상태 변경 감지
+  useEffect(() => {
+    console.log('statusFilter 변경됨:', statusFilter);
+  }, [statusFilter])
 
   // 페이지네이션 관련 상태
   const [currentPage, setCurrentPage] = useState(1)
@@ -177,13 +98,42 @@ export default function QuestionsPage() {
 
   // 필터링된 질문
   const filteredQuestions = allQuestions.filter((question) => {
+    const title = question.title ?? "";
+    const content = question.content ?? "";
     const matchesSearch =
-      question.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      question.content.toLowerCase().includes(searchTerm.toLowerCase())
+      title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      content.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesTags = selectedTags.length === 0 || question.tags.some((tag) => selectedTags.includes(tag))
+    const tags = question.tags || question.techStacks || [];
+    const matchesTags = selectedTags.length === 0 || tags.some((tag: any) => selectedTags.includes(tag));
 
-    return matchesSearch && matchesTags
+    // 상태별 필터링 추가 (status 필드 직접 사용)
+    let matchesStatus = false;
+    
+    if (statusFilter === "all") {
+      matchesStatus = true;
+    } else if (statusFilter === "OPEN") {
+      matchesStatus = question.status === "OPEN";
+    } else if (statusFilter === "RESOLVED") {
+      matchesStatus = question.status === "RESOLVED";
+    } else if (statusFilter === "CLOSED") {
+      matchesStatus = question.status === "CLOSED";
+    }
+    
+    // 디버깅 로그 (모든 질문에 대해)
+    if (statusFilter !== "all") {
+      console.log('필터링:', {
+        questionId: question.questionId,
+        title: question.title,
+        status: question.status,
+        statusFilter,
+        matchesStatus,
+        searchMatch: matchesSearch,
+        tagsMatch: matchesTags
+      });
+    }
+
+    return matchesSearch && matchesTags && matchesStatus;
   })
 
   // 정렬된 질문
@@ -192,13 +142,22 @@ export default function QuestionsPage() {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     } else if (sortOrder === "oldest") {
       return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-    } else if (sortOrder === "most_likes") {
-      return b.likeCount - a.likeCount
-    } else if (sortOrder === "most_comments") {
-      return b.commentCount - a.commentCount
+    } else if (sortOrder === "most_answers") {
+      return b.answerCount - a.answerCount
     }
     return 0
   })
+
+  // 필터링 결과 로깅 (브라우저에서만)
+  if (typeof window !== 'undefined') {
+    console.log('필터링 결과:', {
+      totalQuestions: allQuestions.length,
+      filteredQuestions: filteredQuestions.length,
+      statusFilter,
+      searchTerm,
+      selectedTags
+    });
+  }
 
   // 페이지네이션 적용
   const totalPages = Math.ceil(sortedQuestions.length / itemsPerPage)
@@ -272,16 +231,10 @@ export default function QuestionsPage() {
                       <span>오래된순</span>
                     </div>
                   </SelectItem>
-                  <SelectItem value="most_likes">
-                    <div className="flex items-center">
-                      <ThumbsUp className="mr-2 h-4 w-4" />
-                      <span>좋아요순</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="most_comments">
+                  <SelectItem value="most_answers">
                     <div className="flex items-center">
                       <MessageSquare className="mr-2 h-4 w-4" />
-                      <span>댓글순</span>
+                      <span>답변순</span>
                     </div>
                   </SelectItem>
                 </SelectContent>
@@ -291,9 +244,14 @@ export default function QuestionsPage() {
             <div className="space-y-2">
               <label className="text-sm font-medium">기술 태그</label>
               <div className="flex flex-wrap gap-2">
-                {Array.from(new Set(allQuestions.flatMap((question) => question.tags))).map((tag) => (
+                {(
+                  Array.from(new Set([
+                    ...predefinedTags,
+                    ...allQuestions.flatMap((question: any) => question.tags || question.techStacks || [])
+                  ]))
+                ).map((tag: any, idx: number) => (
                   <Badge
-                    key={tag}
+                    key={tag + '-' + idx}
                     variant={selectedTags.includes(tag) ? "default" : "outline"}
                     className="cursor-pointer"
                     onClick={() => {
@@ -310,6 +268,70 @@ export default function QuestionsPage() {
                 ))}
               </div>
             </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">상태별 필터</label>
+              <div className="flex flex-col gap-2">
+                <button
+                  className={`px-3 py-2 text-sm rounded border ${
+                    statusFilter === "all" 
+                      ? "bg-blue-500 text-white" 
+                      : "bg-white text-gray-700 border-gray-300"
+                  }`}
+                  onClick={() => {
+                    console.log('전체 버튼 클릭됨!');
+                    setStatusFilter("all")
+                    setCurrentPage(1)
+                  }}
+                >
+                  전체
+                </button>
+                <button
+                  className={`px-3 py-2 text-sm rounded border ${
+                    statusFilter === "OPEN" 
+                      ? "bg-blue-500 text-white" 
+                      : "bg-white text-gray-700 border-gray-300"
+                  }`}
+                  onClick={() => {
+                    console.log('미해결 버튼 클릭됨!');
+                    setStatusFilter("OPEN")
+                    setCurrentPage(1)
+                  }}
+                >
+                  미해결
+                </button>
+                <button
+                  className={`px-3 py-2 text-sm rounded border ${
+                    statusFilter === "RESOLVED" 
+                      ? "bg-blue-500 text-white" 
+                      : "bg-white text-gray-700 border-gray-300"
+                  }`}
+                  onClick={() => {
+                    console.log('해결중 버튼 클릭됨!');
+                    setStatusFilter("RESOLVED")
+                    setCurrentPage(1)
+                  }}
+                >
+                  해결중
+                </button>
+                <button
+                  className={`px-3 py-2 text-sm rounded border ${
+                    statusFilter === "CLOSED" 
+                      ? "bg-blue-500 text-white" 
+                      : "bg-white text-gray-700 border-gray-300"
+                  }`}
+                  onClick={() => {
+                    console.log('해결완료 버튼 클릭됨!');
+                    console.log('이전 statusFilter:', statusFilter);
+                    setStatusFilter("CLOSED")
+                    console.log('새로운 statusFilter 설정: CLOSED');
+                    setCurrentPage(1)
+                  }}
+                >
+                  해결완료
+                </button>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -317,19 +339,56 @@ export default function QuestionsPage() {
         <div className="space-y-6">
           <Tabs defaultValue="all">
             <TabsList>
-              <TabsTrigger value="all">전체</TabsTrigger>
-              <TabsTrigger value="unresolved">미해결</TabsTrigger>
-              <TabsTrigger value="resolved">해결됨</TabsTrigger>
+              <TabsTrigger 
+                value="all"
+                onClick={() => {
+                  console.log('전체 탭 클릭됨!');
+                  setStatusFilter("all");
+                  setCurrentPage(1);
+                }}
+              >
+                전체
+              </TabsTrigger>
+              <TabsTrigger 
+                value="OPEN"
+                onClick={() => {
+                  console.log('미해결 탭 클릭됨!');
+                  setStatusFilter("OPEN");
+                  setCurrentPage(1);
+                }}
+              >
+                미해결
+              </TabsTrigger>
+              <TabsTrigger 
+                value="RESOLVED"
+                onClick={() => {
+                  console.log('해결중 탭 클릭됨!');
+                  setStatusFilter("RESOLVED");
+                  setCurrentPage(1);
+                }}
+              >
+                해결중
+              </TabsTrigger>
+              <TabsTrigger 
+                value="CLOSED"
+                onClick={() => {
+                  console.log('해결됨 탭 클릭됨!');
+                  setStatusFilter("CLOSED");
+                  setCurrentPage(1);
+                }}
+              >
+                해결됨
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="all" className="mt-6">
               {paginatedQuestions.length > 0 ? (
                 <div className="space-y-4">
-                  {paginatedQuestions.map((question) => (
+                  {paginatedQuestions.map((q, idx) => (
                     <QuestionCard
-                      key={question.id}
-                      question={question}
-                      onTitleClick={() => navigateToQuestion(question.id)}
+                      key={q.questionId}
+                      question={{ ...q, id: q.questionId }}
+                      onTitleClick={() => navigateToQuestion(q.questionId)}
                     />
                   ))}
 
@@ -344,8 +403,8 @@ export default function QuestionsPage() {
                           />
                         </PaginationItem>
 
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                          <PaginationItem key={page}>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page, idx) => (
+                          <PaginationItem key={page + '-' + idx}>
                             <PaginationLink
                               isActive={page === currentPage}
                               onClick={() => setCurrentPage(page)}
@@ -373,32 +432,163 @@ export default function QuestionsPage() {
               )}
             </TabsContent>
 
-            <TabsContent value="unresolved" className="mt-6">
-              <div className="space-y-4">
-                {paginatedQuestions
-                  .filter((question) => !question.isResolved)
-                  .map((question) => (
-                    <QuestionCard
-                      key={question.id}
-                      question={question}
-                      onTitleClick={() => navigateToQuestion(question.id)}
-                    />
-                  ))}
-              </div>
+            <TabsContent value="RESOLVED" className="mt-6">
+              {filteredQuestions.length > 0 ? (
+                <div className="space-y-4">
+                  {filteredQuestions
+                    .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                    .map((q, idx) => (
+                      <QuestionCard
+                        key={q.questionId}
+                        question={{ ...q, id: q.questionId }}
+                        onTitleClick={() => navigateToQuestion(q.questionId)}
+                      />
+                    ))}
+
+                  {/* 페이지네이션 */}
+                  {Math.ceil(filteredQuestions.length / itemsPerPage) > 1 && (
+                    <Pagination className="mt-6">
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                            className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          />
+                        </PaginationItem>
+
+                        {Array.from({ length: Math.ceil(filteredQuestions.length / itemsPerPage) }, (_, i) => i + 1).map((page, idx) => (
+                          <PaginationItem key={page + '-' + idx}>
+                            <PaginationLink
+                              isActive={page === currentPage}
+                              onClick={() => setCurrentPage(page)}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+
+                        <PaginationItem>
+                          <PaginationNext
+                            onClick={() => setCurrentPage(Math.min(Math.ceil(filteredQuestions.length / itemsPerPage), currentPage + 1))}
+                            className={currentPage === Math.ceil(filteredQuestions.length / itemsPerPage) ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">해결중인 질문이 없습니다.</p>
+                </div>
+              )}
             </TabsContent>
 
-            <TabsContent value="resolved" className="mt-6">
-              <div className="space-y-4">
-                {paginatedQuestions
-                  .filter((question) => question.isResolved)
-                  .map((question) => (
-                    <QuestionCard
-                      key={question.id}
-                      question={question}
-                      onTitleClick={() => navigateToQuestion(question.id)}
-                    />
-                  ))}
-              </div>
+            <TabsContent value="OPEN" className="mt-6">
+              {filteredQuestions.length > 0 ? (
+                <div className="space-y-4">
+                  {filteredQuestions
+                    .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                    .map((q, idx) => (
+                      <QuestionCard
+                        key={q.questionId}
+                        question={{ ...q, id: q.questionId }}
+                        onTitleClick={() => navigateToQuestion(q.questionId)}
+                      />
+                    ))}
+
+                  {/* 페이지네이션 */}
+                  {Math.ceil(filteredQuestions.length / itemsPerPage) > 1 && (
+                    <Pagination className="mt-6">
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                            className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          />
+                        </PaginationItem>
+
+                        {Array.from({ length: Math.ceil(filteredQuestions.length / itemsPerPage) }, (_, i) => i + 1).map((page, idx) => (
+                          <PaginationItem key={page + '-' + idx}>
+                            <PaginationLink
+                              isActive={page === currentPage}
+                              onClick={() => setCurrentPage(page)}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+
+                        <PaginationItem>
+                          <PaginationNext
+                            onClick={() => setCurrentPage(Math.min(Math.ceil(filteredQuestions.length / itemsPerPage), currentPage + 1))}
+                            className={currentPage === Math.ceil(filteredQuestions.length / itemsPerPage) ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">미해결 질문이 없습니다.</p>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="CLOSED" className="mt-6">
+              {filteredQuestions.length > 0 ? (
+                <div className="space-y-4">
+                  {filteredQuestions
+                    .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                    .map((q, idx) => (
+                      <QuestionCard
+                        key={q.questionId}
+                        question={{ ...q, id: q.questionId }}
+                        onTitleClick={() => navigateToQuestion(q.questionId)}
+                      />
+                    ))}
+
+                  {/* 페이지네이션 */}
+                  {Math.ceil(filteredQuestions.length / itemsPerPage) > 1 && (
+                    <Pagination className="mt-6">
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                            className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          />
+                        </PaginationItem>
+
+                        {Array.from({ length: Math.ceil(filteredQuestions.length / itemsPerPage) }, (_, i) => i + 1).map((page, idx) => (
+                          <PaginationItem key={page + '-' + idx}>
+                            <PaginationLink
+                              isActive={page === currentPage}
+                              onClick={() => setCurrentPage(page)}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+
+                        <PaginationItem>
+                          <PaginationNext
+                            onClick={() => setCurrentPage(Math.min(Math.ceil(filteredQuestions.length / itemsPerPage), currentPage + 1))}
+                            className={currentPage === Math.ceil(filteredQuestions.length / itemsPerPage) ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">해결완료된 질문이 없습니다.</p>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </div>
@@ -408,30 +598,47 @@ export default function QuestionsPage() {
 }
 
 interface QuestionCardProps {
-  question: (typeof allQuestions)[0]
+  question: any
   onTitleClick: () => void
 }
 
 function QuestionCard({ question, onTitleClick }: QuestionCardProps) {
+  const authorName = question.nickname || "알 수 없음";
+  const authorAvatar = question.author?.avatar || "/placeholder.svg";
+  // 상태 한글 변환 함수
+  const statusLabel = (status?: string) => {
+    if (status === "OPEN") return "미해결";
+    if (status === "RESOLVED") return "해결중";
+    if (status === "CLOSED") return "해결완료";
+    return "미해결";
+  };
   return (
     <Card>
       <CardHeader className="p-4 pb-0">
         <div className="flex justify-between items-start">
           <div className="flex items-start gap-2">
             <Avatar className="h-8 w-8">
-              <AvatarImage src={question.author.avatar || "/placeholder.svg"} alt={question.author.name} />
-              <AvatarFallback>{question.author.name[0]}</AvatarFallback>
+              <AvatarImage src={authorAvatar} alt={authorName} />
+              <AvatarFallback>{authorName[0]}</AvatarFallback>
             </Avatar>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">{question.author.name}</span>
-                <span className="text-xs text-muted-foreground">
-                  {new Date(question.createdAt).toLocaleDateString()}
+                <span className="text-sm font-medium">{authorName}</span>
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {question.createdAt ? formatReadableDate(question.createdAt) : ''}
                 </span>
               </div>
               <h3 className="text-lg font-semibold mt-1 flex items-center gap-2">
                 <button
-                  onClick={onTitleClick}
+                  onClick={() => {
+                    const qid = question.questionId ?? question.id;
+                    if (qid) {
+                      window.location.href = `/questions/${qid}`;
+                    } else {
+                      alert('질문 ID가 없습니다!');
+                    }
+                  }}
                   className="text-left hover:underline hover:text-primary transition-colors focus:outline-none"
                 >
                   {question.title}
@@ -440,13 +647,43 @@ function QuestionCard({ question, onTitleClick }: QuestionCardProps) {
               </h3>
             </div>
           </div>
+          {/* 상태 pill */}
+          <span
+            className={
+              "text-xs font-semibold px-2 py-0.5 rounded-full border-2 shadow-sm text-black bg-[#ffe5e5] border-[#dc2626] min-w-[48px] text-center"
+            }
+            style={{
+              color: '#111',
+              background: question.status === "OPEN"
+                ? "#ffe5e5"
+                : question.status === "RESOLVED"
+                ? "#fff9db"
+                : question.status === "CLOSED"
+                ? "#e6ffe5"
+                : "#f5f5f5",
+              borderColor: question.status === "OPEN"
+                ? "#dc2626"
+                : question.status === "RESOLVED"
+                ? "#eab308"
+                : question.status === "CLOSED"
+                ? "#16a34a"
+                : "#d1d5db",
+              lineHeight: "1.2",
+              fontWeight: 600,
+              fontSize: "0.75rem",
+              minWidth: "48px",
+              textAlign: "center"
+            }}
+          >
+            {statusLabel(question.status)}
+          </span>
         </div>
       </CardHeader>
       <CardContent className="p-4">
         <p className="text-sm text-muted-foreground line-clamp-2">{question.content}</p>
         <div className="flex flex-wrap gap-1.5 mt-3">
-          {question.tags.map((tag) => (
-            <Badge key={tag} variant="secondary" className="font-normal">
+          {question.tags && question.tags.map((tag: any, idx: number) => (
+            <Badge key={tag + '-' + idx} variant="secondary" className="font-normal">
               {tag}
             </Badge>
           ))}
@@ -456,11 +693,7 @@ function QuestionCard({ question, onTitleClick }: QuestionCardProps) {
         <div className="flex items-center gap-4">
           <div className="text-sm text-muted-foreground flex items-center">
             <MessageSquare className="h-3.5 w-3.5 mr-1" />
-            {question.commentCount}
-          </div>
-          <div className="text-sm text-muted-foreground flex items-center">
-            <ThumbsUp className="h-3.5 w-3.5 mr-1" />
-            {question.likeCount}
+            {question.commentCount ?? question.answerCount ?? 0}
           </div>
         </div>
         <Button asChild size="sm">
@@ -470,3 +703,4 @@ function QuestionCard({ question, onTitleClick }: QuestionCardProps) {
     </Card>
   )
 }
+

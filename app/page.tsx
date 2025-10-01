@@ -1,11 +1,16 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { TrendingUp, Users, Calendar, MessageSquare } from "lucide-react"
 import FeaturedStudies from "@/components/featured-studies"
 import RecentQuestions from "@/components/recent-questions"
 import TechFeed from "@/components/tech-feed"
+import { useAuth } from "@/components/auth-provider"
 
 export default function Home() {
+  const { isAuthenticated } = useAuth();
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Hero Section */}
@@ -19,14 +24,23 @@ export default function Home() {
             <div className="flex flex-wrap gap-4">
               <Button asChild size="lg">
                 <Link href="/studies">스터디 찾기</Link>
-              </Button>
-              <Button asChild variant="outline" size="lg">
-                <Link href="/auth/register">회원가입</Link>
-              </Button>
+               </Button>
+              {!isAuthenticated && ( // 로그인 안 했을 때만 회원가입 버튼 노출
+                <Button asChild variant="outline" size="lg">
+                  <Link href="/auth/register">회원가입</Link>
+                </Button>
+              )}
             </div>
           </div>
-          <div className="rounded-lg overflow-hidden shadow-xl">
-            <img src="/placeholder.svg?height=400&width=600" alt="DeepGround 커뮤니티" className="w-full h-auto" />
+          <div className="rounded-lg overflow-hidden">
+          <video
+            src="https://oopy.lazyrockets.com/api/v2/notion/fileUrl?src=https%3A%2F%2Fprod-files-secure.s3.us-west-2.amazonaws.com%2F38552da6-340d-42c1-a9a1-b181ff331f03%2Faa681f6a-cb4a-4a41-8563-35d8e3ce3a53%2FDeepDive_keyvisual_Web_%25E1%2584%258C%25E1%2585%25A5%25E1%2584%258B%25E1%2585%25AD%25E1%2586%25BC%25E1%2584%2585%25E1%2585%25A3%25E1%2586%25BC.mp4&blockId=19cacac0-e8b1-4dd5-bece-dddb3f779b73#t=0.0001"
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-[400px] object-cover rounded-xl shadow-lg mb-8 pointer-events-none select-none"
+          />
           </div>
         </div>
       </section>

@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,10 +19,52 @@ import { useToast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
+import { api } from "@/lib/api-client"
+import { auth } from "@/lib/auth"
+import { useAuth } from "@/components/auth-provider"
+import { getTechStacks, TechStack } from "@/lib/api/techStack"
+import TechStackSelector from "@/components/TechStackSelector"
+
+interface CreateStudyGroupRequest {
+  title: string;
+  explanation: string;
+  studyStartDate: string;
+  studyEndDate: string;
+  recruitStartDate: string;
+  recruitEndDate: string;
+  groupMemberCount: number;
+  isOffline: boolean;
+  studyLocation: string;
+  techStackNames: string[];
+}
 
 export default function CreateStudyPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const { isAuthenticated } = useAuth()
+
+  // 로그인 상태 확인
+  useEffect(() => {
+    const checkAuth = async () => {
+      console.log('스터디 생성 페이지 - 인증 상태 확인 시작')
+      const token = await auth.getToken()
+      console.log('스터디 생성 페이지 - 현재 토큰:', token)
+      console.log('스터디 생성 페이지 - isAuthenticated 상태:', isAuthenticated)
+      
+      if (!token) {
+        console.log('스터디 생성 페이지 - 토큰 없음, 로그인 페이지로 리다이렉트')
+        toast({
+          title: "로그인이 필요합니다",
+          description: "스터디를 생성하려면 로그인이 필요합니다.",
+          variant: "destructive",
+        })
+        router.push('/auth/login')
+      } else {
+        console.log('스터디 생성 페이지 - 토큰 있음, 정상 진행')
+      }
+    }
+    checkAuth()
+  }, [router, toast, isAuthenticated])
 
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -37,62 +78,14 @@ export default function CreateStudyPage() {
   const [recruitEndDate, setRecruitEndDate] = useState<Date>()
 
   // 기술 태그 선택 방식으로 변경
-  const availableTags = [
-    "JavaScript",
-    "TypeScript",
-    "React",
-    "Next.js",
-    "Vue.js",
-    "Angular",
-    "Node.js",
-    "Express",
-    "NestJS",
-    "Spring",
-    "Django",
-    "Flask",
-    "Java",
-    "Python",
-    "C#",
-    "Go",
-    "Rust",
-    "PHP",
-    "Ruby",
-    "HTML",
-    "CSS",
-    "Tailwind",
-    "Bootstrap",
-    "SASS",
-    "GraphQL",
-    "REST API",
-    "SQL",
-    "NoSQL",
-    "MongoDB",
-    "PostgreSQL",
-    "MySQL",
-    "AWS",
-    "Azure",
-    "GCP",
-    "Docker",
-    "Kubernetes",
-    "CI/CD",
-    "Git",
-    "GitHub",
-    "GitLab",
-    "Testing",
-    "TDD",
-    "DevOps",
-    "Algorithm",
-    "Data Structure",
-    "Machine Learning",
-    "AI",
-    "Blockchain",
-    "Mobile",
-    "React Native",
-    "Flutter",
-    "iOS",
-    "Android",
-  ]
+  const [availableTags, setAvailableTags] = useState<TechStack[]>([])
   const [selectedTags, setSelectedTags] = useState<string[]>([])
+
+  useEffect(() => {
+    getTechStacks().then((tags) => {
+      setAvailableTags(tags)
+    })
+  }, [])
 
   const handleTagToggle = (tag: string) => {
     if (selectedTags.includes(tag)) {
@@ -102,7 +95,7 @@ export default function CreateStudyPage() {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     // 필수 필드 검증
@@ -171,14 +164,36 @@ export default function CreateStudyPage() {
       return
     }
 
-    // 스터디 생성 성공 (실제로는 API 호출)
-    toast({
-      title: "스터디 생성 성공",
-      description: "스터디가 성공적으로 생성되었습니다.",
-    })
+    try {
+      const requestData: CreateStudyGroupRequest = {
+        title,
+        explanation: description,
+        studyStartDate: format(studyStartDate, 'yyyy-MM-dd'),
+        studyEndDate: format(studyEndDate, 'yyyy-MM-dd'),
+        recruitStartDate: format(recruitStartDate, 'yyyy-MM-dd'),
+        recruitEndDate: format(recruitEndDate, 'yyyy-MM-dd'),
+        groupMemberCount: parseInt(maxMembers),
+        isOffline: !isOnline,
+        studyLocation: location,
+        techStackNames: selectedTags,
+      }
 
-    // 스터디 목록 페이지로 이동
-    router.push("/studies")
+      await api.post('/study-group', requestData)
+
+      toast({
+        title: "스터디 생성 성공",
+        description: "스터디가 성공적으로 생성되었습니다.",
+      })
+
+      // 스터디 목록 페이지로 이동
+      router.push("/studies")
+    } catch (error) {
+      toast({
+        title: "스터디 생성 실패",
+        description: "스터디 생성 중 오류가 발생했습니다. 다시 시도해주세요.",
+        variant: "destructive",
+      })
+    }
   }
 
   return (
@@ -364,34 +379,12 @@ export default function CreateStudyPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>관련 기술 태그</Label>
-                <div className="border rounded-md p-4">
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {selectedTags.map((tag) => (
-                      <Badge key={tag} variant="secondary" className="flex items-center gap-1">
-                        {tag}
-                        <X className="h-3 w-3 cursor-pointer" onClick={() => handleTagToggle(tag)} />
-                      </Badge>
-                    ))}
-                  </div>
-                  <div className="border-t pt-3 mt-2">
-                    <p className="text-sm text-muted-foreground mb-2">기술 태그 선택 (다중 선택 가능)</p>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {availableTags.map((tag) => (
-                        <div key={tag} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`tag-${tag}`}
-                            checked={selectedTags.includes(tag)}
-                            onCheckedChange={() => handleTagToggle(tag)}
-                          />
-                          <label htmlFor={`tag-${tag}`} className="text-sm cursor-pointer">
-                            {tag}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                <label className="text-sm font-medium">관련 기술 태그</label>
+                <TechStackSelector
+                    availableTags={availableTags}
+                    selectedTags={selectedTags}
+                    onToggle={handleTagToggle}
+                  />
               </div>
             </CardContent>
           </Card>

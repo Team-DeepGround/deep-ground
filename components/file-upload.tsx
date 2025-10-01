@@ -9,7 +9,8 @@ import { Upload, X, FileIcon, CheckCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface FileUploadProps {
-  onFileSelect: (file: File) => void
+  onFileSelect?: (file: File) => void
+  onFilesSelect?: (files: File[]) => void
   accept?: string
   maxSize?: number // 최대 파일 크기 (MB)
   multiple?: boolean
@@ -18,6 +19,7 @@ interface FileUploadProps {
 
 export default function FileUpload({
   onFileSelect,
+  onFilesSelect,
   accept = "*",
   maxSize = 10, // 기본 최대 크기 10MB
   multiple = false,
@@ -72,7 +74,7 @@ export default function FileUpload({
           clearInterval(interval)
           setTimeout(() => {
             setIsUploading(false)
-            onFileSelect(file)
+            onFileSelect?.(file)
           }, 300)
         }
         return newProgress
@@ -102,9 +104,22 @@ export default function FileUpload({
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0]
-      handleFileSelect(file)
-
+      const files = Array.from(e.target.files)
+      // 여러 파일 업로드 지원
+      if (multiple && onFilesSelect) {
+        // 파일 크기 검증 및 필터링
+        const validFiles = files.filter(file => file.size <= maxSize * 1024 * 1024)
+        if (validFiles.length < files.length) {
+          toast({
+            title: "파일 크기 초과",
+            description: `일부 파일이 ${maxSize}MB를 초과하여 제외되었습니다.`,
+            variant: "destructive",
+          })
+        }
+        onFilesSelect(validFiles)
+      } else if (onFileSelect) {
+        handleFileSelect(files[0])
+      }
       // 입력값 초기화 (같은 파일 다시 선택 가능하도록)
       e.target.value = ""
     }
