@@ -1,8 +1,10 @@
 import { toast } from 'sonner';
 import { auth } from '@/lib/auth';
 
-// 상대 경로로 변경
-const API_BASE_URL = '/api/v1';
+// 환경변수 기반 API 베이스 구성 (fallback: 상대 경로)
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '') || '';
+const API_VERSION = process.env.NEXT_PUBLIC_API_VERSION || 'v1';
+const API_BASE_URL = `${API_ORIGIN}/api/${API_VERSION}`;
 
 export class ApiError extends Error {
     constructor(public status: number, message: string) {
