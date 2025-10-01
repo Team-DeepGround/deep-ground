@@ -1,5 +1,4 @@
 import { api } from "@/lib/api-client"
-import { auth } from "@/lib/auth"
 
 export interface CreateStudyScheduleRequest {
     title: string
@@ -54,24 +53,8 @@ export interface CreateStudyScheduleRequest {
     studyGroupId: number,
     data: CreateStudyScheduleRequest
   ): Promise<{ status: number; message: string; result: StudyScheduleResponseDto }> {
-    const token = await auth.getToken()
-  
-    const res = await fetch(`/api/v1/study-group/${studyGroupId}/schedules`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token ? `Bearer ${token}` : "",
-      },
-      body: JSON.stringify(data),
-    })
-  
-    if (!res.ok) {
-        const errorMessage = await res.text()
-        console.error("❌ 일정 등록 실패", res.status, errorMessage)
-        throw new Error("일정 등록에 실패했습니다.")
-    }
-  
-    return await res.json()
+    const res = await api.post(`/study-group/${studyGroupId}/schedules`, data)
+    return res as any
   }
 
   export const fetchStudySchedulesByGroup = async (
@@ -91,44 +74,15 @@ export interface CreateStudyScheduleRequest {
     scheduleId: number,
     data: UpdateStudyScheduleRequest
   ): Promise<{ status: number; message: string; result: StudyScheduleResponseDto }> {
-    const token = await auth.getToken()
-  
-    const res = await fetch(`/api/v1/study-group/${studyGroupId}/schedules/${scheduleId}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token ? `Bearer ${token}` : "",
-      },
-      body: JSON.stringify(data),
-    })
-  
-    if (!res.ok) {
-      const errorMessage = await res.text()
-      console.error("❌ 일정 수정 실패", res.status, errorMessage)
-      throw new Error("일정 수정에 실패했습니다.")
-    }
-  
-    return await res.json()
+    const res = await api.patch(`/study-group/${studyGroupId}/schedules/${scheduleId}`, data)
+    return res as any
   }
 
   export async function deleteStudySchedule(
     studyGroupId: number,
     scheduleId: number
   ) {
-    const token = await auth.getToken()
-  
-    const res = await fetch(`/api/v1/study-group/${studyGroupId}/schedules/${scheduleId}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: token ? `Bearer ${token}` : "",
-      },
-    })
-  
-    if (!res.ok) {
-      const errorMessage = await res.text()
-      console.error("❌ 일정 삭제 실패", res.status, errorMessage)
-      throw new Error("일정 삭제에 실패했습니다.")
-    }
+    await api.delete(`/study-group/${studyGroupId}/schedules/${scheduleId}`)
   }
 
   // 변환 함수

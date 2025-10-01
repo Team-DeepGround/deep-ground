@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
+import { api } from "@/lib/api-client"
 import { Loader2 } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 
@@ -31,8 +32,7 @@ export default function RegisterPage() {
     return emailRegex.test(email)
   }
 
-  // 공통 상대 경로 기반 API BASE
-  const API_BASE = "/api/v1/auth"
+  // API 호출은 공용 api 클라이언트 사용
 
   // 이메일 중복 확인
   const checkEmailAvailability = async () => {
@@ -46,10 +46,8 @@ export default function RegisterPage() {
     }
     setIsCheckingEmail(true)
     try {
-      const res = await fetch(
-        `${API_BASE}/check-email?email=${encodeURIComponent(email)}`
-      )
-      if (res.ok) {
+      const res = await api.get(`/auth/check-email`, { params: { email: encodeURIComponent(email) } })
+      if (res) {
         setIsEmailAvailable(true)
         toast({
           title: "사용 가능한 이메일",
@@ -87,10 +85,8 @@ export default function RegisterPage() {
     }
     setIsCheckingNickname(true)
     try {
-      const res = await fetch(
-        `${API_BASE}/check-nickname?nickname=${encodeURIComponent(nickname)}`
-      )
-      if (res.ok) {
+      const res = await api.get(`/auth/check-nickname`, { params: { nickname: encodeURIComponent(nickname) } })
+      if (res) {
         setIsNicknameAvailable(true)
         toast({
           title: "사용 가능한 닉네임",
@@ -170,17 +166,8 @@ export default function RegisterPage() {
 
     try {
       setIsLoading(true)
-      const res = await fetch(`${API_BASE}/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          password,
-          nickname,
-        }),
-      })
-      const data = await res.json()
-      if (res.ok) {
+      const data = await api.post(`/auth/register`, { email, password, nickname })
+      if (data && (data.status === 200 || data.status === 201)) {
         toast({
           title: "회원가입 성공",
           description: "이메일 인증을 위해 인증 페이지로 이동합니다.",
@@ -189,7 +176,7 @@ export default function RegisterPage() {
       } else {
         toast({
           title: "회원가입 실패",
-          description: data.message || "회원가입 중 오류가 발생했습니다.",
+          description: (data && data.message) || "회원가입 중 오류가 발생했습니다.",
           variant: "destructive",
         })
       }

@@ -99,10 +99,12 @@ export default function LoginPage() {
 
   const handleSocialLogin = async (provider: string) => {
     try {
-      const res = await fetch(`/api/v1/auth/oauth/${provider}/login`)
-      const { redirectUrl } = await res.json()
+      const data = await api.get(`/auth/oauth/${provider}/login`, { /* 비인증 엔드포인트 */ })
+      const redirectUrl = data?.redirectUrl
       if (redirectUrl) {
-        window.location.href = `/api/v1${redirectUrl}`
+        const base = (process.env.NEXT_PUBLIC_API_BASE_URL || '')
+        const version = process.env.NEXT_PUBLIC_API_VERSION || 'v1'
+        window.location.href = `${base}/api/${version}${redirectUrl}`
       } else {
         toast({
           title: "소셜 로그인 실패",

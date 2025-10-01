@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
+import { api } from "@/lib/api-client"
 
 export default function ResetPasswordPage() {
   const router = useRouter()
@@ -18,7 +19,7 @@ export default function ResetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
-  const API_BASE = "/api/v1"
+  // API 호출은 공용 api 클라이언트 사용
 
   const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
@@ -31,17 +32,12 @@ export default function ResetPasswordPage() {
     }
     setIsLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/auth/password/reset/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      })
-      const data = await res.json()
-      if (res.ok) {
+      const data = await api.post("/auth/password/reset/send", { email })
+      if (data && (data.status === 200 || data.status === 201)) {
         toast({ title: "이메일 발송 성공", description: "비밀번호 재설정 이메일이 발송되었습니다." })
         setStep("reset")
       } else {
-        toast({ title: "이메일 발송 실패", description: data.message || "이메일 발송에 실패했습니다.", variant: "destructive" })
+        toast({ title: "이메일 발송 실패", description: (data && data.message) || "이메일 발송에 실패했습니다.", variant: "destructive" })
       }
     } catch {
       toast({ title: "이메일 발송 실패", description: "서버와 통신 중 오류가 발생했습니다.", variant: "destructive" })
@@ -67,21 +63,12 @@ export default function ResetPasswordPage() {
     }
     setIsLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/auth/password/reset`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          code,
-          newPassword,
-        }),
-      })
-      const data = await res.json()
-      if (res.ok) {
+      const data = await api.post("/auth/password/reset", { email, code, newPassword })
+      if (data && (data.status === 200 || data.status === 201)) {
         toast({ title: "비밀번호 재설정 성공", description: "비밀번호가 성공적으로 변경되었습니다." })
         router.push("/auth/login")
       } else {
-        toast({ title: "비밀번호 재설정 실패", description: data.message || "비밀번호 재설정에 실패했습니다.", variant: "destructive" })
+        toast({ title: "비밀번호 재설정 실패", description: (data && data.message) || "비밀번호 재설정에 실패했습니다.", variant: "destructive" })
       }
     } catch {
       toast({ title: "비밀번호 재설정 실패", description: "서버와 통신 중 오류가 발생했습니다.", variant: "destructive" })

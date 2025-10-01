@@ -10,6 +10,7 @@ import TechStackSelector from "@/components/TechStackSelector"
 import { getTechStacks, TechStack } from "@/lib/api/techStack"
 import { Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { api } from "@/lib/api-client"
 
 interface ProfileFormProps {
   initialProfile?: {
@@ -98,10 +99,8 @@ export default function ProfileForm({
     }
     setIsCheckingNickname(true)
     try {
-      const res = await fetch(
-        `/api/v1/auth/check-nickname?nickname=${encodeURIComponent(formData.nickname)}`
-      )
-      if (res.ok) {
+      const res = await api.get(`/auth/check-nickname`, { params: { nickname: encodeURIComponent(formData.nickname) } })
+      if (res) {
         setIsNicknameAvailable(true)
         toast({
           title: "사용 가능한 닉네임",

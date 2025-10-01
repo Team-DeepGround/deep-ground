@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
+import { api } from "@/lib/api-client"
 import { Loader2, CheckCircle, Mail, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import {
@@ -35,7 +36,7 @@ export default function VerifyEmailPage() {
   const [resendDisabled, setResendDisabled] = useState(true)
   const [resendCountdown, setResendCountdown] = useState(0)
 
-  const API_BASE = "/api/v1/email";
+  // API 호출은 공용 api 클라이언트 사용
 
   useEffect(() => {
     const emailParam = searchParams.get("email")
@@ -93,13 +94,8 @@ export default function VerifyEmailPage() {
   const handleSendCode = async () => {
     setIsLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      })
-      const data = await res.json()
-      if (res.ok) {
+      const data = await api.post("/email/send", { email })
+      if (data && (data.status === 200 || data.status === 201)) {
         toast({
           title: "인증 메일 발송",
           description: "인증 코드가 이메일로 발송되었습니다.",
@@ -143,13 +139,8 @@ export default function VerifyEmailPage() {
     }
     setIsLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/verify`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code: verificationCode }),
-      })
-      const data = await res.json()
-      if (res.ok) {
+      const data = await api.post("/email/verify", { email, code: verificationCode })
+      if (data && (data.status === 200 || data.status === 201)) {
         setIsVerified(true)
         toast({
           title: "이메일 인증 완료",
