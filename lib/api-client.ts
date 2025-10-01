@@ -118,7 +118,7 @@ export const api = {
 };
 
 export async function apiClientFormData(endpoint: string, data: any, accessToken: string) {
-    const url = `http://localhost:3000${endpoint}`;
+    const url = `${API_BASE_URL}${endpoint}`;
     const headers = new Headers();
 
     if (accessToken) {

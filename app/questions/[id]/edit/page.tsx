@@ -139,7 +139,7 @@ export default function EditQuestionPage() {
     const accessToken = localStorage.getItem("auth_token")
     try {
       // apiClientFormData는 POST만 지원하므로 fetch로 직접 PUT
-      const url = `http://localhost:3000/api/v1/questions/${params.id}`
+      const url = `/api/v1/questions/${params.id}`
       const headers = new Headers()
       if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`)
       const res = await fetch(url, {
