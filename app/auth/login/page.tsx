@@ -99,10 +99,10 @@ export default function LoginPage() {
 
   const handleSocialLogin = async (provider: string) => {
     try {
-      const res = await fetch(`http://localhost:8080/api/v1/auth/oauth/${provider}/login`)
+      const res = await fetch(`/api/v1/auth/oauth/${provider}/login`)
       const { redirectUrl } = await res.json()
       if (redirectUrl) {
-        window.location.href = `http://localhost:8080/api/v1${redirectUrl}`
+        window.location.href = `/api/v1${redirectUrl}`
       } else {
         toast({
           title: "소셜 로그인 실패",
