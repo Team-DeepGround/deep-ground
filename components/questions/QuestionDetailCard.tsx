@@ -26,10 +26,6 @@ export default function QuestionDetailCard({
 }: QuestionDetailCardProps) {
   const router = useRouter();
   
-  // 디버깅을 위한 로그
-  console.log('QuestionDetailCard - question:', question);
-  console.log('QuestionDetailCard - question.createdAt:', question?.createdAt);
-  console.log('QuestionDetailCard - question.createdAt type:', typeof question?.createdAt);
   
   return (
     <Card className="mb-8">
@@ -104,7 +100,7 @@ export default function QuestionDetailCard({
               </span>
               {memberId && memberId == question?.memberId && (
                 <select
-                  className="ml-4 text-lg font-bold border-4 border-blue-400 bg-white px-4 py-2 rounded-full shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  className="ml-2 text-sm font-medium border border-gray-300 bg-white px-2 py-1 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
                   value={question?.questionStatus || 'OPEN'}
                   disabled={!!statusUpdating}
                   onChange={e => handleStatusChange(e.target.value)}

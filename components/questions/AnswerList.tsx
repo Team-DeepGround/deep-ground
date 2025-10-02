@@ -53,12 +53,6 @@ export default function AnswerList({
 }: AnswerListProps) {
   const router = useRouter();
   
-  // 디버깅을 위한 로그
-  console.log('AnswerList - answers:', answers);
-  if (answers.length > 0) {
-    console.log('AnswerList - 첫 번째 답변 전체:', answers[0]);
-    console.log('AnswerList - 첫 번째 답변 키들:', Object.keys(answers[0]));
-  }
   
   return (
     <div className="space-y-6 mb-8">

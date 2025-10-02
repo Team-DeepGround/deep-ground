@@ -31,7 +31,6 @@ export default function EditAnswerPage() {
       setLoading(true)
       try {
         const res = await api.get(`/answers/${answerId}`)
-      console.log('res 전체:', res)
       setContent(res.content || "")
         let urls: string[] = [];
       if (Array.isArray(res.imageUrls)) {
@@ -125,21 +124,10 @@ export default function EditAnswerPage() {
     formData.append("questionId", questionId?.toString() || "")
     uploadedImages.forEach(file => formData.append("images", file))
 
-    // 디버깅: 전송할 데이터 확인
-    console.log('수정할 답변 ID:', answerId)
-    console.log('질문 ID:', questionId)
-    console.log('답변 내용:', content)
-    console.log('업로드할 이미지 개수:', uploadedImages.length)
-    console.log('기존 이미지 개수:', existingImages.length)
     
-    // FormData 내용 확인
-    for (let [key, value] of formData.entries()) {
-      console.log('FormData:', key, value)
-    }
 
     try {
       const accessToken = localStorage.getItem("auth_token");
-      console.log('Access Token:', accessToken ? '존재함' : '없음')
       
       const response = await fetch(`/api/v1/answers/${answerId}`, {
         method: "PUT",
@@ -150,10 +138,8 @@ export default function EditAnswerPage() {
         body: formData,
       });
       
-      console.log('응답 상태:', response.status)
       if (!response.ok) {
         const errorText = await response.text()
-        console.error('서버 응답:', errorText)
         throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`)
       }
       

@@ -142,6 +142,7 @@ export default function QuestionDetailPage() {
   // const questionImageUrls = useAuthImageUrls(question?.mediaUrl)
 
   const [statusUpdating, setStatusUpdating] = useState(false)
+  const [justUpdatedStatus, setJustUpdatedStatus] = useState(false)
 
   const fetchQuestion = async () => {
     setLoading(true)
@@ -153,9 +154,6 @@ export default function QuestionDetailPage() {
       const data = await res.json()
       const q = data.result?.question || data.result
       
-      console.log('fetchQuestion 응답 데이터:', data);
-      console.log('질문 상태 (status):', q?.status);
-      console.log('질문 상태 (questionStatus):', q?.questionStatus);
       
       setQuestion(q)
       if (q?.answers) {
@@ -182,55 +180,18 @@ export default function QuestionDetailPage() {
           })
         )
         setAnswerCommentsData(commentsData)
-        console.log('answers:', q.answers) // 디버깅용
-        console.log('memberId:', memberId) // 디버깅용
         
         // localStorage에서 내가 좋아요 누른 답변 목록 불러오기
         const storedLikedAnswers = localStorage.getItem(`likedAnswers_${params.id}`);
         if (storedLikedAnswers) {
           const likedAnswerIds = JSON.parse(storedLikedAnswers);
           setLikedAnswers(likedAnswerIds);
-          console.log('localStorage에서 불러온 likedAnswers:', likedAnswerIds);
         } else {
           setLikedAnswers([]);
         }
       } else {
         setAnswers([])
         setLikedAnswers([])
-      }
-      // 디버깅: 유저와 질문 작성자 정보 콘솔 출력
-      console.log('memberId:', memberId)
-      console.log('email:', email)
-      console.log('question:', q)
-      console.log('question.author:', q?.author)
-      console.log('question.memberId:', q?.memberId)
-      console.log('question.email:', q?.email)
-      console.log('question.nickname:', q?.nickname)
-      console.log('question.author.name:', q?.author?.name)
-      
-      // 날짜 관련 필드 디버깅
-      console.log('question.createdAt:', q?.createdAt)
-      console.log('question.createDate:', q?.createDate)
-      console.log('question.regDate:', q?.regDate)
-      console.log('question.writeDate:', q?.writeDate)
-      console.log('question.date:', q?.date)
-      console.log('question.time:', q?.time)
-      console.log('question.created_at:', q?.created_at)
-      console.log('question.updated_at:', q?.updated_at)
-      console.log('question 전체 필드:', Object.keys(q || {}))
-      
-      if (q?.answers) {
-        console.log('첫 번째 답변:', q.answers[0])
-        console.log('첫 번째 답변 날짜 필드들:', {
-          createdAt: q.answers[0]?.createdAt,
-          createDate: q.answers[0]?.createDate,
-          regDate: q.answers[0]?.regDate,
-          writeDate: q.answers[0]?.writeDate,
-          date: q.answers[0]?.date,
-          time: q.answers[0]?.time,
-          created_at: q.answers[0]?.created_at,
-          updated_at: q.answers[0]?.updated_at
-        })
       }
     } catch (e) {
       setQuestion(null)
@@ -262,7 +223,7 @@ export default function QuestionDetailPage() {
     const handleFocus = () => {
       // 파일 선택 창에서 복귀 직후 상태 반영 전에 트리거되는 것을 방지하기 위해 지연 검사
       setTimeout(() => {
-        if (uploadedImages.length > 0) return
+        if (uploadedImages.length > 0 || justUpdatedStatus) return
         if (params.id) {
           fetchQuestion()
         }
@@ -551,27 +512,42 @@ export default function QuestionDetailPage() {
   const handleStatusChange = async (newStatus: string) => {
     if (!question) return;
     setStatusUpdating(true);
+    setJustUpdatedStatus(true);
+    
     try {
-      console.log('상태 변경 시작:', { 현재상태: question.status, 변경할상태: newStatus });
       
-      const response = await api.patch(`/questions/${params.id}/status`, { status: newStatus });
-      console.log('상태 변경 API 응답:', response);
+      // 직접 fetch로 요청하여 더 자세한 디버깅
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(`/api/v1/questions/${params.id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
       
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      
+      const data = await response.json();
       // 상태 변경 후 즉시 UI 업데이트
       setQuestion((prev: any) => ({ ...prev, questionStatus: newStatus }));
-      console.log('UI 상태 업데이트 완료:', newStatus);
       
       toast({ title: "상태 변경 완료", description: `질문 상태가 '${statusLabel(newStatus)}'로 변경되었습니다.` });
       
-      // 백그라운드에서 서버 데이터 새로고침 제거 (status 필드가 없어서 문제 발생)
-      // setTimeout(async () => {
-      //   console.log('백그라운드 데이터 새로고침 시작');
-      //   await fetchQuestion();
-      //   console.log('백그라운드 데이터 새로고침 완료');
-      // }, 1000);
+      // 상태 변경 후 잠시 포커스 새로고침 방지
+      setTimeout(() => setJustUpdatedStatus(false), 2000);
+      
     } catch (e: any) {
-      console.error('상태 변경 오류:', e);
-      toast({ title: "상태 변경 실패", description: e?.message || "상태 변경 중 오류가 발생했습니다.", variant: "destructive" });
+      toast({ 
+        title: "상태 변경 실패", 
+        description: `오류: ${e?.message || "알 수 없는 오류가 발생했습니다."}`, 
+        variant: "destructive" 
+      });
     } finally {
       setStatusUpdating(false);
     }
