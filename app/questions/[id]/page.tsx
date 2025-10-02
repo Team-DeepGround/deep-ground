@@ -160,12 +160,28 @@ export default function QuestionDetailPage() {
       setQuestion(q)
       if (q?.answers) {
         setAnswers(q.answers)
-        // 댓글 데이터 초기화 (List<CommentDTO> comments)
+        // 댓글 데이터는 별도 조회 API로 채움
         const commentsData: Record<number, any[]> = {};
-        q.answers.forEach((answer: any) => {
-          commentsData[answer.answerId] = answer.comments || [];
-        });
-        setAnswerCommentsData(commentsData);
+        await Promise.all(
+          q.answers.map(async (answer: any) => {
+            try {
+              const token = localStorage.getItem("auth_token")
+              const res = await fetch(`/api/v1/comments/comments?answerId=${answer.answerId}`, {
+                headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+              })
+              if (res.ok) {
+                const data = await res.json()
+                // 공통 응답 구조 { status, message, result } 또는 { result: { comments: [...] } }
+                commentsData[answer.answerId] = data?.result?.comments || data?.result || []
+              } else {
+                commentsData[answer.answerId] = []
+              }
+            } catch {
+              commentsData[answer.answerId] = []
+            }
+          })
+        )
+        setAnswerCommentsData(commentsData)
         console.log('answers:', q.answers) // 디버깅용
         console.log('memberId:', memberId) // 디버깅용
         
@@ -416,8 +432,20 @@ export default function QuestionDetailPage() {
       if (!res.ok) {
         throw new Error("댓글 등록 실패");
       }
-      // 댓글 등록 후 서버에서 최신 데이터로 갱신
-      await fetchQuestion();
+      // 댓글 등록 후 해당 답변의 댓글만 재조회하여 반영
+      try {
+        const token = localStorage.getItem("auth_token")
+        const res = await fetch(`/api/v1/comments/comments?answerId=${answerId}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setAnswerCommentsData(prev => ({
+            ...prev,
+            [answerId]: data?.result?.comments || data?.result || []
+          }))
+        }
+      } catch {}
       setAnswerComments({
         ...answerComments,
         [answerId]: "",
@@ -445,16 +473,23 @@ export default function QuestionDetailPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${authToken}`,
         },
-        body: JSON.stringify({ commentContent: editingCommentContent, answerId }),
+        body: JSON.stringify({ commentId, commentContent: editingCommentContent }),
       });
       if (!res.ok) throw new Error("댓글 수정 실패");
-      // 프론트 상태 갱신
-      setAnswerCommentsData(prev => ({
-        ...prev,
-        [answerId]: prev[answerId].map((c: any) =>
-          c.commentId === commentId ? { ...c, content: editingCommentContent } : c
-        )
-      }));
+      // 서버 데이터 기준 재조회로 동기화
+      try {
+        const token = localStorage.getItem("auth_token")
+        const res = await fetch(`/api/v1/comments/comments?answerId=${answerId}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setAnswerCommentsData(prev => ({
+            ...prev,
+            [answerId]: data?.result?.comments || data?.result || []
+          }))
+        }
+      } catch {}
       setEditingCommentId(null);
       setEditingCommentContent("");
       toast({ title: "댓글 수정 완료", description: "댓글이 수정되었습니다." });
@@ -474,11 +509,20 @@ export default function QuestionDetailPage() {
         },
       });
       if (!res.ok) throw new Error("댓글 삭제 실패");
-      setAnswerCommentsData(prev => ({
-        ...prev,
-        [answerId]: (prev[answerId] || []).filter((c: any) => String(c.commentId) !== String(commentId))
-      }));
-      await fetchQuestion();
+      // 삭제 후 서버 데이터 기준 재조회
+      try {
+        const token = localStorage.getItem("auth_token")
+        const res = await fetch(`/api/v1/comments/comments?answerId=${answerId}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setAnswerCommentsData(prev => ({
+            ...prev,
+            [answerId]: data?.result?.comments || data?.result || []
+          }))
+        }
+      } catch {}
       toast({ title: "댓글 삭제 완료", description: "댓글이 삭제되었습니다." });
     } catch (e) {
       toast({ title: "댓글 삭제 실패", description: "댓글 삭제 중 오류가 발생했습니다.", variant: "destructive" });
