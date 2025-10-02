@@ -10,6 +10,7 @@ import { X } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import FileUpload from "@/components/file-upload"
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
+import { MarkdownToolbar } from "@/components/ui/markdown-toolbar"
 import { api } from "@/lib/api-client"
 
 export default function EditAnswerPage() {

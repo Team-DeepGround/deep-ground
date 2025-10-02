@@ -244,9 +244,13 @@ export default function QuestionDetailPage() {
   // 페이지 포커스 시 데이터 새로고침 (답변 수정 후 돌아올 때)
   useEffect(() => {
     const handleFocus = () => {
-      if (params.id) {
-        fetchQuestion()
-      }
+      // 파일 선택 창에서 복귀 직후 상태 반영 전에 트리거되는 것을 방지하기 위해 지연 검사
+      setTimeout(() => {
+        if (uploadedImages.length > 0) return
+        if (params.id) {
+          fetchQuestion()
+        }
+      }, 300)
     }
 
     window.addEventListener('focus', handleFocus)
@@ -481,6 +485,24 @@ export default function QuestionDetailPage() {
     }
   };
 
+  // 답변 삭제 함수 추가
+  const handleDeleteAnswer = async (answerId: number) => {
+    try {
+      const authToken = localStorage.getItem("auth_token");
+      const res = await fetch(`/api/v1/answers/${answerId}?questionId=${params.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+      if (!res.ok) throw new Error("답변 삭제 실패");
+      await fetchQuestion();
+      toast({ title: "답변 삭제 완료", description: "답변이 삭제되었습니다." });
+    } catch (e) {
+      toast({ title: "답변 삭제 실패", description: "답변 삭제 중 오류가 발생했습니다.", variant: "destructive" });
+    }
+  };
+
   // 질문 상태 변경 함수
   const handleStatusChange = async (newStatus: string) => {
     if (!question) return;
@@ -570,6 +592,7 @@ export default function QuestionDetailPage() {
           handleAddComment={handleAddComment}
           handleEditComment={handleEditComment}
           handleDeleteComment={handleDeleteComment}
+          handleDeleteAnswer={handleDeleteAnswer}
           setShowCommentInput={setShowCommentInput}
           setEditingCommentId={setEditingCommentId}
           question={question}

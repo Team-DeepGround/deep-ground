@@ -21,8 +21,9 @@ interface AnswerListProps {
   setEditingCommentContent: (content: string) => void;
   handleLikeAnswer: (answerId: number) => void;
   handleAddComment: (answerId: number) => void;
-  handleEditComment: (commentId: number, answerId: number) => void;
-  handleDeleteComment: (commentId: number, answerId?: number) => void;
+  handleEditComment: (commentId: number, answerId: number) => Promise<void> | void;
+  handleDeleteComment: (commentId: number, answerId: number) => Promise<void> | void;
+  handleDeleteAnswer: (answerId: number) => void;
   setShowCommentInput: (answerId: number | null) => void;
   setEditingCommentId: (commentId: number | null) => void;
   question: any;
@@ -43,7 +44,8 @@ export default function AnswerList({
   handleLikeAnswer, 
   handleAddComment, 
   handleEditComment, 
-  handleDeleteComment, 
+  handleDeleteComment,
+  handleDeleteAnswer,
   setShowCommentInput, 
   setEditingCommentId, 
   question, 
@@ -201,7 +203,7 @@ export default function AnswerList({
                       </>
                     ) : (
                       <span className="text-muted-foreground">
-                        작성 시간: 방금 전 | 답변 ID: {answer.answerId} | 작성자: {answer.memberId}
+                        작성 시간: 방금 전
                       </span>
                     )}
                   </div>
@@ -263,7 +265,7 @@ export default function AnswerList({
                 size="sm"
                 onClick={async () => {
                   if (window.confirm('정말로 이 답변을 삭제하시겠습니까?')) {
-                    await handleDeleteComment(answer.answerId);
+                    await handleDeleteAnswer(answer.answerId);
                   }
                 }}
               >
