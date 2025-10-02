@@ -21,7 +21,10 @@ const publicPaths = [
   "/auth/register",
   "/auth/forgot-password",
   "/auth/verify-email",
-  "/auth/reset-password"
+  "/auth/reset-password",
+  "/feed",
+  "/studies",
+  "/questions",
 ]
 
 export function useAuth() {
