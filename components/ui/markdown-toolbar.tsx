@@ -159,15 +159,6 @@ export function MarkdownToolbar({ onInsert, className = "" }: MarkdownToolbarPro
   return (
     <TooltipProvider>
       <div className={`border rounded-md p-2 bg-gray-50 dark:bg-gray-800 ${className}`}>
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <HelpCircle className="h-3 w-3" />
-            <span>마크다운 툴바</span>
-          </div>
-          <div className="text-xs text-muted-foreground">
-            💡 버튼 클릭으로 쉽게 작성
-          </div>
-        </div>
         
         <div className="flex flex-wrap gap-1">
           {toolbarItems.map((item, index) => (
