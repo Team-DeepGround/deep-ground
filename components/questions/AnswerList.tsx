@@ -21,8 +21,9 @@ interface AnswerListProps {
   setEditingCommentContent: (content: string) => void;
   handleLikeAnswer: (answerId: number) => void;
   handleAddComment: (answerId: number) => void;
-  handleEditComment: (commentId: number, answerId: number) => void;
-  handleDeleteComment: (commentId: number, answerId?: number) => void;
+  handleEditComment: (commentId: number, answerId: number) => Promise<void> | void;
+  handleDeleteComment: (commentId: number, answerId: number) => Promise<void> | void;
+  handleDeleteAnswer: (answerId: number) => void;
   setShowCommentInput: (answerId: number | null) => void;
   setEditingCommentId: (commentId: number | null) => void;
   question: any;
@@ -43,7 +44,8 @@ export default function AnswerList({
   handleLikeAnswer, 
   handleAddComment, 
   handleEditComment, 
-  handleDeleteComment, 
+  handleDeleteComment,
+  handleDeleteAnswer,
   setShowCommentInput, 
   setEditingCommentId, 
   question, 
@@ -51,12 +53,6 @@ export default function AnswerList({
 }: AnswerListProps) {
   const router = useRouter();
   
-  // 디버깅을 위한 로그
-  console.log('AnswerList - answers:', answers);
-  if (answers.length > 0) {
-    console.log('AnswerList - 첫 번째 답변 전체:', answers[0]);
-    console.log('AnswerList - 첫 번째 답변 키들:', Object.keys(answers[0]));
-  }
   
   return (
     <div className="space-y-6 mb-8">
@@ -84,27 +80,7 @@ export default function AnswerList({
                           hour: '2-digit',
                           minute: '2-digit'
                         })}
-                        <span className="text-muted-foreground/70 ml-1">
-                          ({(() => {
-                            const now = new Date();
-                            const created = new Date(answer.createdAt);
-                            const diffTime = Math.abs(now.getTime() - created.getTime());
-                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                            
-                            if (diffDays === 1) return '오늘';
-                            if (diffDays === 2) return '어제';
-                            if (diffDays <= 7) return `${diffDays - 1}일 전`;
-                            
-                            const year = created.getFullYear();
-                            const month = created.getMonth() + 1;
-                            const day = created.getDate();
-                            
-                            if (year !== now.getFullYear()) {
-                              return `${year}년 ${month}월 ${day}일`;
-                            }
-                            return `${month}월 ${day}일`;
-                          })()})
-                        </span>
+                        
                       </>
                     ) : answer.created_at ? (
                       <>
@@ -115,27 +91,7 @@ export default function AnswerList({
                           hour: '2-digit',
                           minute: '2-digit'
                         })}
-                        <span className="text-muted-foreground/70 ml-1">
-                          ({(() => {
-                            const now = new Date();
-                            const created = new Date(answer.created_at);
-                            const diffTime = Math.abs(now.getTime() - created.getTime());
-                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                            
-                            if (diffDays === 1) return '오늘';
-                            if (diffDays === 2) return '어제';
-                            if (diffDays <= 7) return `${diffDays - 1}일 전`;
-                            
-                            const year = created.getFullYear();
-                            const month = created.getMonth() + 1;
-                            const day = created.getDate();
-                            
-                            if (year !== now.getFullYear()) {
-                              return `${year}년 ${month}월 ${day}일`;
-                            }
-                            return `${month}월 ${day}일`;
-                          })()})
-                        </span>
+                        
                       </>
                     ) : answer.createDate ? (
                       <>
@@ -146,27 +102,7 @@ export default function AnswerList({
                           hour: '2-digit',
                           minute: '2-digit'
                         })}
-                        <span className="text-xs text-muted-foreground/70 ml-1">
-                          ({(() => {
-                            const now = new Date();
-                            const created = new Date(answer.createDate);
-                            const diffTime = Math.abs(now.getTime() - created.getTime());
-                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                            
-                            if (diffDays === 1) return '오늘';
-                            if (diffDays === 2) return '어제';
-                            if (diffDays <= 7) return `${diffDays - 1}일 전`;
-                            
-                            const year = created.getFullYear();
-                            const month = created.getMonth() + 1;
-                            const day = created.getDate();
-                            
-                            if (year !== now.getFullYear()) {
-                              return `${year}년 ${month}월 ${day}일`;
-                            }
-                            return `${month}월 ${day}일`;
-                          })()})
-                        </span>
+                        
                       </>
                     ) : answer.regDate ? (
                       <>
@@ -177,31 +113,17 @@ export default function AnswerList({
                           hour: '2-digit',
                           minute: '2-digit'
                         })}
-                        <span className="text-xs text-muted-foreground/70 ml-1">
-                          ({(() => {
-                            const now = new Date();
-                            const created = new Date(answer.regDate);
-                            const diffTime = Math.abs(now.getTime() - created.getTime());
-                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                            
-                            if (diffDays === 1) return '오늘';
-                            if (diffDays === 2) return '어제';
-                            if (diffDays <= 7) return `${diffDays - 1}일 전`;
-                            
-                            const year = created.getFullYear();
-                            const month = created.getMonth() + 1;
-                            const day = created.getDate();
-                            
-                            if (year !== now.getFullYear()) {
-                              return `${year}년 ${month}월 ${day}일`;
-                            }
-                            return `${month}월 ${day}일`;
-                          })()})
-                        </span>
+                        
                       </>
                     ) : (
                       <span className="text-muted-foreground">
-                        작성 시간: 방금 전 | 답변 ID: {answer.answerId} | 작성자: {answer.memberId}
+                        {(() => {
+                          try {
+                            return formatDateTime(new Date().toISOString())
+                          } catch {
+                            return '방금 전'
+                          }
+                        })()}
                       </span>
                     )}
                   </div>
@@ -263,7 +185,7 @@ export default function AnswerList({
                 size="sm"
                 onClick={async () => {
                   if (window.confirm('정말로 이 답변을 삭제하시겠습니까?')) {
-                    await handleDeleteComment(answer.answerId);
+                    await handleDeleteAnswer(answer.answerId);
                   }
                 }}
               >
@@ -282,7 +204,7 @@ export default function AnswerList({
               <div className="space-y-3 mb-4 w-full">
                 {answerCommentsData[answer.answerId].map((comment: any, idx: number) => (
                   <div key={comment.commentId ? String(comment.commentId) : idx} className="flex items-center border-b py-2 w-full">
-                    <span className="font-medium text-xs mr-2">{comment.nickName || comment.memberId}</span>
+                    <span className="font-medium text-xs mr-2">{comment.nickname || comment.nickName || comment.memberNickname || comment.memberId}</span>
                     {editingCommentId === comment.commentId ? (
                       <>
                         <Textarea
