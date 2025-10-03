@@ -8,7 +8,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { MessageSquare, ThumbsUp, Share2, MoreHorizontal, ImageIcon, Send, X, Repeat } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/hooks/use-toast"
-import { useAuth } from "@/hooks/use-auth"
 import {
   likeFeed,
   unlikeFeed,
@@ -30,7 +29,6 @@ interface FeedPostProps {
 
 export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
   const { toast } = useToast()
-  const { user } = useAuth()
   const router = useRouter()
   const [post, setPost] = useState(initialPost)
   const [showComments, setShowComments] = useState(false)
