@@ -12,8 +12,6 @@ import { useAuth } from "@/hooks/use-auth"
 import {
   likeFeed,
   unlikeFeed,
-  getFeedMediaUrl,
-  getProfileMediaUrl,
   FetchFeedResponse
 } from "@/lib/api/feed"
 import { FeedComments } from "./feed-comments"

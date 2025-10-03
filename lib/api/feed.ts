@@ -1,8 +1,6 @@
-import { api, ApiError } from '../api-client';
+import { api, ApiError, API_BASE_URL } from '../api-client';
 import type { File } from 'buffer'; // File 타입이 필요할 경우(환경에 따라 조정)
 import { auth } from '@/lib/auth';
-
-const API_BASE_URL = '/api/v1';
 
 // ====== Feed DTO ======
 export interface FeedCreateRequest {
@@ -160,10 +158,7 @@ export async function fetchFeedById(feedId: number): Promise<{ status: number; m
 }
 
 export async function createFeed(formData: FormData): Promise<any> {
-  return await apiClientFormData('/feed', {
-    method: 'POST',
-    body: formData,
-  });
+  return await api.upload('/feed', formData);
 }
 
 export async function shareFeed(content: string, originFeedId: number): Promise<any> {
@@ -192,10 +187,7 @@ export async function fetchFeedComments(feedId: number): Promise<FetchFeedCommen
 }
 
 export async function createFeedComment(formData: FormData): Promise<any> {
-  return await apiClientFormData(`/feed/comment`, {
-    method: 'POST',
-    body: formData,
-  });
+  return await api.upload('/feed/comment', formData);
 }
 
 export function getFeedCommentMediaUrl(mediaId: number): string {
@@ -203,10 +195,7 @@ export function getFeedCommentMediaUrl(mediaId: number): string {
 }
 
 export async function updateFeedComment(feedCommentId: number, formData: FormData): Promise<any> {
-  return await apiClientFormData(`/feed/comment/${feedCommentId}`, {
-    method: 'PUT',
-    body: formData,
-  });
+  return await api.upload(`/feed/comment/${feedCommentId}`, formData, { method: 'PUT' });
 }
 
 export async function deleteFeedComment(feedCommentId: number): Promise<any> {
@@ -227,17 +216,11 @@ export async function fetchFeedReplies(feedCommentId: number): Promise<FetchFeed
 }
 
 export async function createFeedReply(formData: FormData): Promise<any> {
-  return await apiClientFormData('/feed/comment/reply', {
-    method: 'POST',
-    body: formData,
-  });
+  return await api.upload('/feed/comment/reply', formData);
 }
 
 export async function updateFeedReply(feedReplyId: number, formData: FormData): Promise<any> {
-  return await apiClientFormData(`/feed/comment/reply/${feedReplyId}`, {
-    method: 'PUT',
-    body: formData,
-  });
+  return await api.upload(`/feed/comment/reply/${feedReplyId}`, formData, { method: 'PUT' });
 }
 
 export async function deleteFeedReply(feedReplyId: number): Promise<any> {
@@ -309,57 +292,3 @@ export async function getFeedReplyMediaBlob(mediaId: number): Promise<Blob> {
   return await response.blob();
 } 
 
-
-export async function apiClientFormData(endpoint: string, options: RequestInit = {}) {
-  const { body, ...fetchOptions } = options;
-  
-  // Construct URL with query parameters
-  let url = `${API_BASE_URL}${endpoint}`;
-
-  const headers = new Headers(fetchOptions.headers);
-
-  // 토큰이 있으면 Authorization 헤더 추가
-  const token = await auth.getToken();
-  console.log('API 요청 - 현재 토큰:', token);
-  
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
-    console.log('API 요청 - Authorization 헤더 추가됨:', headers.get('Authorization'));
-  } else {
-    console.log('API 요청 - 토큰 없음, Authorization 헤더 미포함');
-  }
-
-  const init: RequestInit = {
-    ...fetchOptions,
-    headers,
-    body,
-  };
-
-  try {
-    console.log('API 요청 시작:', {
-      url,
-      method: init.method,
-      headers: Object.fromEntries(headers.entries())
-    });
-    
-    const response = await fetch(url, init);
-    const data = await response.json();
-
-    console.log('API 응답:', {
-      status: response.status,
-      data
-    });
-
-    if (!response.ok) {
-      throw new ApiError(response.status, data.message || 'API 요청 실패');
-    }
-
-    return data;
-  } catch (error) {
-    console.error('API 요청 실패:', error);
-    if (error instanceof ApiError) {
-      throw error;
-    }
-    throw new ApiError(500, '서버 오류가 발생했습니다');
-  }
-}
