@@ -9,8 +9,9 @@ import {useAuth} from "@/components/auth-provider"
 import { Notification } from '@/types/notification'
 import { fetchNotificationsApi, fetchUnreadCountApi, markAsReadApi, markAllAsReadApi } from '@/lib/api/notification'
 import { getNotificationMessage } from './notification-utils'
+import { API_BASE_URL } from '@/lib/api-client'
 
-const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/sse/subscribe`
+const API_BASE = `${API_BASE_URL}/sse/subscribe`
 
 // SSE 설정 상수
 const SSE_CONFIG = {

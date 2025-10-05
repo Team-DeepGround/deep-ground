@@ -26,10 +26,6 @@ export default function QuestionDetailCard({
 }: QuestionDetailCardProps) {
   const router = useRouter();
   
-  // 디버깅을 위한 로그
-  console.log('QuestionDetailCard - question:', question);
-  console.log('QuestionDetailCard - question.createdAt:', question?.createdAt);
-  console.log('QuestionDetailCard - question.createdAt type:', typeof question?.createdAt);
   
   return (
     <Card className="mb-8">
@@ -53,135 +49,15 @@ export default function QuestionDetailCard({
             <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
               <Calendar className="h-3.5 w-3.5" />
               <span>
-                {question?.createdAt ? (
-                  <>
-                    {new Date(question.createdAt).toLocaleDateString('ko-KR', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                    <span className="text-xs text-muted-foreground/70 ml-2">
-                      ({(() => {
-                        const now = new Date();
-                        const created = new Date(question.createdAt);
-                        const diffTime = Math.abs(now.getTime() - created.getTime());
-                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                        
-                        if (diffDays === 1) return '오늘';
-                        if (diffDays === 2) return '어제';
-                        if (diffDays <= 7) return `${diffDays - 1}일 전`;
-                        
-                        const year = created.getFullYear();
-                        const month = created.getMonth() + 1;
-                        const day = created.getDate();
-                        
-                        if (year !== now.getFullYear()) {
-                          return `${year}년 ${month}월 ${day}일`;
-                        }
-                        return `${month}월 ${day}일`;
-                      })()})
-                    </span>
-                  </>
-                ) : question?.created_at ? (
-                  <>
-                    {new Date(question.created_at).toLocaleDateString('ko-KR', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                    <span className="text-xs text-muted-foreground/70 ml-2">
-                      ({(() => {
-                        const now = new Date();
-                        const created = new Date(question.created_at);
-                        const diffTime = Math.abs(now.getTime() - created.getTime());
-                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                        
-                        if (diffDays === 1) return '오늘';
-                        if (diffDays === 2) return '어제';
-                        if (diffDays <= 7) return `${diffDays - 1}일 전`;
-                        
-                        const year = created.getFullYear();
-                        const month = created.getMonth() + 1;
-                        const day = created.getDate();
-                        
-                        if (year !== now.getFullYear()) {
-                          return `${year}년 ${month}월 ${day}일`;
-                        }
-                        return `${month}월 ${day}일`;
-                      })()})
-                    </span>
-                  </>
-                ) : question?.createDate ? (
-                  <>
-                    {new Date(question.createDate).toLocaleDateString('ko-KR', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                    <span className="text-xs text-muted-foreground/70 ml-2">
-                      ({(() => {
-                        const now = new Date();
-                        const created = new Date(question.createDate);
-                        const diffTime = Math.abs(now.getTime() - created.getTime());
-                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                        
-                        if (diffDays === 1) return '오늘';
-                        if (diffDays === 2) return '어제';
-                        if (diffDays <= 7) return `${diffDays - 1}일 전`;
-                        
-                        const year = created.getFullYear();
-                        const month = created.getMonth() + 1;
-                        const day = created.getDate();
-                        
-                        if (year !== now.getFullYear()) {
-                          return `${year}년 ${month}월 ${day}일`;
-                        }
-                        return `${month}월 ${day}일`;
-                      })()})
-                    </span>
-                  </>
-                ) : question?.regDate ? (
-                  <>
-                    {new Date(question.regDate).toLocaleDateString('ko-KR', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                    <span className="text-xs text-muted-foreground/70 ml-2">
-                      ({(() => {
-                        const now = new Date();
-                        const created = new Date(question.regDate);
-                        const diffTime = Math.abs(now.getTime() - created.getTime());
-                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                        
-                        if (diffDays === 1) return '오늘';
-                        if (diffDays === 2) return '어제';
-                        if (diffDays <= 7) return `${diffDays - 1}일 전`;
-                        
-                        const year = created.getFullYear();
-                        const month = created.getMonth() + 1;
-                        const day = created.getDate();
-                        
-                        if (year !== now.getFullYear()) {
-                          return `${year}년 ${month}월 ${day}일`;
-                        }
-                        return `${month}월 ${day}일`;
-                      })()})
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-muted-foreground">
-                    작성 시간: 방금 전 | 질문 ID: {question?.questionId} | 작성자: {question?.nickname}
-                  </span>
-                )}
+                {question?.createdAt
+                  ? new Date(question.createdAt).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                  : question?.created_at
+                  ? new Date(question.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                  : question?.createDate
+                  ? new Date(question.createDate).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                  : question?.regDate
+                  ? new Date(question.regDate).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                  : '작성 시간 정보 없음'}
               </span>
             </div>
           </div>
@@ -224,7 +100,7 @@ export default function QuestionDetailCard({
               </span>
               {memberId && memberId == question?.memberId && (
                 <select
-                  className="ml-4 text-lg font-bold border-4 border-blue-400 bg-white px-4 py-2 rounded-full shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  className="ml-2 text-sm font-medium border border-gray-300 bg-white px-2 py-1 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
                   value={question?.questionStatus || 'OPEN'}
                   disabled={!!statusUpdating}
                   onChange={e => handleStatusChange(e.target.value)}
