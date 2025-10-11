@@ -27,16 +27,32 @@ const nextConfig = {
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
   },
-  // 임시 설정: 서버에서 직접 CORS 처리해야 함
+  // 빌드 시 console.log 제거
+  webpack: (config, { dev, isServer }) => {
+    if (!dev && !isServer) {
+      const TerserPlugin = require('terser-webpack-plugin');
+      config.optimization.minimizer.push(
+        new TerserPlugin({
+          terserOptions: {
+            compress: {
+              drop_console: true, // ✅ console.log, console.debug, console.info 제거
+            },
+          },
+        })
+      );
+    }
+    return config;
+  },
+
   async rewrites() {
     return [
       {
         source: '/api/:path*',
-        destination: 'http://localhost:8080/api/:path*',
+        destination: process.env.NEXT_PUBLIC_API_URL + '/api/:path*',
       },
     ];
   },
-}
+};
 
 if (userConfig) {
   // ESM imports will have a "default" property
