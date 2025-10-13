@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import axios from "axios"
+import { api } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -33,9 +33,7 @@ export default function ReportDetailPage() {
       }
 
       try {
-        const response = await axios.get(`/api/v1/admin/report/${reportId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+        const response = await api.get(`/api/v1/admin/report/${reportId}`)
         setReport(response.data.result)
       } catch (error) {
         console.error("신고 상세 조회 실패:", error)
@@ -48,37 +46,25 @@ export default function ReportDetailPage() {
   }, [reportId, router])
 
   const handleDeleteFeed = async () => {
-    const token = await auth.getToken()
-    await axios.post(`/api/v1/admin/report/${reportId}/delete-feed`, null, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    await api.post(`/api/v1/admin/report/${reportId}/delete-feed`)
     alert("피드가 삭제되고 신고가 처리되었습니다.")
     router.push("/admin/reports")
   }
 
   const handleKeepFeed = async () => {
-    const token = await auth.getToken()
-    await axios.post(`/api/v1/admin/report/${reportId}/keep-feed`, null, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    await api.post(`/api/v1/admin/report/${reportId}/keep-feed`)
     alert("피드를 유지하고 신고를 처리했습니다.")
     router.push("/admin/reports")
   }
 
   const handleBanMember = async () => {
-    const token = await auth.getToken()
-    await axios.post(`/api/v1/admin/report/${reportId}/ban-member?days=${banDays}`, null, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    await api.post(`/api/v1/admin/report/${reportId}/ban-member?days=${banDays}`)
     alert("회원이 정지되고 신고가 처리되었습니다.")
     router.push("/admin/reports")
   }
 
   const handleIgnoreMember = async () => {
-    const token = await auth.getToken()
-    await axios.post(`/api/v1/admin/report/${reportId}/keep-member`, null, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    await api.post(`/api/v1/admin/report/${reportId}/keep-member`)
     alert("신고를 무시하고 처리했습니다.")
     router.push("/admin/reports")
   }

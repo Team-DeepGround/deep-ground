@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import axios from "axios"
+import { api } from "@/lib/api-client"
 import { auth } from "@/lib/auth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -37,11 +37,7 @@ export default function AdminDashboardPage() {
       }
 
       try {
-        const response = await axios.get("/api/v1/admin/dashboard", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
+        const response = await api.get("/admin/dashboard")
         setStats(response.data.result)
       } catch (error) {
         console.error("대시보드 통계 로딩 실패:", error)
