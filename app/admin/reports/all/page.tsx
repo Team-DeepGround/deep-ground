@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import axios from "axios"
+import { api } from "@/lib/api-client"
 import { useRouter } from "next/navigation"
 import { Report } from "@/types/report"
 import { ReportList } from "@/components/admin/report-list"
@@ -26,11 +26,7 @@ export default function AdminAllReportsPage() {
       }
 
       try {
-        const response = await axios.get("/api/v1/admin/report", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
+        const response = await api.get("/api/v1/admin/report")
         // 🔥 여기 중요: result.content로부터 꺼내야 함
         setReports(response.data.result.content)
       } catch (error) {
