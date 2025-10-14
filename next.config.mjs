@@ -27,21 +27,12 @@ const nextConfig = {
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
   },
-  // 빌드 시 console.log 제거
-  webpack: (config, { dev, isServer }) => {
-    if (!dev && !isServer) {
-      const TerserPlugin = require('terser-webpack-plugin');
-      config.optimization.minimizer.push(
-        new TerserPlugin({
-          terserOptions: {
-            compress: {
-              drop_console: true, // ✅ console.log, console.debug, console.info 제거
-            },
-          },
-        })
-      );
-    }
-    return config;
+  // 프로덕션 빌드 시 console.log/debug/info만 제거하고 warn/error는 유지
+  compiler: {
+    removeConsole:
+      process.env.NODE_ENV === 'production'
+        ? { exclude: ['error', 'warn'] }
+        : false,
   },
 
   async rewrites() {
