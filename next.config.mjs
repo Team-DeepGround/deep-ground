@@ -1,4 +1,7 @@
 let userConfig = undefined
+const API_ORIGIN =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '') ||
+  'http://localhost:8080';
 try {
   // try to import ESM first
   userConfig = await import('./v0-user-next.config.mjs')
@@ -39,7 +42,7 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: process.env.NEXT_PUBLIC_API_BASE_URL + '/api/:path*',
+        destination: API_ORIGIN + '/api/:path*',
       },
     ];
   },
