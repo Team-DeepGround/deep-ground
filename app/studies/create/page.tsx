@@ -106,7 +106,8 @@ export default function CreateStudyPage() {
       !studyEndDate ||
       !recruitStartDate ||
       !recruitEndDate ||
-      !maxMembers
+      !maxMembers ||
+      maxMembers.trim() === ""
     ) {
       toast({
         title: "필수 정보 누락",
@@ -165,6 +166,8 @@ export default function CreateStudyPage() {
     }
 
     try {
+      const parsedMaxMembers = parseInt(maxMembers) || 6;
+      
       const requestData: CreateStudyGroupRequest = {
         title,
         explanation: description,
@@ -172,7 +175,7 @@ export default function CreateStudyPage() {
         studyEndDate: format(studyEndDate, 'yyyy-MM-dd'),
         recruitStartDate: format(recruitStartDate, 'yyyy-MM-dd'),
         recruitEndDate: format(recruitEndDate, 'yyyy-MM-dd'),
-        groupMemberCount: parseInt(maxMembers),
+        groupMemberCount: parsedMaxMembers,
         isOffline: !isOnline,
         studyLocation: location,
         techStackNames: selectedTags,
