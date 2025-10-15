@@ -16,9 +16,10 @@ const API_BASE = `${API_BASE_URL}/sse/subscribe`
 // SSE 설정 상수
 const SSE_CONFIG = {
     URL: API_BASE,
-    HEARTBEAT_TIMEOUT: 60000,
-    CONNECTION_TIMEOUT: 10000,
-    RECONNECT_INTERVAL: 5000,
+    HEARTBEAT_TIMEOUT: 120000, // 2분으로 증가
+    CONNECTION_TIMEOUT: 15000,  // 연결 타임아웃 증가
+    RECONNECT_INTERVAL: 3000,   // 재연결 간격 단축
+    MAX_RECONNECT_ATTEMPTS: 10, // 최대 재연결 시도 횟수
 } as const
 
 // 전역 SSE 연결 관리
@@ -32,6 +33,8 @@ let globalListeners: Array<{
 let lastHeartbeatTime = Date.now()
 let heartbeatIntervalId: NodeJS.Timeout | null = null
 let globalCurrentChatRoomId: number | null = null
+let reconnectAttempts = 0
+let isReconnecting = false
 
 // 전역 채팅방 ID 설정 함수
 const setGlobalCurrentChatRoomId = (chatRoomId: number | null): void => {
@@ -121,6 +124,8 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
         eventSource.onopen = () => {
             console.log('SSE 연결 성공')
             lastHeartbeatTime = Date.now() // 하트비트 시간 초기화
+            reconnectAttempts = 0 // 재연결 시도 횟수 리셋
+            isReconnecting = false // 재연결 상태 리셋
             startHeartbeatMonitoring() // 하트비트 모니터링 시작
         }
 
@@ -193,6 +198,17 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
             if (!hasReceivedMessage && !isTrulyEmptyError(error)) {
                 console.error('SSE 연결 오류:', error)
             }
+            
+            // 재연결 시도 횟수 증가
+            reconnectAttempts++
+            
+            // 최대 재연결 시도 횟수 초과 시 로그 출력
+            if (reconnectAttempts > SSE_CONFIG.MAX_RECONNECT_ATTEMPTS) {
+                console.warn(`SSE 재연결 시도 횟수 초과 (${reconnectAttempts}/${SSE_CONFIG.MAX_RECONNECT_ATTEMPTS}). 재연결을 중단합니다.`)
+                globalListeners.forEach(listener => listener.onError(error))
+                return
+            }
+            
             globalListeners.forEach(listener => listener.onError(error))
             globalListeners.forEach(listener => listener.onConnected(false))
             // 일반 에러는 내장 재연결 기능 사용
@@ -252,14 +268,24 @@ const startHeartbeatMonitoring = (): void => {
     }
     heartbeatIntervalId = setInterval(() => {
         if (globalConnectionCount > 0 && !validateConnection()) {
-            console.log('하트비트 모니터링에서 연결 끊김 감지 - 내장 재연결 기능 활용')
-            if (globalEventSource) {
-                globalEventSource.close();
+            console.log('하트비트 모니터링에서 연결 끊김 감지 - 재연결 시도')
+            
+            // 재연결 중이 아닌 경우에만 재연결 시도
+            if (!isReconnecting && reconnectAttempts < SSE_CONFIG.MAX_RECONNECT_ATTEMPTS) {
+                isReconnecting = true
+                if (globalEventSource) {
+                    globalEventSource.close();
+                }
                 // 직접 재연결 시도
-                createGlobalSSEConnection();
+                createGlobalSSEConnection().finally(() => {
+                    isReconnecting = false
+                });
+            } else if (reconnectAttempts >= SSE_CONFIG.MAX_RECONNECT_ATTEMPTS) {
+                console.warn('최대 재연결 시도 횟수 초과로 하트비트 모니터링 중단')
+                stopHeartbeatMonitoring()
             }
         }
-    }, 30000)
+    }, 30000) // 30초마다 체크
 }
 
 // 하트비트 모니터링 중단

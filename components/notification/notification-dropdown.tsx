@@ -14,7 +14,9 @@ import {
   X,
   Loader2,
   Clock,
-  MessageSquare
+  MessageSquare,
+  Wifi,
+  WifiOff
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Notification, NotificationType } from "@/types/notification"
@@ -226,7 +228,19 @@ export const NotificationDropdown = ({ isOpen, onClose }: NotificationDropdownPr
   return (
     <Card ref={dropdownRef} className="fixed top-16 right-4 z-50 w-[380px] max-w-[calc(100vw-2rem)] shadow-xl">
       <CardHeader className="p-4 flex flex-row items-center justify-between">
-        <CardTitle className="text-lg">알림</CardTitle>
+        <div className="flex items-center gap-2">
+          <CardTitle className="text-lg">알림</CardTitle>
+          <div className="flex items-center gap-1">
+            {isConnected ? (
+              <Wifi className="h-4 w-4 text-green-500" />
+            ) : (
+              <WifiOff className="h-4 w-4 text-red-500" />
+            )}
+            <span className={`text-xs ${isConnected ? 'text-green-600' : 'text-red-600'}`}>
+              {isConnected ? '연결됨' : '연결 끊김'}
+            </span>
+          </div>
+        </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={handleMarkAllAsRead}>
             모두 읽음
