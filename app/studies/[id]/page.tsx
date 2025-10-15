@@ -53,7 +53,7 @@ export default function StudyDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
-  const { user } = useAuth()
+  const { memberId } = useAuth()
   const [study, setStudy] = useState<StudyGroupDetail | null>(null)
   const [participants, setParticipants] = useState<Participant[]>([])
   const [isLoading, setIsLoading] = useState(true)
