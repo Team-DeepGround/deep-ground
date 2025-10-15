@@ -126,8 +126,13 @@ export default function QuestionDetailCard({
       <CardContent className="pt-0">
         <div className="flex items-center gap-3 mb-4">
           <Avatar>
-            <AvatarImage src={question?.author?.avatar || "/placeholder.svg"} alt={question?.author?.name || "알 수 없음"} />
-            <AvatarFallback>{question?.author?.name ? question.author.name[0] : "?"}</AvatarFallback>
+            <AvatarImage 
+              src={question?.imageUrl || question?.author?.avatar || "/placeholder.svg"} 
+              alt={question?.author?.name || question?.nickname || "알 수 없음"} 
+            />
+            <AvatarFallback>
+              {question?.author?.name ? question.author.name[0] : question?.nickname ? question.nickname[0] : "?"}
+            </AvatarFallback>
           </Avatar>
           <div>
             <div className="font-medium">

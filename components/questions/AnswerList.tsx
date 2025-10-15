@@ -64,8 +64,13 @@ export default function AnswerList({
             <div className="flex justify-between items-start">
               <div className="flex items-center gap-3">
                 <Avatar>
-                  <AvatarImage src="/placeholder.svg" alt={`User ${answer.memberId}`} />
-                  <AvatarFallback>{answer.memberId}</AvatarFallback>
+                  <AvatarImage 
+                    src={answer.imageUrl || answer.author?.avatar || "/placeholder.svg"} 
+                    alt={answer.nickname || `User ${answer.memberId}`} 
+                  />
+                  <AvatarFallback>
+                    {answer.nickname ? answer.nickname[0] : answer.memberId}
+                  </AvatarFallback>
                 </Avatar>
                 <div>
                   <div className="font-medium">

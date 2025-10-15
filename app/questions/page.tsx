@@ -51,7 +51,10 @@ export default function QuestionsPage() {
           title: q.title,
           questionStatus: q.questionStatus,
           status: q.status,
-          isResolved: q.isResolved
+          isResolved: q.isResolved,
+          imageUrl: q.imageUrl,
+          nickname: q.nickname,
+          author: q.author
         });
       });
       
@@ -604,7 +607,7 @@ interface QuestionCardProps {
 
 function QuestionCard({ question, onTitleClick }: QuestionCardProps) {
   const authorName = question.nickname || "알 수 없음";
-  const authorAvatar = question.author?.avatar || "/placeholder.svg";
+  const authorAvatar = question.imageUrl || question.author?.avatar || "/placeholder.svg";
   // 상태 한글 변환 함수
   const statusLabel = (status?: string) => {
     if (status === "OPEN") return "미해결";

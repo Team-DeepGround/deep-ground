@@ -210,7 +210,10 @@ export function FeedComments({ feedId, onShow }: FeedCommentsProps) {
           {comments[feedId].map((comment) => (
             <div key={comment.feedCommentId} className="flex gap-2 items-start">
               <Avatar className="h-8 w-8">
-                <AvatarImage src="/placeholder.svg" alt={comment.memberName} />
+                <AvatarImage 
+                  src={(comment as any).profileImageUrl || (comment as any).profileImage || "/placeholder.svg"} 
+                  alt={comment.memberName} 
+                />
                 <AvatarFallback>{comment.memberName[0]}</AvatarFallback>
               </Avatar>
               <div className="flex-1 bg-muted rounded-md px-3 py-2">

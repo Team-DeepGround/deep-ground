@@ -13,7 +13,7 @@ interface QuestionCardProps {
 
 export default function QuestionCard({ question, onTitleClick }: QuestionCardProps) {
   const authorName = question.nickname || "알 수 없음";
-  const authorAvatar = question.author?.avatar || "/placeholder.svg";
+  const authorAvatar = question.imageUrl || question.author?.avatar || "/placeholder.svg";
   const statusLabel = (status?: string) => {
     if (status === "OPEN") return "미해결";
     if (status === "RESOLVED") return "해결중";

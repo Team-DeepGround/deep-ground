@@ -172,7 +172,19 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
           <div className="flex justify-between items-start">
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
-                {post.profileImageId ? (
+                {(post as any).profileImageUrl ? (
+                  <AvatarImage 
+                    src={(post as any).profileImageUrl} 
+                    alt={post.memberName} 
+                    className="h-10 w-10 rounded-full object-cover"
+                  />
+                ) : (post as any).profileImage ? (
+                  <AvatarImage 
+                    src={(post as any).profileImage} 
+                    alt={post.memberName} 
+                    className="h-10 w-10 rounded-full object-cover"
+                  />
+                ) : post.profileImageId ? (
                   <AuthImage 
                     mediaId={post.profileImageId} 
                     type="profile" 
