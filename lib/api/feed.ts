@@ -158,7 +158,7 @@ export async function fetchFeedById(feedId: number): Promise<{ status: number; m
 }
 
 export async function createFeed(formData: FormData): Promise<any> {
-  return await api.upload('/feed', formData);
+  return await api.post('/feed', formData);
 }
 
 export async function shareFeed(content: string, originFeedId: number): Promise<any> {
@@ -174,11 +174,11 @@ export async function unlikeFeed(feedId: number): Promise<any> {
 }
 
 export function getFeedMediaUrl(mediaId: number): string {
-  return `${API_BASE_URL}/feed/media/${mediaId}`;
+  return `${API_BASE_URL}/api/v1/feed/media/${mediaId}`;
 }
 
 export function getProfileMediaUrl(mediaId: number): string {
-  return `${API_BASE_URL}/profile/media/${mediaId}`;
+  return `${API_BASE_URL}/api/v1/profile/media/${mediaId}`;
 }
 
 // ====== Feed Comment DTO 및 API ======
@@ -187,15 +187,15 @@ export async function fetchFeedComments(feedId: number): Promise<FetchFeedCommen
 }
 
 export async function createFeedComment(formData: FormData): Promise<any> {
-  return await api.upload('/feed/comment', formData);
+  return await api.post('/feed/comment', formData);
 }
 
 export function getFeedCommentMediaUrl(mediaId: number): string {
-  return `${API_BASE_URL}/feed/comment/media/${mediaId}`;
+  return `${API_BASE_URL}/api/v1/feed/comment/media/${mediaId}`;
 }
 
 export async function updateFeedComment(feedCommentId: number, formData: FormData): Promise<any> {
-  return await api.upload(`/feed/comment/${feedCommentId}`, formData, { method: 'PUT' });
+  return await api.put(`/feed/comment/${feedCommentId}`, formData, { method: 'PUT' });
 }
 
 export async function deleteFeedComment(feedCommentId: number): Promise<any> {
@@ -216,11 +216,11 @@ export async function fetchFeedReplies(feedCommentId: number): Promise<FetchFeed
 }
 
 export async function createFeedReply(formData: FormData): Promise<any> {
-  return await api.upload('/feed/comment/reply', formData);
+  return await api.post('/feed/comment/reply', formData);
 }
 
 export async function updateFeedReply(feedReplyId: number, formData: FormData): Promise<any> {
-  return await api.upload(`/feed/comment/reply/${feedReplyId}`, formData, { method: 'PUT' });
+  return await api.put(`/feed/comment/reply/${feedReplyId}`, formData);
 }
 
 export async function deleteFeedReply(feedReplyId: number): Promise<any> {
