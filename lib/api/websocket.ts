@@ -6,8 +6,22 @@ import { ChatMessage, InitChatRoomResponse } from '@/types/chat';
 // WebSocket 클라이언트 생성
 export const createStompClient = async (onConnect: () => void, onError: (error: any) => void, onClose: () => void): Promise<Client> => {
 
-  const wsUrl = `${API_BASE_URL.replace(/^http/, 'ws')}/ws`;
   const token = await auth.getToken();
+  const explicitWsBase = process.env.NEXT_PUBLIC_WS_BASE_URL;
+  let wsUrl: string;
+  if (explicitWsBase) {
+    wsUrl = explicitWsBase.replace(/\/$/, '');
+  } else {
+    try {
+      const apiUrl = new URL(API_BASE_URL);
+      wsUrl = `${apiUrl.origin.replace(/^http/, 'ws')}/ws`;
+    } catch {
+      wsUrl = `${API_BASE_URL.replace(/^http/, 'ws')}/ws`;
+    }
+  }
+  if (token) {
+    wsUrl += (wsUrl.includes('?') ? '&' : '?') + `token=${encodeURIComponent(token)}`;
+  }
 
   const client = new Client({
     brokerURL: wsUrl,
