@@ -32,16 +32,6 @@ export default function FeedPage() {
       if (res.result?.feeds) {
         console.log('피드 아이템들:', res.result.feeds)
         
-        // 각 피드의 프로필 이미지 정보 로깅
-        res.result.feeds.forEach((feed, idx) => {
-          console.log(`피드 ${idx + 1}:`, {
-            feedId: feed.feedId,
-            memberName: feed.memberName,
-            profileImageId: feed.profileImageId,
-            profileImage: (feed as any).profileImage,
-            profileImageUrl: (feed as any).profileImageUrl
-          });
-        });
         
         // 공유된 피드와 일반 피드를 모두 표시
         const processedFeeds = res.result.feeds.map(feed => {
