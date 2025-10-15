@@ -136,86 +136,86 @@ export default function FriendsPage() {
     }
   }
 
-  const handleAcceptRequest = async (memberId: number) => {
-    if (isSubmitting) return
+  const handleAcceptRequest = async (friendId: number) => {
+    if (isSubmitting) return;
     try {
-      setIsSubmitting(true)
-      const response = await api.patch(`/friends/receive/${memberId}/accept`)
+      setIsSubmitting(true);
+      const response = await api.patch(`/friends/receive/${friendId}/accept`);
       if (response.status === 200) {
         toast({
-          title: "친구 요청 수락",
+          title: '친구 요청 수락',
           description: response.message,
-        })
-        await loadData()
+        });
+        await loadData();
       }
     } catch (error) {
       if (error instanceof ApiError && error.status !== 401) {
         toast({
-          title: "수락 실패",
-          description: "친구 요청 수락에 실패했습니다.",
-          variant: "destructive",
-        })
+          title: '수락 실패',
+          description: '친구 요청 수락에 실패했습니다.',
+          variant: 'destructive',
+        });
       }
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
-  const handleRejectRequest = async (memberId: number) => {
-    if (isSubmitting) return
+  const handleRejectRequest = async (friendId: number) => {
+    if (isSubmitting) return;
     try {
-      setIsSubmitting(true)
-      const response = await api.patch(`/friends/receive/${memberId}/refusal`)
+      setIsSubmitting(true);
+      const response = await api.patch(`/friends/receive/${friendId}/refusal`);
       if (response.status === 200) {
         toast({
-          title: "친구 요청 거절",
+          title: '친구 요청 거절',
           description: response.message,
-        })
-        await loadData()
+        });
+        await loadData();
       }
     } catch (error) {
       if (error instanceof ApiError && error.status !== 401) {
         toast({
-          title: "거절 실패",
-          description: "친구 요청 거절에 실패했습니다.",
-          variant: "destructive",
-        })
+          title: '거절 실패',
+          description: '친구 요청 거절에 실패했습니다.',
+          variant: 'destructive',
+        });
       }
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
-  const handleRemoveFriend = async (memberId: number) => {
-    if (isSubmitting) return
+  const handleRemoveFriend = async (friendId: number) => {
+    if (isSubmitting) return;
     try {
-      setIsSubmitting(true)
-      const response = await api.delete(`/friends/${memberId}`)
+      setIsSubmitting(true);
+      const response = await api.delete(`/friends/${friendId}`);
       if (response.status === 200) {
         toast({
-          title: "친구 삭제",
+          title: '친구 삭제',
           description: response.message,
-        })
-        await loadData()
+        });
+        await loadData();
       }
     } catch (error) {
       if (error instanceof ApiError && error.status !== 401) {
         toast({
-          title: "삭제 실패",
-          description: "친구 삭제에 실패했습니다.",
-          variant: "destructive",
-        })
+          title: '삭제 실패',
+          description: '친구 삭제에 실패했습니다.',
+          variant: 'destructive',
+        });
       }
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   const handleCancelRequest = async (friendId: number) => {
     if (isSubmitting) return
     try {
       setIsSubmitting(true)
-      const response = await api.patch(`/friends/sent/${friendId}/cancel`)
+      const response = await api.patch(`/friends/sent/${friendId}/cancel`);
       if (response.status === 200) {
         toast({
           title: "친구 요청 취소",
