@@ -9,6 +9,7 @@ import { ImageIcon, X } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/lib/api-client"
 import { createFeed } from "@/lib/api/feed"
+import { useAuth } from "@/components/auth-provider"
 
 interface FeedCreatePostProps {
   onPostCreated: () => void
@@ -16,6 +17,7 @@ interface FeedCreatePostProps {
 
 export function FeedCreatePost({ onPostCreated }: FeedCreatePostProps) {
   const { toast } = useToast()
+  const { email, memberId } = useAuth()
   const [user, setUser] = useState<{
     nickname: string
     email: string
@@ -31,21 +33,32 @@ export function FeedCreatePost({ onPostCreated }: FeedCreatePostProps) {
     setUserError(null)
     try {
       const res = await api.get("/members/profile/me")
+      
       if (res && res.result) {
         setUser({
-          nickname: res.result.nickname || "",
-          email: res.result.email || "",
+          nickname: res.result.nickname || `사용자${memberId}`,
+          email: res.result.email || email || "",
           profileImage: res.result.profileImage || "",
         })
       } else {
-        setUserError("유저 정보를 불러오지 못했습니다.")
+        // API 실패 시 기본값 사용
+        setUser({
+          nickname: `사용자${memberId}`,
+          email: email || "",
+          profileImage: "",
+        })
       }
     } catch (e) {
-      setUserError("유저 정보를 불러오지 못했습니다.")
+      // API 에러 시 기본값 사용
+      setUser({
+        nickname: `사용자${memberId}`,
+        email: email || "",
+        profileImage: "",
+      })
     } finally {
       setUserLoading(false)
     }
-  }, [])
+  }, [email, memberId])
 
   useEffect(() => {
     loadUser()
@@ -82,9 +95,9 @@ export function FeedCreatePost({ onPostCreated }: FeedCreatePostProps) {
             {user?.profileImage ? (
               <AvatarImage src={user.profileImage} alt={user.nickname || user.email} />
             ) : (
-              <AvatarImage src="/placeholder.svg?height=40&width=40" alt={user?.email || "사용자"} />
+              <AvatarImage src="/placeholder.svg?height=40&width=40" alt={user?.nickname || "사용자"} />
             )}
-            <AvatarFallback>{user?.email?.charAt(0).toUpperCase() || "U"}</AvatarFallback>
+            <AvatarFallback>{user?.nickname?.charAt(0).toUpperCase() || "U"}</AvatarFallback>
           </Avatar>
           <div>
             {userLoading ? (
@@ -92,7 +105,7 @@ export function FeedCreatePost({ onPostCreated }: FeedCreatePostProps) {
             ) : userError ? (
               <span className="text-destructive text-sm">{userError}</span>
             ) : (
-              <h3 className="font-medium">{user?.email || "게스트"}</h3>
+              <h3 className="font-medium">{user?.nickname || "게스트"}</h3>
             )}
           </div>
         </div>

@@ -144,6 +144,7 @@ export default function QuestionDetailPage() {
   const [statusUpdating, setStatusUpdating] = useState(false)
   const [justUpdatedStatus, setJustUpdatedStatus] = useState(false)
 
+
   const fetchQuestion = async () => {
     setLoading(true)
     try {
@@ -153,7 +154,6 @@ export default function QuestionDetailPage() {
       )
       const data = await res.json()
       const q = data.result?.question || data.result
-      
       
       setQuestion(q)
       if (q?.answers) {
@@ -617,6 +617,7 @@ export default function QuestionDetailPage() {
           setEditingCommentId={setEditingCommentId}
           question={question}
           toast={toast}
+          memberId={memberId}
         />
 
         {/* 답변 작성 폼 컴포넌트 */}
