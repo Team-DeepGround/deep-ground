@@ -84,7 +84,7 @@ export default function StudyDetailPage() {
   }, [params.id, toast])
 
   const handleJoinStudy = async () => {
-    if (!user) {
+    if (!memberId) {
       toast({
         title: "로그인이 필요합니다",
         description: "스터디에 참여하려면 로그인해주세요",
@@ -132,13 +132,13 @@ export default function StudyDetailPage() {
   }
 
   const handleCommentSubmit = async (content: string) => {
-    if (!user) {
+    if (!memberId) {
       toast({
-        title: "로그인이 필요합니다",
-        description: "댓글을 작성하려면 로그인해주세요",
-        variant: "destructive",
-      })
-      return
+        title: '로그인이 필요합니다',
+        description: '댓글을 작성하려면 로그인해주세요',
+        variant: 'destructive',
+      });
+      return;
     }
 
     if (!study) return
@@ -156,7 +156,7 @@ export default function StudyDetailPage() {
   }
 
   const handleReplySubmit = async (commentId: number, content: string) => {
-    if (!user) {
+    if (!memberId) {
       toast({
         title: "로그인이 필요합니다",
         description: "답글을 작성하려면 로그인해주세요",
