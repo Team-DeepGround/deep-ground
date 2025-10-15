@@ -11,6 +11,20 @@ import { getTechStacks, TechStack } from "@/lib/api/techStack"
 import { Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/lib/api-client"
+import { set } from "date-fns"
+
+const serverToFormField: Record<string, string> = {
+  nickname: "nickname",
+  introduction: "bio",
+  job: "jobTitle",
+  company: "company",
+  liveIn: "liveIn",
+  education: "education",
+  githubUrl: "github",
+  linkedInUrl: "linkedin",
+  websiteUrl: "website",
+  twitterUrl: "twitter",
+};
 
 interface ProfileFormProps {
   initialProfile?: {
@@ -29,7 +43,7 @@ interface ProfileFormProps {
     company?: string
     education?: string
   }
-  onSubmit: (profileDto: any, profileImage: File | null) => void
+  onSubmit: (profileDto: any, profileImage: File | null) => Promise<any>
   onCancel?: () => void
   loading?: boolean
 }
@@ -40,6 +54,7 @@ export default function ProfileForm({
   onCancel,
   loading,
 }: ProfileFormProps) {
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [availableTags, setAvailableTags] = useState<TechStack[]>([])
   const [profileImage, setProfileImage] = useState<File | null>(null)
   const [isCheckingNickname, setIsCheckingNickname] = useState(false)
@@ -126,28 +141,90 @@ export default function ProfileForm({
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setErrors({});
 
-    const dto = {
-      nickname: formData.nickname,
-      introduction: formData.bio,
-      job: formData.jobTitle,
-      company: formData.company,
-      liveIn: formData.liveIn,
-      education: formData.education,
-      techStack: formData.techStack,
-      githubUrl: formData.links.github,
-      linkedInUrl: formData.links.linkedin,
-      websiteUrl: formData.links.website,
-      twitterUrl: formData.links.twitter,
-    }
-
-    console.log("🔥 전송할 프로필 데이터:", dto)
-    console.log("🖼️ 전송할 프로필 이미지:", profileImage)
-
-    onSubmit(dto, profileImage)
+  // ✅ 프론트 검증
+  const clientErrors = validateClient(formData);
+  if (Object.keys(clientErrors).length > 0) {
+    setErrors(clientErrors);
+    // 첫 에러 메시지로 토스트
+    const firstMsg = Object.values(clientErrors)[0];
+    toast({
+      title: "입력값을 확인해주세요",
+      description: firstMsg,
+      variant: "destructive",
+    });
+    return; // ❗ 서버 호출하지 않음
   }
+
+  // 서버 DTO로 변환
+  const dto = {
+    nickname: formData.nickname,
+    introduction: formData.bio,
+    job: formData.jobTitle,
+    company: formData.company,
+    liveIn: formData.liveIn,
+    education: formData.education,
+    techStack: formData.techStack,
+    githubUrl: formData.links.github,
+    linkedInUrl: formData.links.linkedin,
+    websiteUrl: formData.links.website,
+    twitterUrl: formData.links.twitter,
+  };
+
+  try {
+    // ✅ 서버로 전송 (부모가 Promise를 던지므로 await 필수)
+    await onSubmit(dto, profileImage);
+  } catch (err: any) {
+    // 서버 검증도 병행 표시 (있으면)
+    const data = err?.data ?? err;
+    if (Array.isArray(data?.errors)) {
+      const mapped: Record<string, string> = {};
+      for (const fe of data.errors) {
+        const formKey = serverToFormField[fe.field] ?? fe.field;
+        mapped[formKey] = fe.reason || fe.defaultMessage || "유효하지 않은 값입니다.";
+      }
+      setErrors(mapped);
+    }
+  }
+};
+
+
+  // ✅ 간단한 URL 검사 (필드가 비어있으면 통과, 값이 있으면 형식 검사)
+const isValidUrl = (v?: string) => {
+  if (!v) return true;
+  try { new URL(v); return true; } catch { return false; }
+};
+
+// ✅ 프론트 단 검증: 필수/길이/URL/스택 개수 등
+const validateClient = (fd: typeof formData) => {
+  const es: Record<string, string> = {};
+
+  // 필수값
+  if (!fd.nickname?.trim()) es.nickname = "닉네임은 필수입니다.";
+  else if (fd.nickname.trim().length < 2) es.nickname = "닉네임은 2자 이상이어야 합니다.";
+  if (!fd.bio?.trim()) es.bio = "자기소개는 필수입니다.";
+  if (!fd.liveIn?.trim()) es.liveIn = "사는 지역은 필수입니다.";
+  if (!fd.jobTitle?.trim()) es.jobTitle = "직업은 필수입니다.";
+  if (!fd.company?.trim()) es.company = "회사는 필수입니다.";
+  if (!fd.education?.trim()) es.education = "학력은 필수입니다.";
+
+  // 선택이지만 형식 체크 (값이 있을 때만)
+  if (!isValidUrl(fd.links.github))  es.github  = "올바른 URL 형식이 아닙니다.";
+  if (!isValidUrl(fd.links.linkedin)) es.linkedin = "올바른 URL 형식이 아닙니다.";
+  if (!isValidUrl(fd.links.website))  es.website  = "올바른 URL 형식이 아닙니다.";
+  if (!isValidUrl(fd.links.twitter))  es.twitter  = "올바른 URL 형식이 아닙니다.";
+
+  // 기술 스택 (백엔드가 @NotNull + 최소 1개라면)
+  if (!Array.isArray(fd.techStack) || fd.techStack.length < 1) {
+    es.techStack = "한 가지 이상의 기술 스택을 선택해주세요.";
+  }
+
+  return es;
+};
+
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -169,16 +246,16 @@ export default function ProfileForm({
             onChange={(e) => {
               setFormData({ ...formData, nickname: e.target.value })
               setIsNicknameAvailable(null)
+              setErrors((prev) => ({ ...prev, nickname: "" }))
             }}
             required
             className={
-              isNicknameAvailable === true
-                ? "border-green-500 focus-visible:ring-green-500"
-                : isNicknameAvailable === false
-                  ? "border-red-500 focus-visible:ring-red-500"
-                  : ""
+              (isNicknameAvailable === true ? "border-green-500 focus-visible:ring-green-500 " : "") +
+              (isNicknameAvailable === false ? "border-red-500 focus-visible:ring-red-500 " : "") +
+              (errors.nickname ? "border-red-500 focus-visible:ring-red-500 " : "")
             }
           />
+          {errors.nickname && <p className="text-xs text-red-500 mt-1">{errors.nickname}</p>}
           <Button
             type="button"
             variant="outline"
@@ -194,28 +271,79 @@ export default function ProfileForm({
 
       <div className="space-y-2">
         <Label htmlFor="bio">자기소개</Label>
-        <Textarea id="bio" name="bio" value={formData.bio} onChange={handleInputChange} rows={4} />
+        <Textarea
+          id="bio"
+          name="bio"
+          value={formData.bio}
+          onChange={(e) => {
+            setFormData({ ...formData, bio: e.target.value })
+            setErrors((prev) => ({ ...prev, bio: "" }))
+          }}
+          rows={4}
+          className={errors.bio ? "border-red-500 focus-visible:ring-red-500" : ""}
+        />
+        {errors.bio && <p className="text-xs text-red-500 mt-1">{errors.bio}</p>}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="jobTitle">직업</Label>
-          <Input id="jobTitle" name="jobTitle" value={formData.jobTitle || ""} onChange={handleInputChange} />
+          <Input
+            id="jobTitle"
+            name="jobTitle"
+            value={formData.jobTitle || ""}
+            onChange={(e) => {
+              setFormData({ ...formData, jobTitle: e.target.value })
+              setErrors((prev) => ({ ...prev, jobTitle: "" }))
+            }}
+            className={errors.jobTitle ? "border-red-500 focus-visible:ring-red-500" : ""}
+          />
+          {errors.jobTitle && <p className="text-xs text-red-500 mt-1">{errors.jobTitle}</p>}
         </div>
         <div className="space-y-2">
           <Label htmlFor="company">회사/소속</Label>
-          <Input id="company" name="company" value={formData.company || ""} onChange={handleInputChange} />
+          <Input
+            id="company"
+            name="company"
+            value={formData.company || ""}
+            onChange={(e) => {
+              setFormData({ ...formData, company: e.target.value })
+              setErrors((prev) => ({ ...prev, company: "" }))
+            }}
+            className={errors.company ? "border-red-500 focus-visible:ring-red-500" : ""}
+          />
+          {errors.company && <p className="text-xs text-red-500 mt-1">{errors.company}</p>}
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="liveIn">사는 지역</Label>
-          <Input id="liveIn" name="liveIn" value={formData.liveIn || ""} onChange={handleInputChange} />
+          <Input
+            id="liveIn"
+            name="liveIn"
+            value={formData.liveIn || ""}
+            onChange={(e) => {
+              setFormData({ ...formData, liveIn: e.target.value })
+              setErrors((prev) => ({ ...prev, liveIn: "" }))
+            }}
+            className={errors.liveIn ? "border-red-500 focus-visible:ring-red-500" : ""}
+          />
+          {errors.liveIn && <p className="text-xs text-red-500 mt-1">{errors.liveIn}</p>}
         </div>
         <div className="space-y-2">
           <Label htmlFor="education">학력</Label>
-          <Input id="education" name="education" value={formData.education || ""} onChange={handleInputChange} />
+          <Input
+            id="education"
+            name="education"
+            value={formData.education || ""}
+            onChange={(e) => {
+              setFormData({ ...formData, education: e.target.value })
+              setErrors((prev) => ({ ...prev, education: "" }))
+            }}
+            className={errors.education ? "border-red-500 focus-visible:ring-red-500" : ""}
+          />
+          {errors.education && <p className="text-xs text-red-500 mt-1">{errors.education}</p>}
         </div>
       </div>
 
@@ -232,19 +360,60 @@ export default function ProfileForm({
         <Label>소셜 링크</Label>
         <div className="space-y-2">
           <Label htmlFor="github" className="text-sm">GitHub</Label>
-          <Input id="github" name="github" value={formData.links.github || ""} onChange={handleLinkChange} />
+          <Input
+            id="github"
+            name="github"
+            value={formData.links.github || ""}
+            onChange={(e) => {
+              setFormData({ ...formData, links: { ...formData.links, github: e.target.value } })
+              setErrors((prev) => ({ ...prev, github: "" }))
+            }}
+            className={errors.github ? "border-red-500 focus-visible:ring-red-500" : ""}
+          />
+          {errors.github && <p className="text-xs text-red-500 mt-1">{errors.github}</p>}
+
         </div>
         <div className="space-y-2">
           <Label htmlFor="linkedin" className="text-sm">LinkedIn</Label>
-          <Input id="linkedin" name="linkedin" value={formData.links.linkedin || ""} onChange={handleLinkChange} />
+          <Input
+            id="linkedin"
+            name="linkedin"
+            value={formData.links.linkedin || ""}
+            onChange={(e) => {
+              setFormData({ ...formData, links: { ...formData.links, linkedin: e.target.value } })
+              setErrors((prev) => ({ ...prev, linkedin: "" }))
+            }}
+            className={errors.linkedin ? "border-red-500 focus-visible:ring-red-500" : ""}
+          />
+          {errors.linkedin && <p className="text-xs text-red-500 mt-1">{errors.linkedin}</p>}
         </div>
         <div className="space-y-2">
           <Label htmlFor="website" className="text-sm">웹사이트</Label>
-          <Input id="website" name="website" value={formData.links.website || ""} onChange={handleLinkChange} />
+          <Input
+            id="website"
+            name="website"
+            value={formData.links.website || ""}
+            onChange={(e) => {
+              setFormData({ ...formData, links: { ...formData.links, website: e.target.value } })
+              setErrors((prev) => ({ ...prev, website: "" }))
+            }}
+            className={errors.website ? "border-red-500 focus-visible:ring-red-500" : ""}
+          />
+          {errors.website && <p className="text-xs text-red-500 mt-1">{errors.website}</p>}
         </div>
         <div className="space-y-2">
           <Label htmlFor="twitter" className="text-sm">Twitter</Label>
-          <Input id="twitter" name="twitter" value={formData.links.twitter || ""} onChange={handleLinkChange} />
+          <Input
+            id="twitter"
+            name="twitter"
+            value={formData.links.twitter || ""}
+            onChange={(e) => {
+              setFormData({ ...formData, links: { ...formData.links, twitter: e.target.value } })
+              setErrors((prev) => ({ ...prev, twitter: "" }))
+            }}
+            className={errors.twitter ? "border-red-500 focus-visible:ring-red-500" : ""}
+          />
+          {errors.twitter && <p className="text-xs text-red-500 mt-1">{errors.twitter}</p>}
         </div>
       </div>
 
