@@ -246,9 +246,10 @@ export async function getFeedMediaBlob(mediaId: number): Promise<Blob> {
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  const response = await fetch(`${API_BASE_URL}/feed/media/${mediaId}`, { headers });
+  
+  const response = await fetch(`/api/v1/feed/media/${mediaId}`, { headers });
   if (!response.ok) {
-    throw new ApiError(response.status, '이미지를 가져올 수 없습니다');
+    throw new ApiError(response.status, '피드 이미지를 가져올 수 없습니다');
   }
   return await response.blob();
 }
@@ -259,9 +260,9 @@ export async function getProfileMediaBlob(mediaId: number): Promise<Blob> {
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  const response = await fetch(`${API_BASE_URL}/profile/media/${mediaId}`, { headers });
+  const response = await fetch(`/api/v1/profile/media/${mediaId}`, { headers });
   if (!response.ok) {
-    throw new ApiError(response.status, '이미지를 가져올 수 없습니다');
+    throw new ApiError(response.status, '프로필 이미지를 가져올 수 없습니다');
   }
   return await response.blob();
 }
