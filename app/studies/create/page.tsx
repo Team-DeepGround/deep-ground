@@ -32,7 +32,7 @@ interface CreateStudyGroupRequest {
   studyEndDate: string;
   recruitStartDate: string;
   recruitEndDate: string;
-  groupMemberCount: number;
+  maxMembers: number;
   isOffline: boolean;
   studyLocation: string;
   techStackNames: string[];
@@ -70,7 +70,7 @@ export default function CreateStudyPage() {
   const [description, setDescription] = useState("")
   const [isOnline, setIsOnline] = useState(true)
   const [location, setLocation] = useState("")
-  const [maxMembers, setMaxMembers] = useState("6")
+  const [maxMembers, setMaxMembers] = useState<string>("6")
 
   const [studyStartDate, setStudyStartDate] = useState<Date>()
   const [studyEndDate, setStudyEndDate] = useState<Date>()
@@ -107,7 +107,8 @@ export default function CreateStudyPage() {
       !recruitStartDate ||
       !recruitEndDate ||
       !maxMembers ||
-      maxMembers.trim() === ""
+      maxMembers.trim() === "" ||
+      isNaN(parseInt(maxMembers))
     ) {
       toast({
         title: "필수 정보 누락",
@@ -166,7 +167,17 @@ export default function CreateStudyPage() {
     }
 
     try {
-      const parsedMaxMembers = parseInt(maxMembers) || 6;
+      const parsedMaxMembers = parseInt(maxMembers, 10);
+      
+      // 인원 수 에러 
+      if (isNaN(parsedMaxMembers) || parsedMaxMembers <= 0) {
+        toast({
+          title: "인원 수 오류",
+          description: "올바른 인원 수를 선택해주세요.",
+          variant: "destructive",
+        })
+        return
+      }
       
       const requestData: CreateStudyGroupRequest = {
         title,
@@ -175,7 +186,7 @@ export default function CreateStudyPage() {
         studyEndDate: format(studyEndDate, 'yyyy-MM-dd'),
         recruitStartDate: format(recruitStartDate, 'yyyy-MM-dd'),
         recruitEndDate: format(recruitEndDate, 'yyyy-MM-dd'),
-        groupMemberCount: parsedMaxMembers,
+        maxMembers: parsedMaxMembers,
         isOffline: !isOnline,
         studyLocation: location,
         techStackNames: selectedTags,
