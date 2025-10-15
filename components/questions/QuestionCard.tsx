@@ -50,25 +50,11 @@ export default function QuestionCard({ question, onTitleClick }: QuestionCardPro
           </div>
           {/* 상태 pill */}
           <span
-            className={
-              "text-xs font-semibold px-2 py-0.5 rounded-full border-2 shadow-sm text-black bg-[#ffe5e5] border-[#dc2626] min-w-[48px] text-center"
-            }
+            className="text-xs font-semibold px-2 py-0.5 rounded-full border-2 shadow-sm text-black bg-gray-200 border-gray-400 min-w-[48px] text-center"
             style={{
               color: '#111',
-              background: question.status === "OPEN"
-                ? "#ffe5e5"
-                : question.status === "RESOLVED"
-                ? "#fff9db"
-                : question.status === "CLOSED"
-                ? "#e6ffe5"
-                : "#f5f5f5",
-              borderColor: question.status === "OPEN"
-                ? "#dc2626"
-                : question.status === "RESOLVED"
-                ? "#eab308"
-                : question.status === "CLOSED"
-                ? "#16a34a"
-                : "#d1d5db",
+              background: "#e5e7eb",
+              borderColor: "#9ca3af",
               lineHeight: "1.2",
               fontWeight: 600,
               fontSize: "0.75rem",

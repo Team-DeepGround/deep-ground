@@ -9,7 +9,7 @@ interface MarkdownRendererProps {
 
 export function MarkdownRenderer({ content, className = "" }: MarkdownRendererProps) {
   return (
-    <div className={`prose prose-sm max-w-none ${className}`}>
+    <div className={`prose prose-sm max-w-none bg-white dark:bg-gray-900 p-4 rounded-md ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeSanitize]}
@@ -19,11 +19,11 @@ export function MarkdownRenderer({ content, className = "" }: MarkdownRendererPr
             const match = /language-(\w+)/.exec(className || '');
             const isInline = !match;
             return isInline ? (
-              <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm" {...props}>
+              <code className="bg-white dark:bg-gray-900 px-1 py-0.5 rounded text-sm" {...props}>
                 {children}
               </code>
             ) : (
-              <pre className="bg-gray-100 dark:bg-gray-800 rounded-md p-4 overflow-x-auto">
+              <pre className="bg-white dark:bg-gray-900 rounded-md p-4 overflow-x-auto">
                 <code className={className} {...props}>
                   {children}
                 </code>
