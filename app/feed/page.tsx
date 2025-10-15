@@ -31,13 +31,6 @@ export default function FeedPage() {
       
       if (res.result?.feeds) {
         console.log('피드 아이템들:', res.result.feeds)
-        console.log('페이지네이션 정보:', {
-          total: res.result.total,
-          page: res.result.page,
-          pageSize: res.result.pageSize,
-          totalPages: res.result.totalPages,
-          currentPage: pageNum
-        })
         
         // 공유된 피드와 일반 피드를 모두 표시
         const processedFeeds = res.result.feeds.map(feed => {

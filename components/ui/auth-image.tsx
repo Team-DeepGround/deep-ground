@@ -43,7 +43,7 @@ export function AuthImage({ mediaId, type, alt, className, fallbackSrc = "/place
         const url = URL.createObjectURL(blob)
         setImageUrl(url)
       } catch (err) {
-        console.error('이미지 로딩 실패:', err)
+        console.error(`이미지 로딩 실패 - mediaId: ${mediaId}, type: ${type}:`, err)
         setError(true)
       } finally {
         setIsLoading(false)

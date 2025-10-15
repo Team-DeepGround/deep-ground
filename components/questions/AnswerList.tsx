@@ -28,6 +28,7 @@ interface AnswerListProps {
   setEditingCommentId: (commentId: number | null) => void;
   question: any;
   toast: any;
+  memberId: number | null;
 }
 
 export default function AnswerList({ 
@@ -49,7 +50,8 @@ export default function AnswerList({
   setShowCommentInput, 
   setEditingCommentId, 
   question, 
-  toast 
+  toast,
+  memberId
 }: AnswerListProps) {
   const router = useRouter();
   
@@ -171,26 +173,30 @@ export default function AnswerList({
                   답변 채택하기
                 </Button>
               )}
-              {/* 답변 수정(페이지 이동) 버튼 */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push(`/answers/${answer.answerId}/edit`)}
-              >
-                <Pencil className="h-4 w-4" />
-                <span className="sr-only">답변 수정</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={async () => {
-                  if (window.confirm('정말로 이 답변을 삭제하시겠습니까?')) {
-                    await handleDeleteAnswer(answer.answerId);
-                  }
-                }}
-              >
-                <Trash className="h-4 w-4" />
-              </Button>
+              {/* 답변 수정/삭제 버튼은 작성자에게만 표시 */}
+              {memberId && answer.memberId && Number(memberId) === Number(answer.memberId) && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => router.push(`/answers/${answer.answerId}/edit`)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                    <span className="sr-only">답변 수정</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={async () => {
+                      if (window.confirm('정말로 이 답변을 삭제하시겠습니까?')) {
+                        await handleDeleteAnswer(answer.answerId);
+                      }
+                    }}
+                  >
+                    <Trash className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -229,19 +235,24 @@ export default function AnswerList({
                               })}
                             </span>
                           )}
-                          <Button size="icon" variant="ghost" aria-label="댓글 수정" onClick={() => {
-                            setEditingCommentId(comment.commentId);
-                            setEditingCommentContent(comment.content);
-                          }}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" aria-label="댓글 삭제" onClick={() => {
-                            if (window.confirm('정말로 이 댓글을 삭제하시겠습니까?')) {
-                              handleDeleteComment(comment.commentId, answer.answerId);
-                            }
-                          }}>
-                            <Trash className="h-4 w-4" />
-                          </Button>
+                          {/* 댓글 수정/삭제 버튼은 작성자에게만 표시 */}
+                          {memberId && comment.memberId && Number(memberId) === Number(comment.memberId) && (
+                            <>
+                              <Button size="icon" variant="ghost" aria-label="댓글 수정" onClick={() => {
+                                setEditingCommentId(comment.commentId);
+                                setEditingCommentContent(comment.content);
+                              }}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button size="icon" variant="ghost" aria-label="댓글 삭제" onClick={() => {
+                                if (window.confirm('정말로 이 댓글을 삭제하시겠습니까?')) {
+                                  handleDeleteComment(comment.commentId, answer.answerId);
+                                }
+                              }}>
+                                <Trash className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </>
                     )}
