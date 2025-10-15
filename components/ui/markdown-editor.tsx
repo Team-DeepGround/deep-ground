@@ -82,11 +82,11 @@ export function MarkdownEditor({
         </TabsContent>
 
         <TabsContent value="preview" className="space-y-2">
-          <div className="min-h-[200px] border rounded-md p-4 bg-gray-50 dark:bg-gray-900">
+          <div className="min-h-[200px] border rounded-md">
             {value ? (
               <MarkdownRenderer content={value} />
             ) : (
-              <div className="text-muted-foreground italic">
+              <div className="text-muted-foreground italic p-4">
                 미리보기할 내용이 없습니다. 작성 탭에서 내용을 입력해주세요.
               </div>
             )}

@@ -27,12 +27,13 @@ export default function QuestionDetailCard({
   const router = useRouter();
   
   
+  
   return (
     <Card className="mb-8">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-1">
               {question?.techStacks?.map((tag: any, idx: number) => (
                 <Badge key={tag ? String(tag) : idx} variant="secondary" className="font-normal">
                   {tag}
@@ -61,28 +62,14 @@ export default function QuestionDetailCard({
               </span>
             </div>
           </div>
-          <div className="flex flex-col gap-2 items-end">
+          <div className="flex flex-col gap-2 items-end flex-shrink-0 ml-4">
             <div className="flex items-center gap-2">
               <span
-                className={
-                  "text-xs font-semibold px-2 py-0.5 rounded-full border-2 shadow-sm text-black bg-[#ffe5e5] border-[#dc2626] min-w-[48px] text-center"
-                }
+                className="text-xs font-semibold px-2 py-0.5 rounded-full border-2 shadow-sm text-black bg-gray-200 border-gray-400 min-w-[48px] text-center"
                 style={{
                   color: '#111',
-                  background: question?.status === "OPEN"
-                    ? "#ffe5e5"
-                    : question?.status === "RESOLVED"
-                    ? "#fff9db"
-                    : question?.status === "CLOSED"
-                    ? "#e6ffe5"
-                    : "#f5f5f5",
-                  borderColor: question?.status === "OPEN"
-                    ? "#dc2626"
-                    : question?.status === "RESOLVED"
-                    ? "#eab308"
-                    : question?.status === "CLOSED"
-                    ? "#16a34a"
-                    : "#d1d5db",
+                  background: "#e5e7eb",
+                  borderColor: "#9ca3af",
                   lineHeight: "1.2",
                   fontWeight: 600,
                   fontSize: "0.75rem",
@@ -98,7 +85,7 @@ export default function QuestionDetailCard({
                   ? "해결완료"
                   : "미해결"}
               </span>
-              {memberId && memberId == question?.memberId && (
+              {memberId && question?.memberId && Number(memberId) === Number(question.memberId) && (
                 <select
                   className="ml-2 text-sm font-medium border border-gray-300 bg-white px-2 py-1 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
                   value={question?.questionStatus || 'OPEN'}
@@ -111,26 +98,28 @@ export default function QuestionDetailCard({
                 </select>
               )}
             </div>
-            <div className="flex gap-2 items-center mt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-1"
-                onClick={onEdit}
-                aria-label="질문 수정하기"
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-1"
-                aria-label="질문 삭제하기"
-                onClick={onDelete}
-              >
-                <Trash className="h-4 w-4" />
-              </Button>
-            </div>
+            {memberId && question?.memberId && Number(memberId) === Number(question.memberId) && (
+              <div className="flex gap-2 items-center mt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1"
+                  onClick={onEdit}
+                  aria-label="질문 수정하기"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1"
+                  aria-label="질문 삭제하기"
+                  onClick={onDelete}
+                >
+                  <Trash className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -144,6 +133,8 @@ export default function QuestionDetailCard({
             <div className="font-medium">
               {question?.author?.name
                 ? question.author.name
+                : question?.author?.nickname
+                ? question.author.nickname
                 : question?.nickname
                 ? question.nickname
                 : question?.memberId
