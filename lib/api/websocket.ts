@@ -19,9 +19,6 @@ export const createStompClient = async (onConnect: () => void, onError: (error: 
       wsUrl = `${API_BASE_URL.replace(/^http/, 'ws')}/ws`;
     }
   }
-  if (token) {
-    wsUrl += (wsUrl.includes('?') ? '&' : '?') + `token=${encodeURIComponent(token)}`;
-  }
 
   const client = new Client({
     brokerURL: wsUrl,
