@@ -64,8 +64,12 @@ export default function Header() {
             <SheetContent side="left" className="pr-0">
               <div className="px-7">
                 <Link href="/" className="flex items-center gap-2">
-                  <BookOpen className="h-5 w-5" />
-                  <span className="font-bold">DeepGround</span>
+                  <img 
+                    src="/studen-logo.png" 
+                    alt="Studen" 
+                    className="w-auto"
+                    style={{height: '68px'}}
+                  />
                 </Link>
               </div>
               <nav className="flex flex-col gap-4 px-2 pt-8">
@@ -87,8 +91,12 @@ export default function Header() {
             </SheetContent>
           </Sheet>
           <Link href="/" className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5" />
-            <span className="hidden font-bold sm:inline-block">DeepGround</span>
+            <img 
+              src="/studen-logo.png" 
+              alt="Studen" 
+              className="w-auto"
+              style={{height: '130px'}}
+            />
           </Link>
           <nav className="hidden md:flex items-center gap-6">
             {navigation.map((item) => (
