@@ -583,9 +583,11 @@ export const useNotificationSSE = () => {
                     console.log(`재연결 시도 스킵 - 최근 시도로부터 ${Math.round((now - lastReconnectAttempt) / 1000)}초 경과`)
                     return
                 }
-                console.log(`디바운스된 SSE 재연결 시도 (${reason})`)
+                console.log(`[${reason}] 디바운스된 SSE 재연결 실행 (${delay}ms 지연 완료)`)
                 isManualReconnect = true
                 connectSSE()
+            } else {
+                console.log(`[${reason}] 재연결 취소 - 이미 연결됨 또는 인증되지 않음`)
             }
         }, delay)
     }, [isAuthenticated, isConnected, connectSSE])
@@ -608,9 +610,9 @@ export const useNotificationSSE = () => {
         // 페이지 가시성 변화 감지 (절전 모드, 탭 전환 등) - 최적화
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
-                console.log('페이지 가시성 복구')
+                console.log('페이지 가시성 복구 - SSE 연결 상태:', isConnected ? '연결됨' : '끊어짐')
                 if (isAuthenticated && !isConnected) {
-                    console.log('SSE 연결이 끊어진 상태 - 재연결 시도')
+                    console.log(`SSE 연결이 끊어진 상태 - 재연결 예약 (${SSE_CONFIG.VISIBILITY_RECONNECT_DELAY/1000}초 후 실행)`)
                     debouncedConnectSSE(SSE_CONFIG.VISIBILITY_RECONNECT_DELAY, '가시성 복구')
                 } else if (isAuthenticated && isConnected) {
                     // 연결이 유지되고 있다면 하트비트 확인 (더 신중하게)
@@ -620,12 +622,12 @@ export const useNotificationSSE = () => {
                     
                     // 최근 재연결이 있었거나 하트비트가 정상이면 스킵
                     if (timeSinceLastReconnect < 10000 || timeSinceLastHeartbeat < 60000) {
-                        console.log('SSE 연결 상태 양호 - 재연결 불필요')
+                        console.log(`SSE 연결 상태 양호 - 재연결 불필요 (마지막 하트비트: ${Math.round(timeSinceLastHeartbeat/1000)}초 전, 마지막 재연결: ${Math.round(timeSinceLastReconnect/1000)}초 전)`)
                         return
                     }
                     
                     if (connectionQuality === 'critical' && timeSinceLastHeartbeat > 120000) {
-                        console.log('연결 품질이 critical - 재연결 시도')
+                        console.log(`연결 품질이 critical - 재연결 예약 (${SSE_CONFIG.VISIBILITY_RECONNECT_DELAY/1000}초 후 실행)`)
                         debouncedConnectSSE(SSE_CONFIG.VISIBILITY_RECONNECT_DELAY, '품질 개선')
                     }
                 }
@@ -636,9 +638,9 @@ export const useNotificationSSE = () => {
 
         // 페이지 포커스/블러 감지 - 최적화
         const handleFocus = () => {
-            console.log('페이지 포커스 획득')
+            console.log('페이지 포커스 획득 - SSE 연결 상태:', isConnected ? '연결됨' : '끊어짐')
             if (isAuthenticated && !isConnected) {
-                console.log('포커스 시 SSE 재연결 시도')
+                console.log(`포커스 시 SSE 재연결 예약 (${SSE_CONFIG.FOCUS_RECONNECT_DELAY/1000}초 후 실행)`)
                 debouncedConnectSSE(SSE_CONFIG.FOCUS_RECONNECT_DELAY, '포커스 복구')
             } else if (isAuthenticated && isConnected) {
                 // 연결이 유지되고 있다면 하트비트 확인 (더 신중하게)
@@ -648,12 +650,12 @@ export const useNotificationSSE = () => {
                 
                 // 최근 재연결이 있었거나 하트비트가 정상이면 스킵
                 if (timeSinceLastReconnect < 10000 || timeSinceLastHeartbeat < 60000) {
-                    console.log('SSE 연결 상태 양호 - 재연결 불필요')
+                    console.log(`SSE 연결 상태 양호 - 재연결 불필요 (마지막 하트비트: ${Math.round(timeSinceLastHeartbeat/1000)}초 전, 마지막 재연결: ${Math.round(timeSinceLastReconnect/1000)}초 전)`)
                     return
                 }
                 
                 if (connectionQuality === 'critical' && timeSinceLastHeartbeat > 120000) {
-                    console.log('포커스 시 연결 품질 개선을 위한 재연결 시도')
+                    console.log(`포커스 시 연결 품질 개선을 위한 재연결 예약 (${SSE_CONFIG.FOCUS_RECONNECT_DELAY/1000}초 후 실행)`)
                     debouncedConnectSSE(SSE_CONFIG.FOCUS_RECONNECT_DELAY, '품질 개선')
                 }
             }
