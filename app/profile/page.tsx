@@ -54,31 +54,36 @@ export default function ProfilePage() {
     profileImage: "",
   })
 
+
   useEffect(() => {
     const fetchUserData = async () => {
       setIsLoading(true)
       try {
         // 프로필 데이터
+        // 프로필 데이터
         const profileResponse = await api.get("/members/profile/me")
         if (profileResponse && profileResponse.result) {
+          const r = profileResponse.result
           setProfile({
-            nickname: profileResponse.result.nickname || "",
-            email: profileResponse.result.email || "",
-            bio: profileResponse.result.bio || "",
-            techStack: profileResponse.result.techStack || [],
+            nickname: r.nickname ?? "",
+            email: r.email ?? "",                          // ✅ 서버 DTO의 email 그대로 반영
+            bio: r.bio ?? r.introduction ?? "",            // 서버/클라 키 차이 흡수
+            techStack: r.techStack ?? [],
             links: {
-              github: profileResponse.result.links?.github || "",
-              linkedin: profileResponse.result.links?.linkedin || "",
-              website: profileResponse.result.links?.website || "",
-              twitter: profileResponse.result.links?.twitter || "",
+              github: r.links?.github ?? r.githubUrl ?? "",
+              linkedin: r.links?.linkedin ?? r.linkedInUrl ?? "",
+              website: r.links?.website ?? r.websiteUrl ?? "",
+              twitter: r.links?.twitter ?? r.twitterUrl ?? "",
             },
-            location: profileResponse.result.location || "",
-            jobTitle: profileResponse.result.jobTitle || "",
-            company: profileResponse.result.company || "",
-            education: profileResponse.result.education || "",
-            profileImage: profileResponse.result.profileImage || "",
+            location: r.location ?? r.liveIn ?? "",
+            jobTitle: r.jobTitle ?? r.job ?? "",
+            company: r.company ?? "",
+            education: r.education ?? "",
+            profileImage: r.profileImage ?? "",
           })
         }
+        console.log(profileResponse.result)
+
 
         // 생성한 스터디
         const createdStudiesResponse = await api.get("/study-group/my")
@@ -129,45 +134,43 @@ export default function ProfilePage() {
     }
   }
 
-  // 프로필 업데이트 핸들러
-  const handleProfileUpdate = async (updatedProfile: any, profileImage: File | null) => {
-    try {
+      // 프로필 업데이트 핸들러
+    const handleProfileUpdate = async (updatedProfile: any, profileImage: File | null) => {
       const formData = new FormData();
-      formData.append(
-        "profile",
-        new Blob([JSON.stringify(updatedProfile)], { type: "application/json" })
-      );
+      formData.append("profile", new Blob([JSON.stringify(updatedProfile)], { type: "application/json" }));
       if (profileImage) formData.append("profileImage", profileImage);
+
       const token = await auth.getToken();
       const response = await fetch("/api/v1/members/profile", {
         method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
-      const data = await response.json();
-      if (response.ok) {
-        setProfile(data.result || updatedProfile);
-        setIsEditing(false);
-        toast({
-          title: "프로필 업데이트 성공",
-          description: "프로필 정보가 성공적으로 업데이트되었습니다.",
-        });
-      } else {
-        toast({
-          title: "프로필 업데이트 실패",
-          description: data.message || "프로필 정보 업데이트에 실패했습니다.",
-        });
+
+      // 응답 바디는 한 번만 파싱 가능하므로 여기서 고정
+      let data: any = null;
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
       }
-    } catch (error) {
-      console.error("프로필 업데이트 실패:", error);
+
+      if (!response.ok) {
+        // ❗ 실패 바디를 그대로 throw → ProfileForm에서 catch해서
+        //    "자기소개를 입력해주세요." 같은 메시지를 토스트/필드 에러로 사용
+        throw (data ?? { message: "요청에 실패했습니다.", status: response.status });
+      }
+
+      // 성공 처리만 여기서
+      setProfile(data?.result || updatedProfile);
+      setIsEditing(false);
       toast({
-        title: "프로필 업데이트 실패",
-        description: "프로필 정보 업데이트에 실패했습니다.",
+        title: "프로필 업데이트 성공",
+        description: "프로필 정보가 성공적으로 업데이트되었습니다.",
       });
+
+      return data;
     }
-  }
 
   // 스터디 카드 컴포넌트 (tags 배지 완전 제거!)
   const StudyCard = ({ study, isCreated = false }) => (
