@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useParams } from "next/navigation"
+import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -13,12 +14,16 @@ import {
   Globe,
   Linkedin,
   Twitter,
+  Briefcase,
+  MapPin,
+  GraduationCap,
+  Loader2
 } from "lucide-react"
-import Link from "next/link"
 
-interface ProfileData {
+type ProfileData = {
   profileImage?: string
   nickname: string
+  email?: string
   introduction?: string
   job?: string
   company?: string
@@ -38,157 +43,179 @@ export default function UserProfilePage() {
   const { user } = useAuth()
 
   const [profile, setProfile] = useState<ProfileData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [friendState, setFriendState] = useState<"none" | "pending">("none")
+  const [friendLoading, setFriendLoading] = useState(false)
+
+  const isMyProfile = useMemo(() => {
+    // 로그인 유저의 profileId와 비교 (없으면 false)
+    return String((user as any)?.profileId ?? "") === String(profileId ?? "")
+  }, [user, profileId])
 
   useEffect(() => {
+    let mounted = true
     const fetchProfile = async () => {
+      setLoading(true)
       try {
-        const response = await api.get(`/members/profile/${profileId}`)
-        console.log("🔥 프로필 응답:", response.result)
-        setProfile(response.result)
-      } catch (error) {
+        const res = await api.get(`/members/profile/${profileId}`)
+        if (!mounted) return
+        setProfile(res.result)
+      } catch (err) {
         toast({
           title: "프로필 로드 실패",
           description: "프로필 정보를 불러오는데 실패했습니다.",
           variant: "destructive",
         })
+      } finally {
+        if (mounted) setLoading(false)
       }
     }
-
-    fetchProfile()
+    if (profileId) fetchProfile()
+    return () => { mounted = false }
   }, [profileId, toast])
 
+  const handleSendFriendRequest = async () => {
+    if (!profile?.email) {
+      toast({ title: "요청 불가", description: "이메일 정보가 없습니다.", variant: "destructive" })
+      return
+    }
+    setFriendLoading(true)
+    try {
+      await api.post("/friends/request", { receiverEmail: profile.email })
+      setFriendState("pending")
+      toast({
+        title: "친구 요청 완료",
+        description: `${profile.nickname}님에게 친구 요청을 보냈어요.`,
+      })
+    } catch (e: any) {
+      toast({
+        title: "친구 요청 실패",
+        description: e?.message ?? "요청 처리에 실패했습니다.",
+        variant: "destructive",
+      })
+    } finally {
+      setFriendLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-16 flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    )
+  }
+
   if (!profile) {
-    return <div className="container mx-auto py-8 text-center">프로필 로드 중...</div>
+    return <div className="container mx-auto px-4 py-16 text-center">프로필을 찾을 수 없어요.</div>
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        {/* 프로필 헤더 */}
-        <div className="flex flex-col md:flex-row gap-6 items-start mb-12">
-          <Avatar className="h-28 w-28">
-            <AvatarImage src={profile.profileImage || "/placeholder.svg?height=112&width=112"} alt={profile.nickname} />
-            <AvatarFallback>{profile.nickname[0]}</AvatarFallback>
+    <div className="container mx-auto px-4 py-10">
+      <div className="max-w-5xl mx-auto">
+        {/* ===== 헤더 섹션 ===== */}
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-6 md:gap-10 mb-10">
+          <Avatar className="h-28 w-28 md:h-36 md:w-36">
+            <AvatarImage src={profile.profileImage || "/placeholder.svg"} alt={profile.nickname} />
+            <AvatarFallback className="text-xl">{profile.nickname?.[0]}</AvatarFallback>
           </Avatar>
 
-          <div className="flex-1">
-            <h1 className="text-4xl font-extrabold">{profile.nickname}</h1>
+          <div className="flex-1 w-full">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight">{profile.nickname}</h1>
+                {profile.email && (
+                  <p className="text-muted-foreground mt-2 text-lg">{profile.email}</p>
+                )}
+              </div>
+
+              {/* 우측 버튼: 내 프로필이면 수정, 아니면 친구 요청 */}
+              {isMyProfile ? (
+                <Button asChild size="lg" className="whitespace-nowrap">
+                  <Link href="/profile">
+                    <span className="mr-2">✎</span> 프로필 수정
+                  </Link>
+                </Button>
+              ) : (
+                <Button
+                  size="lg"
+                  onClick={handleSendFriendRequest}
+                  disabled={friendState === "pending" || friendLoading}
+                >
+                  {friendLoading
+                    ? "요청 중..."
+                    : friendState === "pending"
+                    ? "요청 완료"
+                    : "친구 요청"}
+                </Button>
+              )}
+            </div>
+
+            {/* 자기소개 */}
+            {profile.introduction && (
+              <p className="mt-4 text-base md:text-lg text-muted-foreground leading-relaxed">
+                {profile.introduction}
+              </p>
+            )}
+
+            {/* 아이콘 정보 줄 */}
+            <div className="mt-5 space-y-2 text-muted-foreground">
+              {profile.job && profile.company && (
+                <p className="flex items-center gap-2">
+                  <Briefcase className="h-4 w-4" />
+                  <span className="text-base">{profile.job} at {profile.company}</span>
+                </p>
+              )}
+              {profile.liveIn && (
+                <p className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  <span className="text-base">{profile.liveIn}</span>
+                </p>
+              )}
+              {profile.education && (
+                <p className="flex items-center gap-2">
+                  <GraduationCap className="h-4 w-4" />
+                  <span className="text-base">{profile.education}</span>
+                </p>
+              )}
+            </div>
+
+            {/* 기술 스택 */}
+            {profile.techStack?.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-5">
+                {profile.techStack.map((t, i) => (
+                  <Badge key={`${t}-${i}`} variant="secondary" className="px-3 py-1.5 text-sm">
+                    {t}
+                  </Badge>
+                ))}
+              </div>
+            )}
+
+            {/* 소셜 링크 아이콘 */}
+            <div className="flex gap-4 mt-6">
+              {profile.githubUrl && (
+                <Link href={profile.githubUrl} target="_blank" className="text-muted-foreground hover:text-foreground">
+                  <Github className="h-5 w-5" />
+                </Link>
+              )}
+              {profile.websiteUrl && (
+                <Link href={profile.websiteUrl} target="_blank" className="text-muted-foreground hover:text-foreground">
+                  <Globe className="h-5 w-5" />
+                </Link>
+              )}
+              {profile.linkedInUrl && (
+                <Link href={profile.linkedInUrl} target="_blank" className="text-muted-foreground hover:text-foreground">
+                  <Linkedin className="h-5 w-5" />
+                </Link>
+              )}
+              {profile.twitterUrl && (
+                <Link href={profile.twitterUrl} target="_blank" className="text-muted-foreground hover:text-foreground">
+                  <Twitter className="h-5 w-5" />
+                </Link>
+              )}
+            </div>
           </div>
         </div>
-
-        {/* 자기소개 */}
-        {profile.introduction && (
-          <section className="mt-8">
-            <h2 className="text-xl font-semibold mb-2">자기소개</h2>
-            <p className="text-base whitespace-pre-wrap leading-relaxed text-muted-foreground">
-              {profile.introduction}
-            </p>
-          </section>
-        )}
-
-        {/* 기본 정보 */}
-        <section className="mt-8">
-          <h2 className="text-xl font-semibold mb-2">기본 정보</h2>
-          <ul className="text-base text-muted-foreground space-y-2">
-            {profile.job && (
-              <li>
-                <strong className="text-foreground mr-2">직업:</strong>
-                {profile.job}
-              </li>
-            )}
-            {profile.company && (
-              <li>
-                <strong className="text-foreground mr-2">회사:</strong>
-                {profile.company}
-              </li>
-            )}
-            {profile.liveIn && (
-              <li>
-                <strong className="text-foreground mr-2">사는 지역:</strong>
-                {profile.liveIn}
-              </li>
-            )}
-            {profile.education && (
-              <li>
-                <strong className="text-foreground mr-2">학력:</strong>
-                {profile.education}
-              </li>
-            )}
-          </ul>
-        </section>
-
-        {/* 기술 스택 */}
-        {profile.techStack.length > 0 && (
-          <section className="mt-8">
-            <h2 className="text-xl font-semibold mb-2">기술 스택</h2>
-            <div className="flex flex-wrap gap-3">
-              {profile.techStack.map((tech, index) => (
-                <Badge key={index} variant="secondary" className="text-sm px-3 py-1.5">
-                  {tech}
-                </Badge>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* URL / 포트폴리오 */}
-        <section className="mt-8">
-          <h2 className="text-xl font-semibold mb-2">소셜 및 포트폴리오</h2>
-          <ul className="text-sm space-y-2">
-            {profile.githubUrl && (
-              <li className="flex items-center gap-2">
-                <Github className="h-4 w-4 text-muted-foreground" />
-                <Link
-                  href={profile.githubUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline break-all"
-                >
-                  {profile.githubUrl}
-                </Link>
-              </li>
-            )}
-            {profile.linkedInUrl && (
-              <li className="flex items-center gap-2">
-                <Linkedin className="h-4 w-4 text-muted-foreground" />
-                <Link
-                  href={profile.linkedInUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline break-all"
-                >
-                  {profile.linkedInUrl}
-                </Link>
-              </li>
-            )}
-            {profile.websiteUrl && (
-              <li className="flex items-center gap-2">
-                <Globe className="h-4 w-4 text-muted-foreground" />
-                <Link
-                  href={profile.websiteUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline break-all"
-                >
-                  {profile.websiteUrl}
-                </Link>
-              </li>
-            )}
-            {profile.twitterUrl && (
-              <li className="flex items-center gap-2">
-                <Twitter className="h-4 w-4 text-muted-foreground" />
-                <Link
-                  href={profile.twitterUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline break-all"
-                >
-                  {profile.twitterUrl}
-                </Link>
-              </li>
-            )}
-          </ul>
-        </section>
       </div>
     </div>
   )
