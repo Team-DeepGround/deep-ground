@@ -140,12 +140,12 @@ export const NotificationDropdown = ({ isOpen, onClose }: NotificationDropdownPr
     }
   }, [isOpen, onClose])
 
-  // 드롭다운이 열릴 때 알림 목록 조회
+  // 드롭다운이 열릴 때 알림 목록 조회 (한 번만)
   useEffect(() => {
-    if (isOpen && isAuthenticated) {
+    if (isOpen && isAuthenticated && notifications.length === 0) {
       fetchNotifications()
     }
-  }, [isOpen, isAuthenticated, fetchNotifications])
+  }, [isOpen, isAuthenticated, fetchNotifications, notifications.length])
 
   // 네트워크 상태 변화 감지
   useEffect(() => {

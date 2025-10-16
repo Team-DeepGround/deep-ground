@@ -413,8 +413,12 @@ export const useNotificationSSE = () => {
     const reconnectDebounceRef = useRef<NodeJS.Timeout | null>(null)
 
     const fetchNotifications = useCallback(async (cursor?: string, limit: number = 10) => {
+        // 이미 로딩 중이면 중복 호출 방지
         if (isFetchedRef.current && !cursor) return
+        if (isLoading) return
+        
         try {
+            setIsLoading(true)
             const data = await fetchNotificationsApi(cursor, limit)
             if (cursor) {
                 setNotifications(prev => [...prev, ...data.result.notifications])
@@ -426,8 +430,10 @@ export const useNotificationSSE = () => {
             setHasNext(data.result.hasNext)
         } catch (error) {
             console.error('알림 목록 조회 오류:', error)
+        } finally {
+            setIsLoading(false)
         }
-    }, [])
+    }, [isLoading])
 
     const loadMoreNotifications = useCallback(async () => {
         if (!hasNext || !nextCursor || isLoading) return
@@ -470,8 +476,10 @@ export const useNotificationSSE = () => {
                     duration: 5000,
                 })
             },
-            onError: () => {
-                setIsConnected(false)
+            onError: (error: Event) => {
+                console.log('알림 리스너에서 에러 발생:', error)
+                // 에러가 발생해도 즉시 연결 상태를 false로 설정하지 않음
+                // SSE 연결 자체는 유지되고 있을 수 있음
             }
         }
 
@@ -509,7 +517,7 @@ export const useNotificationSSE = () => {
                 )
             )
             setUnreadCount(prev => Math.max(0, prev - 1))
-            isFetchedRef.current = false
+            // isFetchedRef.current = false 제거 - SSE 연결에 영향 주지 않도록
         } catch (error) {
             console.error('알림 읽음 처리 오류:', error)
         }
@@ -520,7 +528,7 @@ export const useNotificationSSE = () => {
             await markAllAsReadApi()
             setNotifications(prev => prev.map(notification => ({...notification, read: true})))
             setUnreadCount(0)
-            isFetchedRef.current = false
+            // isFetchedRef.current = false 제거 - SSE 연결에 영향 주지 않도록
         } catch (error) {
             console.error('전체 알림 읽음 처리 오류:', error)
         }
