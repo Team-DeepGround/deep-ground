@@ -10,7 +10,7 @@ import { useUnreadChatCount } from "@/hooks/use-unread-chat-count"
 export default function FloatingChatButton() {
   const [isOpen, setIsOpen] = useState(false)
   const { isAuthenticated } = useAuth() // 로그인 상태 확인을 위해 useAuth 훅 사용
-  const { unreadCount, isLoading } = useUnreadChatCount() // 읽지 않은 메시지 수
+  const { unreadCount, isLoading, refetch } = useUnreadChatCount() // 읽지 않은 메시지 수
 
 
   // 로그인하지 않은 경우 채팅 버튼을 표시하지 않음
@@ -18,7 +18,13 @@ export default function FloatingChatButton() {
 
   // Update the toggleChat function to handle positioning better
   const toggleChat = () => {
-    setIsOpen(!isOpen)
+    const newIsOpen = !isOpen
+    setIsOpen(newIsOpen)
+    
+    // 채팅창이 열릴 때 읽지 않은 메시지 개수 즉시 업데이트
+    if (newIsOpen) {
+      refetch()
+    }
   }
 
   return (
@@ -45,7 +51,11 @@ export default function FloatingChatButton() {
       </div>
 
       {/* 채팅 팝업 */}
-      <ChatPopup isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      <ChatPopup isOpen={isOpen} onClose={() => {
+        setIsOpen(false)
+        // 채팅창이 닫힐 때도 읽지 않은 메시지 개수 업데이트
+        refetch()
+      }} />
     </>
   )
 }

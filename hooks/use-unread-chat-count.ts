@@ -33,10 +33,32 @@ export function useUnreadChatCount() {
   useEffect(() => {
     fetchUnreadCount();
     
-    // 30초마다 읽지 않은 메시지 개수 업데이트
-    const interval = setInterval(fetchUnreadCount, 30000);
+    // 5초마다 읽지 않은 메시지 개수 업데이트 (더 빠른 반영)
+    const interval = setInterval(fetchUnreadCount, 5000);
     
-    return () => clearInterval(interval);
+    // SSE 이벤트 리스너 - 새 메시지가 올 때마다 즉시 업데이트
+    const handleChatMessage = () => {
+      fetchUnreadCount();
+    };
+    
+    // 채팅 관련 이벤트들 리스닝
+    window.addEventListener('chat-message-received', handleChatMessage);
+    window.addEventListener('chat-unread-updated', handleChatMessage);
+    window.addEventListener('chat-unread-count', handleChatMessage); // SSE에서 발생하는 이벤트
+    
+    // 페이지 포커스 시 업데이트 (사용자가 다른 탭에서 돌아왔을 때)
+    const handleFocus = () => {
+      fetchUnreadCount();
+    };
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('chat-message-received', handleChatMessage);
+      window.removeEventListener('chat-unread-updated', handleChatMessage);
+      window.removeEventListener('chat-unread-count', handleChatMessage);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   return { unreadCount, isLoading, refetch: fetchUnreadCount };
