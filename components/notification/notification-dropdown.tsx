@@ -43,7 +43,7 @@ type TabValue = typeof TAB_VALUES[keyof typeof TAB_VALUES]
 export const NotificationDropdown = ({ isOpen, onClose }: NotificationDropdownProps) => {
   const [activeTab, setActiveTab] = useState<TabValue>('all')
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const {notifications, unreadCount, isConnected, markAsRead, markAllAsRead, loadMoreNotifications, isLoading, hasNext, fetchNotifications} = useNotificationContext()
+  const {notifications, unreadCount, isConnected, markAsRead, markAllAsRead, loadMoreNotifications, isLoading, hasNext, fetchNotifications, deleteNotification} = useNotificationContext()
   const {isAuthenticated} = useAuth()
   const router = useRouter()
   const { toast } = useToast()
@@ -121,6 +121,18 @@ export const NotificationDropdown = ({ isOpen, onClose }: NotificationDropdownPr
       title: "알림 읽음 처리",
       description: "모든 알림을 읽음 처리했습니다.",
     })
+  }
+
+  const handleDeleteNotification = async (notificationId: string, event: React.MouseEvent) => {
+    event.stopPropagation() // 알림 클릭 이벤트 방지
+    console.log('알림 삭제 버튼 클릭 - ID:', notificationId)
+    try {
+      await deleteNotification(notificationId)
+      toast({ title: "알림 삭제", description: "알림이 삭제되었습니다." })
+    } catch (error) {
+      console.error('알림 삭제 실패:', error)
+      toast({ title: "오류", description: "알림 삭제에 실패했습니다.", variant: "destructive" })
+    }
   }
 
   // 드롭다운 외부 클릭 감지
@@ -269,7 +281,7 @@ export const NotificationDropdown = ({ isOpen, onClose }: NotificationDropdownPr
                   {filteredNotifications.map((notification) => (
                     <div
                       key={notification.id}
-                      className={`p-3 rounded-lg border cursor-pointer hover:bg-accent transition-colors ${!notification.read ? "bg-accent/30" : ""}`}
+                      className={`p-3 rounded-lg border cursor-pointer hover:bg-accent transition-colors relative group ${!notification.read ? "bg-accent/30" : ""}`}
                       onClick={() => handleNotificationAction(notification)}
                     >
                       <div className="flex gap-3">
@@ -296,6 +308,15 @@ export const NotificationDropdown = ({ isOpen, onClose }: NotificationDropdownPr
                           )}
                         </div>
                       </div>
+                      
+                      {/* 삭제 버튼 */}
+                      <button
+                        onClick={(e) => handleDeleteNotification(notification.id, e)}
+                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded-full"
+                        title="알림 삭제"
+                      >
+                        <X className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                      </button>
                     </div>
                   ))}
                   

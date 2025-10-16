@@ -15,6 +15,7 @@ interface NotificationContextType {
   loadMoreNotifications: () => Promise<void>
   reconnect: () => Promise<(() => void) | undefined>
   fetchNotifications: (cursor?: string, limit?: number) => Promise<void>
+  deleteNotification: (notificationId: string) => Promise<void>
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined)

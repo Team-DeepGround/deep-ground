@@ -38,4 +38,13 @@ export const markAllAsReadApi = async () => {
         console.error('전체 알림 읽음 처리 실패:', error)
         throw error
     }
+}
+
+export const deleteNotificationApi = async (notificationId: string) => {
+    try {
+        return await api.delete(`/notifications/${notificationId}`)
+    } catch (error) {
+        console.error('알림 삭제 실패:', error)
+        throw error
+    }
 } 

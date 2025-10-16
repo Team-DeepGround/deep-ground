@@ -7,7 +7,7 @@ import {useToast} from '@/hooks/use-toast'
 import {EventSourcePolyfill} from 'event-source-polyfill'
 import {useAuth} from "@/components/auth-provider"
 import { Notification } from '@/types/notification'
-import { fetchNotificationsApi, fetchUnreadCountApi, markAsReadApi, markAllAsReadApi } from '@/lib/api/notification'
+import { fetchNotificationsApi, fetchUnreadCountApi, markAsReadApi, markAllAsReadApi, deleteNotificationApi } from '@/lib/api/notification'
 import { getNotificationMessage } from './notification-utils'
 import { API_BASE_URL } from '@/lib/api-client'
 
@@ -315,6 +315,8 @@ export const useNotificationSSE = () => {
         if (isFetchedRef.current && !cursor) return
         try {
             const data = await fetchNotificationsApi(cursor, limit)
+            console.log('알림 목록 조회 응답:', data.result.notifications.map(n => ({ id: n.id, type: n.data?.type })))
+            
             if (cursor) {
                 setNotifications(prev => [...prev, ...data.result.notifications])
             } else {
@@ -425,6 +427,24 @@ export const useNotificationSSE = () => {
         }
     }, [])
 
+    const deleteNotification = useCallback(async (notificationId: string) => {
+        try {
+            console.log('삭제할 알림 ID:', notificationId)
+            console.log('현재 알림 목록:', notifications.map(n => ({ id: n.id, title: n.data?.type })))
+            
+            await deleteNotificationApi(notificationId)
+            setNotifications(prev => prev.filter(notification => notification.id !== notificationId))
+            // 삭제된 알림이 읽지 않은 알림이었다면 unreadCount 감소
+            const deletedNotification = notifications.find(n => n.id === notificationId)
+            if (deletedNotification && !deletedNotification.read) {
+                setUnreadCount(prev => Math.max(0, prev - 1))
+            }
+        } catch (error) {
+            console.error('알림 삭제 오류:', error)
+            throw error
+        }
+    }, [notifications])
+
     // 디바운스된 재연결 함수
     const debouncedConnectSSE = useCallback(() => {
         if (reconnectDebounceRef.current) {
@@ -534,5 +554,6 @@ export const useNotificationSSE = () => {
         loadMoreNotifications,
         reconnect: connectSSE,
         fetchNotifications,
+        deleteNotification,
     }
 }
