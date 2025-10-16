@@ -23,6 +23,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/s
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/components/auth-provider"
 import { useNotificationContext } from "./notification/notification-provider"
+import { useUnreadChatCount } from "@/hooks/use-unread-chat-count"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -47,8 +48,10 @@ export default function Header() {
   const pathname = usePathname()
   const { isAuthenticated, logout, role } = useAuth()
   const { unreadCount, isConnected } = useNotificationContext()
+  const { unreadCount: chatUnreadCount, isLoading: chatLoading } = useUnreadChatCount()
   const [searchOpen, setSearchOpen] = useState(false)
   const [notificationOpen, setNotificationOpen] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
