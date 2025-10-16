@@ -25,22 +25,15 @@ export const fetchFriendChatRooms = async (page: number): Promise<{
     }
   });
   
-  console.log('fetchFriendChatRooms 원본 응답:', response);
-  console.log('fetchFriendChatRooms result:', response.result);
-  console.log('fetchFriendChatRooms chatRooms:', response.result.chatRooms);
-  
-  const mappedFriends: FriendChatRoom[] = (response.result.chatRooms || []).map((room) => {
-    console.log('친구 채팅방 원본 데이터:', room);
-    return {
-      chatRoomId: room.chatRoomId,
-      name: room.name,
-      lastReadMessageTime: room.lastReadMessageTime,
-      unreadCount: room.unreadCount,
-      id: room.id,
-      avatar: "/placeholder.svg?height=40&width=40",
-      status: "offline", // 기본값, 온라인 상태는 별도로 업데이트
-    };
-  });
+  const mappedFriends: FriendChatRoom[] = (response.result.chatRooms || []).map((room) => ({
+    chatRoomId: room.chatRoomId,
+    name: room.name,
+    lastReadMessageTime: room.lastReadMessageTime,
+    unreadCount: room.unreadCount,
+    id: room.id,
+    avatar: "/placeholder.svg?height=40&width=40",
+    status: "offline", // 기본값, 온라인 상태는 별도로 업데이트
+  }));
 
   return {
     chatRooms: mappedFriends,
@@ -60,19 +53,13 @@ export const fetchStudyGroupChatRooms = async (page: number): Promise<{
     }
   });
   
-  console.log('fetchStudyGroupChatRooms 원본 응답:', response);
-  console.log('fetchStudyGroupChatRooms result:', response.result);
-  
-  const mappedGroups: StudyGroupChatRoom[] = (response.result.chatRooms || []).map((room) => {
-    console.log('스터디 그룹 채팅방 원본 데이터:', room);
-    return {
-      chatRoomId: room.chatRoomId,
-      name: room.name,
-      lastReadMessageTime: room.lastReadMessageTime,
-      unreadCount: room.unreadCount,
-      memberCount: room.memberCount || 0,
-    };
-  });
+  const mappedGroups: StudyGroupChatRoom[] = (response.result.chatRooms || []).map((room) => ({
+    chatRoomId: room.chatRoomId,
+    name: room.name,
+    lastReadMessageTime: room.lastReadMessageTime,
+    unreadCount: room.unreadCount,
+    memberCount: room.memberCount || 0,
+  }));
 
   return {
     chatRooms: mappedGroups,

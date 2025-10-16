@@ -12,8 +12,6 @@ export default function FloatingChatButton() {
   const { isAuthenticated } = useAuth() // 로그인 상태 확인을 위해 useAuth 훅 사용
   const { unreadCount, isLoading } = useUnreadChatCount() // 읽지 않은 메시지 수
 
-  // 디버깅용 로그
-  console.log('FloatingChatButton - unreadCount:', unreadCount, 'isLoading:', isLoading)
 
   // 로그인하지 않은 경우 채팅 버튼을 표시하지 않음
   if (!isAuthenticated) return null
@@ -43,12 +41,6 @@ export default function FloatingChatButton() {
             </div>
           )}
           
-          {/* 디버깅용: 항상 배지 표시 (임시) */}
-          {!isOpen && (
-            <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center min-w-[24px] shadow-lg border-2 border-white z-10">
-              {unreadCount}
-            </div>
-          )}
         </div>
       </div>
 
