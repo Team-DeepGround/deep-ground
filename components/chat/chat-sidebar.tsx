@@ -55,7 +55,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="all">전체</TabsTrigger>
             <TabsTrigger value="online">온라인</TabsTrigger>
-            <TabsTrigger value="groups">단체</TabsTrigger>
+            <TabsTrigger value="groups">스터디그룹</TabsTrigger>
           </TabsList>
         </div>
 
@@ -129,7 +129,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           <div className="h-full max-h-[420px] overflow-y-auto">
             <div className="p-3 space-y-2">
               {!isLoadingChatRooms && studyGroupChatRooms.length === 0 && (
-                <div className="text-center text-muted-foreground">그룹 채팅방이 없습니다.</div>
+                <div className="text-center text-muted-foreground">스터디그룹 채팅방이 없습니다.</div>
               )}
               {studyGroupChatRooms.map((group) => (
                 <ChatRoomItem
