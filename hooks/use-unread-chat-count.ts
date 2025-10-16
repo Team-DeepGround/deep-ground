@@ -20,6 +20,14 @@ export function useUnreadChatCount() {
 
       console.log('친구 채팅방 결과:', friendRoomsResult);
       console.log('스터디 그룹 채팅방 결과:', studyGroupRoomsResult);
+      
+      // 각 채팅방의 unreadCount 상세 확인
+      friendRoomsResult.chatRooms.forEach((room, index) => {
+        console.log(`친구 채팅방 ${index}:`, room.name, 'unreadCount:', room.unreadCount);
+      });
+      studyGroupRoomsResult.chatRooms.forEach((room, index) => {
+        console.log(`스터디 그룹 채팅방 ${index}:`, room.name, 'unreadCount:', room.unreadCount);
+      });
 
       // 모든 채팅방의 unreadCount를 합산
       const totalUnreadCount = 
