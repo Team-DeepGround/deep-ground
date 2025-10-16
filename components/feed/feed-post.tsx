@@ -2,10 +2,9 @@
 
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { MessageSquare, ThumbsUp, Share2, MoreHorizontal, ImageIcon, Send, X, Repeat } from "lucide-react"
+import { MessageSquare, ThumbsUp, Share2, MoreHorizontal, Repeat } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -18,9 +17,7 @@ import { ShareFeedDialog } from "./share-feed-dialog"
 import { AuthImage } from "@/components/ui/auth-image"
 import { ReportModal } from "@/components/report/report-modal"
 import ReactMarkdown from "react-markdown"
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { useState } from "react"
-import { api } from "@/lib/api-client"
 
 interface FeedPostProps {
   post: FetchFeedResponse
@@ -34,10 +31,6 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
   const [showComments, setShowComments] = useState(false)
   const [showShareDialog, setShowShareDialog] = useState(false)
   const [showReportModal, setShowReportModal] = useState(false)
-  const [friendPopoverOpen, setFriendPopoverOpen] = useState(false)
-  const [friendLoading, setFriendLoading] = useState(false)
-  const [friendError, setFriendError] = useState<string | null>(null)
-  const [friendSuccess, setFriendSuccess] = useState<string | null>(null)
 
   // 좋아요/좋아요 취소
   const handleLike = async (feedId: number, liked: boolean) => {
@@ -61,9 +54,7 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
   }
 
   // 공유 다이얼로그 열기
-  const handleShareClick = () => {
-    setShowShareDialog(true)
-  }
+  const handleShareClick = () => setShowShareDialog(true)
 
   // 공유 성공 시 전체 피드 리프레시
   const handleShareSuccess = () => {
@@ -72,32 +63,7 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
   }
 
   // 댓글 토글
-  const handleToggleComments = () => {
-    setShowComments(!showComments)
-  }
-
-  const handleAddFriend = async (memberId: number, memberName: string) => {
-    setFriendLoading(true)
-    setFriendError(null)
-    setFriendSuccess(null)
-    try {
-      // 1. memberId로 이메일 조회
-      const res = await api.get(`/members/${memberId}`)
-      const email = res?.result?.email
-      if (!email) throw new Error("이메일 정보를 찾을 수 없습니다.")
-      // 2. 친구 추가 요청
-      const response = await api.post('/friends/request', { receiverEmail: email })
-      if (response?.status === 200) {
-        setFriendSuccess(`${memberName}님에게 친구 요청을 보냈습니다.`)
-      } else {
-        setFriendError(response?.message || "친구 요청에 실패했습니다.")
-      }
-    } catch (e: any) {
-      setFriendError(e?.message || "친구 요청에 실패했습니다.")
-    } finally {
-      setFriendLoading(false)
-    }
-  }
+  const handleToggleComments = () => setShowComments(!showComments)
 
   // 공유된 피드 렌더링
   const renderSharedFeed = (sharedFeed: FetchFeedResponse) => (
@@ -112,10 +78,10 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
         <div className="flex items-center gap-2 mb-2">
           <Avatar className="h-6 w-6">
             {sharedFeed.profileImageId ? (
-              <AuthImage 
-                mediaId={sharedFeed.profileImageId} 
-                type="profile" 
-                alt={sharedFeed.memberName} 
+              <AuthImage
+                mediaId={sharedFeed.profileImageId}
+                type="profile"
+                alt={sharedFeed.memberName}
                 className="h-6 w-6 rounded-full object-cover"
               />
             ) : (
@@ -123,40 +89,37 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
             )}
             <AvatarFallback className="text-xs">{sharedFeed.memberName[0]}</AvatarFallback>
           </Avatar>
-          <Popover>
-            <PopoverTrigger asChild>
-              <button className="text-sm font-medium hover:underline focus:outline-none" type="button">
-                {sharedFeed.memberName}
-              </button>
-            </PopoverTrigger>
-            <PopoverContent align="start" className="w-56 p-4">
-              <div className="mb-2 font-semibold">친구 추가</div>
-              <div className="mb-2 text-xs text-muted-foreground">{sharedFeed.memberName}님과 친구를 맺어보세요.</div>
-              <Button
-                size="sm"
-                onClick={() => handleAddFriend(sharedFeed.memberId, sharedFeed.memberName)}
-                className="w-full"
-              >
-                친구 요청 보내기
-              </Button>
-            </PopoverContent>
-          </Popover>
+
+          {/* ✅ 공유된 피드 작성자 프로필로 이동 */}
+          <button
+            className="text-sm font-medium hover:underline focus:outline-none"
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              router.push(`/profile/${sharedFeed.profileId}`)
+            }}
+          >
+            {sharedFeed.memberName}
+          </button>
+
           <span className="text-xs text-muted-foreground">
             {new Date(sharedFeed.createdAt).toLocaleDateString()}
           </span>
         </div>
+
         <div className="prose max-w-none text-sm text-gray-700">
           <ReactMarkdown>{sharedFeed.content}</ReactMarkdown>
         </div>
+
         {sharedFeed.mediaIds && sharedFeed.mediaIds.length > 0 && (
           <div className="mt-2 rounded-md overflow-hidden">
             {sharedFeed.mediaIds.map((id) => (
-              <AuthImage 
-                key={id} 
-                mediaId={id} 
-                type="feed" 
-                alt="공유된 피드 이미지" 
-                className="w-full h-auto max-h-48 object-cover" 
+              <AuthImage
+                key={id}
+                mediaId={id}
+                type="feed"
+                alt="공유된 피드 이미지"
+                className="w-full h-auto max-h-48 object-cover"
               />
             ))}
           </div>
@@ -172,23 +135,11 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
           <div className="flex justify-between items-start">
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
-                {(post as any).profileImageUrl ? (
-                  <AvatarImage 
-                    src={(post as any).profileImageUrl} 
-                    alt={post.memberName} 
-                    className="h-10 w-10 rounded-full object-cover"
-                  />
-                ) : (post as any).profileImage ? (
-                  <AvatarImage 
-                    src={(post as any).profileImage} 
-                    alt={post.memberName} 
-                    className="h-10 w-10 rounded-full object-cover"
-                  />
-                ) : post.profileImageId ? (
-                  <AuthImage 
-                    mediaId={post.profileImageId} 
-                    type="profile" 
-                    alt={post.memberName} 
+                {post.profileImageId ? (
+                  <AuthImage
+                    mediaId={post.profileImageId}
+                    type="profile"
+                    alt={post.memberName}
                     className="h-10 w-10 rounded-full object-cover"
                   />
                 ) : (
@@ -196,39 +147,35 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
                 )}
                 <AvatarFallback>{post.memberName[0]}</AvatarFallback>
               </Avatar>
+
               <div>
-                <Popover open={friendPopoverOpen} onOpenChange={setFriendPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <button className="font-medium hover:underline focus:outline-none" type="button">
-                      {post.memberName}
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className="w-56 p-4">
-                    <div className="mb-2 font-semibold">친구 추가</div>
-                    <div className="mb-2 text-xs text-muted-foreground">{post.memberName}님과 친구를 맺어보세요.</div>
-                    <Button
-                      size="sm"
-                      disabled={friendLoading}
-                      onClick={() => handleAddFriend(post.memberId, post.memberName)}
-                      className="w-full"
-                    >
-                      {friendLoading ? "요청 중..." : "친구 요청 보내기"}
-                    </Button>
-                    {friendSuccess && <div className="text-green-600 text-xs mt-2">{friendSuccess}</div>}
-                    {friendError && <div className="text-destructive text-xs mt-2">{friendError}</div>}
-                  </PopoverContent>
-                </Popover>
-                <p className="text-xs text-muted-foreground">{new Date(post.createdAt).toLocaleDateString()}</p>
-                {post.isShared && post.sharedBy && (
+                {/* ✅ 작성자 이름 클릭 시 해당 프로필로 이동 */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    router.push(`/profile/${post.profileId}`)
+                  }}
+                  className="font-medium hover:underline focus:outline-none"
+                  type="button"
+                >
+                  {post.memberName}
+                </button>
+
+                <p className="text-xs text-muted-foreground">
+                  {new Date(post.createdAt).toLocaleDateString()}
+                </p>
+
+                {post.isShared && (post as any).sharedBy && (
                   <div className="flex items-center gap-1 mt-1">
                     <Repeat className="h-3 w-3 text-blue-500" />
                     <span className="text-xs text-blue-600">
-                      {post.sharedBy.memberName}님이 공유함
+                      {(post as any).sharedBy.memberName}님이 공유함
                     </span>
                   </div>
                 )}
               </div>
             </div>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon">
@@ -236,35 +183,46 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>저장하기</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setShowReportModal(true)}>신고하기</DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => e.stopPropagation()}>저장하기</DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowReportModal(true)
+                  }}
+                >
+                  신고하기
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </CardHeader>
-        <CardContent 
-          className="p-4 cursor-pointer hover:bg-gray-50/50 transition-colors" 
+
+        <CardContent
+          className="p-4 cursor-pointer hover:bg-gray-50/50 transition-colors"
           onClick={() => router.push(`/feed/${post.feedId}`)}
         >
           <div className="prose max-w-none text-sm">
             <ReactMarkdown>{post.content}</ReactMarkdown>
           </div>
+
           {post.mediaIds && post.mediaIds.length > 0 && (
             <div className="mt-3 rounded-md overflow-hidden">
               {post.mediaIds.map((id) => (
-                <AuthImage 
-                  key={id} 
-                  mediaId={id} 
-                  type="feed" 
-                  alt="피드 이미지" 
-                  className="w-full h-auto mb-2" 
+                <AuthImage
+                  key={id}
+                  mediaId={id}
+                  type="feed"
+                  alt="피드 이미지"
+                  className="w-full h-auto mb-2"
                 />
               ))}
             </div>
           )}
+
           {/* 공유된 피드가 있으면 표시 */}
           {post.sharedFeed && renderSharedFeed(post.sharedFeed)}
         </CardContent>
+
         <CardFooter className="p-4 pt-0 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <Button
@@ -279,6 +237,7 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
               <ThumbsUp className={`h-4 w-4 ${post.liked ? "fill-primary" : ""}`} />
               <span>{post.likeCount}</span>
             </Button>
+
             <Button
               variant="ghost"
               size="sm"
@@ -291,6 +250,7 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
               <MessageSquare className="h-4 w-4" />
               <span>{post.commentCount}</span>
             </Button>
+
             {/* 공유된 피드가 아닌 경우에만 공유 버튼 표시 */}
             {!post.isShared && (
               <Button
@@ -308,6 +268,7 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
             )}
           </div>
         </CardFooter>
+
         {showComments && <FeedComments feedId={post.feedId} onShow={true} />}
       </Card>
 
@@ -318,6 +279,7 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
         originalFeed={post}
         onSuccess={handleShareSuccess}
       />
+
       {/* 신고 모달 */}
       <ReportModal
         targetId={post.feedId}
@@ -326,7 +288,6 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
         setOpen={setShowReportModal}
         triggerText={""}
       />
-
     </>
   )
-} 
+}

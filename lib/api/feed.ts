@@ -24,6 +24,7 @@ export interface FeedResponse {
 export interface FetchFeedResponse {
   memberId: number;
   feedId: number;
+  profileId?: number | null;
   memberName: string;
   content: string;
   likeCount: number;
