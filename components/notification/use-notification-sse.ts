@@ -135,6 +135,9 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
             isReconnecting = false // 재연결 상태 리셋
             connectionQuality = 'good' // 연결 품질 리셋
             startHeartbeatMonitoring() // 하트비트 모니터링 시작
+            
+            // 연결 성공 시 모든 리스너에게 알림
+            globalListeners.forEach(listener => listener.onConnected(true))
         }
 
         eventSource.addEventListener('connected', () => {
@@ -239,6 +242,7 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
         }
 
         eventSource.onclose = () => {
+            console.log('SSE 연결 종료')
             globalListeners.forEach(listener => listener.onConnected(false))
             // 내장 재연결 기능 사용하므로 수동 재연결 제거
         }
@@ -270,7 +274,16 @@ const closeGlobalSSEConnection = (): void => {
 
 // 연결 상태 검증 함수 (운영 환경 강화)
 const validateConnection = (): boolean => {
-    if (!globalEventSource) return false
+    if (!globalEventSource) {
+        console.log('연결 상태 검증: EventSource가 null')
+        return false
+    }
+    
+    // EventSource의 readyState 확인
+    if (globalEventSource.readyState === EventSource.CLOSED) {
+        console.log('연결 상태 검증: EventSource가 CLOSED 상태')
+        return false
+    }
     
     // 하트비트 타임아웃 체크 (5분 이상 응답 없으면 연결 끊어진 것으로 간주)
     const now = Date.now()
@@ -465,6 +478,7 @@ export const useNotificationSSE = () => {
 
         const listener = {
             onConnected: (connected: boolean) => {
+                console.log('알림 리스너 연결 상태 변경:', connected)
                 setIsConnected(connected)
             },
             onNotification: (notification: Notification) => {
@@ -487,6 +501,12 @@ export const useNotificationSSE = () => {
 
         globalListeners.push(listener)
         const success = await createGlobalSSEConnection()
+        
+        // 연결 성공 시 즉시 상태 업데이트
+        if (success && globalEventSource && globalEventSource.readyState === EventSource.OPEN) {
+            console.log('초기 연결 상태 확인: 연결됨')
+            setIsConnected(true)
+        }
 
         return () => {
             const index = globalListeners.findIndex(l => l === listener)
