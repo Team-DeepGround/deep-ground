@@ -27,6 +27,7 @@ export const fetchFriendChatRooms = async (page: number): Promise<{
   
   console.log('fetchFriendChatRooms 원본 응답:', response);
   console.log('fetchFriendChatRooms result:', response.result);
+  console.log('fetchFriendChatRooms chatRooms:', response.result.chatRooms);
   
   const mappedFriends: FriendChatRoom[] = (response.result.chatRooms || []).map((room) => {
     console.log('친구 채팅방 원본 데이터:', room);

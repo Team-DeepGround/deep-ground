@@ -17,6 +17,15 @@ export function useUnreadChatCount() {
         fetchFriendChatRooms(1),
         fetchStudyGroupChatRooms(1)
       ]);
+      
+      // 혹시 다른 API 엔드포인트가 있는지 확인
+      try {
+        const { api } = await import('@/lib/api-client');
+        const allRoomsResponse = await api.get('/chatrooms');
+        console.log('전체 채팅방 API 응답:', allRoomsResponse);
+      } catch (error) {
+        console.log('전체 채팅방 API 호출 실패:', error);
+      }
 
       console.log('친구 채팅방 결과:', friendRoomsResult);
       console.log('스터디 그룹 채팅방 결과:', studyGroupRoomsResult);
