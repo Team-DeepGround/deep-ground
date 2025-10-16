@@ -26,6 +26,7 @@ export const fetchFriendChatRooms = async (page: number): Promise<{
   });
   
   console.log('fetchFriendChatRooms 원본 응답:', response);
+  console.log('fetchFriendChatRooms result:', response.result);
   
   const mappedFriends: FriendChatRoom[] = (response.result.chatRooms || []).map((room) => {
     console.log('친구 채팅방 원본 데이터:', room);
@@ -59,6 +60,7 @@ export const fetchStudyGroupChatRooms = async (page: number): Promise<{
   });
   
   console.log('fetchStudyGroupChatRooms 원본 응답:', response);
+  console.log('fetchStudyGroupChatRooms result:', response.result);
   
   const mappedGroups: StudyGroupChatRoom[] = (response.result.chatRooms || []).map((room) => {
     console.log('스터디 그룹 채팅방 원본 데이터:', room);
