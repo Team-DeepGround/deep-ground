@@ -9,9 +9,9 @@ import {useAuth} from "@/components/auth-provider"
 import { Notification } from '@/types/notification'
 import { fetchNotificationsApi, fetchUnreadCountApi, markAsReadApi, markAllAsReadApi } from '@/lib/api/notification'
 import { getNotificationMessage } from './notification-utils'
-import { api } from "@/lib/api-client"
+import { API_BASE_URL } from "@/lib/api-client"
 
-const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/sse/subscribe`
+const API_BASE = `${API_BASE_URL}/sse/subscribe`
 
 // SSE 설정 상수 (운영 환경 최적화)
 const SSE_CONFIG = {
@@ -203,18 +203,21 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
         });
 
         eventSource.onerror = async (error: Event) => {
+            console.log('SSE 에러 발생:', error)
+            
             if (isTokenExpiredError(error)) {
                 console.log('토큰 만료 감지 - 내장 재연결 중단 후 수동 재연결')
                 // 내장 재연결 중단
                 eventSource.close()
                 // 수동 재연결 (새 토큰으로)
-                // 토큰 갱신 필요
                 await createGlobalSSEConnection()
                 return
             }
             
-            if (!hasReceivedMessage && !isTrulyEmptyError(error)) {
-                console.error('SSE 연결 오류:', error)
+            // 빈 에러는 무시 (일반적인 연결 끊김)
+            if (isTrulyEmptyError(error)) {
+                console.log('빈 에러 무시 - 내장 재연결 기능 사용')
+                return
             }
             
             // 재연결 시도 횟수 증가
@@ -227,9 +230,12 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
                 return
             }
             
+            // 에러 리스너에게 알림
             globalListeners.forEach(listener => listener.onError(error))
             globalListeners.forEach(listener => listener.onConnected(false))
+            
             // 일반 에러는 내장 재연결 기능 사용
+            console.log('내장 재연결 기능 사용 중...')
         }
 
         eventSource.onclose = () => {
@@ -323,15 +329,23 @@ const startHeartbeatMonitoring = (): void => {
     }, SSE_CONFIG.HEALTH_CHECK_INTERVAL)
 }
 
-// 지수 백오프 재연결 스케줄링
+// 지수 백오프 재연결 스케줄링 (개선된 버전)
 const scheduleReconnection = (): void => {
     if (isReconnecting) return;
     
     isReconnecting = true;
-    const delay = Math.min(
-        SSE_CONFIG.CONNECTION_RETRY_DELAY * Math.pow(2, reconnectAttempts),
-        SSE_CONFIG.MAX_RETRY_DELAY
-    );
+    
+    // 재연결 시도 횟수에 따른 지연 시간 계산
+    let delay;
+    if (reconnectAttempts === 0) {
+        delay = 1000; // 첫 번째 재연결은 1초 후
+    } else if (reconnectAttempts < 5) {
+        delay = 2000; // 2-5번째는 2초 후
+    } else if (reconnectAttempts < 10) {
+        delay = 5000; // 6-10번째는 5초 후
+    } else {
+        delay = 10000; // 10번째 이후는 10초 후
+    }
     
     console.log(`재연결 시도 ${reconnectAttempts + 1}/${SSE_CONFIG.MAX_RECONNECT_ATTEMPTS} - ${delay}ms 후 시도`);
     
@@ -523,7 +537,7 @@ export const useNotificationSSE = () => {
                 console.log('디바운스된 SSE 재연결 시도')
                 connectSSE()
             }
-        }, 300) // 300ms 디바운스
+        }, 1000) // 1초 디바운스 (더 안정적으로)
     }, [isAuthenticated, isConnected, connectSSE])
 
     // 네트워크 상태 변화 감지 및 자동 재연결 (운영 환경 강화)
@@ -587,13 +601,13 @@ export const useNotificationSSE = () => {
                 const now = Date.now()
                 const timeSinceLastHeartbeat = now - lastHeartbeatTime
                 
-                // 2분 이상 응답이 없으면 재연결 시도
-                if (timeSinceLastHeartbeat > 120000) {
+                // 3분 이상 응답이 없으면 재연결 시도 (더 관대하게)
+                if (timeSinceLastHeartbeat > 180000) {
                     console.log('주기적 체크에서 연결 불안정 감지 - 재연결 시도')
                     debouncedConnectSSE()
                 }
             }
-        }, 60000) // 1분마다 체크
+        }, 120000) // 2분마다 체크 (더 여유롭게)
 
         // 이벤트 리스너 등록
         window.addEventListener('online', handleOnline)
