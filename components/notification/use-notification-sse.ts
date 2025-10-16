@@ -103,16 +103,21 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
     let hasReceivedMessage = false
 
     try {
+        console.log('🔌 SSE 연결 시도 시작')
         const token = await auth.getToken()
         if (!token) {
+            console.log('❌ 토큰이 없어서 SSE 연결 실패')
             return false
         }
 
         if (!token.startsWith('eyJ')) {
-            console.error('토큰이 JWT 형식이 아닙니다')
+            console.error('❌ 토큰이 JWT 형식이 아닙니다')
             return false
         }
 
+        console.log('🔌 SSE URL:', SSE_CONFIG.URL)
+        console.log('🔌 토큰 확인됨, EventSourcePolyfill 생성 중...')
+        
         const eventSource = new EventSourcePolyfill(SSE_CONFIG.URL, {
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -124,11 +129,14 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
             connectionTimeout: SSE_CONFIG.CONNECTION_TIMEOUT,
             reconnectInterval: SSE_CONFIG.RECONNECT_INTERVAL,
         })
+        
+        console.log('🔌 EventSourcePolyfill 생성 완료, 이벤트 리스너 등록 중...')
 
         globalEventSource = eventSource
 
         eventSource.onopen = () => {
-            console.log('SSE 연결 성공')
+            console.log('✅ SSE 연결 성공 - readyState:', eventSource.readyState)
+            console.log('✅ 현재 등록된 리스너 수:', globalListeners.length)
             lastHeartbeatTime = Date.now() // 하트비트 시간 초기화
             lastSuccessfulConnection = Date.now() // 성공적인 연결 시간 기록
             reconnectAttempts = 0 // 재연결 시도 횟수 리셋
@@ -137,7 +145,10 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
             startHeartbeatMonitoring() // 하트비트 모니터링 시작
             
             // 연결 성공 시 모든 리스너에게 알림
-            globalListeners.forEach(listener => listener.onConnected(true))
+            globalListeners.forEach((listener, index) => {
+                console.log(`✅ 리스너 ${index}에게 연결 성공 알림 전달`)
+                listener.onConnected(true)
+            })
         }
 
         eventSource.addEventListener('connected', () => {
@@ -149,12 +160,17 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
 
         eventSource.addEventListener('notification', (event: MessageEvent) => {
             try {
+                console.log('🔔 SSE에서 알림 수신:', event.data)
                 hasReceivedMessage = true
                 lastHeartbeatTime = Date.now() // 하트비트 시간 업데이트
                 lastSuccessfulConnection = Date.now() // 성공적인 연결 시간 업데이트
                 connectionQuality = 'good' // 연결 품질 개선
                 const notification = JSON.parse(event.data)
-                globalListeners.forEach(listener => listener.onNotification(notification))
+                console.log('🔔 파싱된 알림 데이터:', notification)
+                globalListeners.forEach(listener => {
+                    console.log('🔔 리스너에게 알림 전달:', listener)
+                    listener.onNotification(notification)
+                })
             } catch (error) {
                 console.error('알림 데이터 파싱 오류:', error)
             }
@@ -482,10 +498,14 @@ export const useNotificationSSE = () => {
                 setIsConnected(connected)
             },
             onNotification: (notification: Notification) => {
+                console.log('🔔 onNotification 핸들러 호출됨:', notification)
                 if (!notification || !notification.data) {
+                    console.log('🔔 알림 데이터가 유효하지 않음:', notification)
                     return
                 }
+                console.log('🔔 알림 상태 업데이트 시작')
                 updateNotificationState(setNotifications, setUnreadCount, notification)
+                console.log('🔔 토스트 알림 표시')
                 toast({
                     title: "🔔 새로운 알림",
                     description: getNotificationMessage(notification),
