@@ -494,7 +494,7 @@ export default function QuestionDetailPage() {
   const handleDeleteAnswer = async (answerId: number) => {
     try {
       const authToken = localStorage.getItem("auth_token");
-      const res = await fetch(`/api/v1/answers/${answerId}?questionId=${params.id}`, {
+      const res = await fetch(`/api/v1/answers/${params.id}/${answerId}?questionId=${params.id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${authToken}`,

@@ -143,6 +143,30 @@ export default function AnswerList({
                     채택된 답변
                   </Badge>
                 )}
+                {/* 답변 수정/삭제 버튼은 작성자에게만 표시 */}
+                {memberId && answer.memberId && Number(memberId) === Number(answer.memberId) && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => router.push(`/answers/${answer.answerId}/edit`)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                      <span className="sr-only">답변 수정</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={async () => {
+                        if (window.confirm('정말로 이 답변을 삭제하시겠습니까?')) {
+                          await handleDeleteAnswer(answer.answerId);
+                        }
+                      }}
+                    >
+                      <Trash className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
@@ -177,30 +201,6 @@ export default function AnswerList({
                 <Button variant="outline" size="sm">
                   답변 채택하기
                 </Button>
-              )}
-              {/* 답변 수정/삭제 버튼은 작성자에게만 표시 */}
-              {memberId && answer.memberId && Number(memberId) === Number(answer.memberId) && (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => router.push(`/answers/${answer.answerId}/edit`)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                    <span className="sr-only">답변 수정</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={async () => {
-                      if (window.confirm('정말로 이 답변을 삭제하시겠습니까?')) {
-                        await handleDeleteAnswer(answer.answerId);
-                      }
-                    }}
-                  >
-                    <Trash className="h-4 w-4" />
-                  </Button>
-                </>
               )}
               <Button
                 variant="ghost"
