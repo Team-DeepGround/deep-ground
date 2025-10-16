@@ -249,11 +249,38 @@ export const NotificationDropdown = ({ isOpen, onClose }: NotificationDropdownPr
               <WifiOff className="h-4 w-4 text-red-500" />
             )}
             <span className={`text-xs ${isConnected ? 'text-green-600' : 'text-red-600'}`}>
-              {isConnected ? '연결됨' : '연결 끊김'}
+              {isConnected ? '실시간 연결됨' : '연결 끊김 - 재연결 중...'}
             </span>
+            {isConnected && (
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" title="연결 상태 양호" />
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {!isConnected && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={async () => {
+                try {
+                  await reconnect()
+                  toast({
+                    title: "재연결 시도",
+                    description: "알림 연결을 다시 시도합니다.",
+                  })
+                } catch (error) {
+                  toast({
+                    title: "재연결 실패",
+                    description: "연결에 실패했습니다. 페이지를 새로고침해주세요.",
+                    variant: "destructive"
+                  })
+                }
+              }}
+              className="text-xs"
+            >
+              재연결
+            </Button>
+          )}
           <Button variant="ghost" size="sm" onClick={handleMarkAllAsRead}>
             모두 읽음
           </Button>
@@ -342,9 +369,20 @@ export const NotificationDropdown = ({ isOpen, onClose }: NotificationDropdownPr
                 </>
               ) : (
                 <div className="text-center py-12">
-                  <Bell className="mx-auto h-12 w-12 text-muted-foreground" />
-                  <h3 className="mt-4 text-lg font-semibold">알림 없음</h3>
-                  <p className="text-muted-foreground">현재 알림이 없습니다.</p>
+                  {!isConnected ? (
+                    <>
+                      <WifiOff className="mx-auto h-12 w-12 text-red-500" />
+                      <h3 className="mt-4 text-lg font-semibold">연결 끊김</h3>
+                      <p className="text-muted-foreground">알림 서버와의 연결이 끊어졌습니다.</p>
+                      <p className="text-sm text-muted-foreground mt-2">재연결 버튼을 클릭하거나 페이지를 새로고침해주세요.</p>
+                    </>
+                  ) : (
+                    <>
+                      <Bell className="mx-auto h-12 w-12 text-muted-foreground" />
+                      <h3 className="mt-4 text-lg font-semibold">알림 없음</h3>
+                      <p className="text-muted-foreground">현재 알림이 없습니다.</p>
+                    </>
+                  )}
                 </div>
               )}
             </div>
