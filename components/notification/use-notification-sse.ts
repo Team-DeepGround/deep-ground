@@ -9,17 +9,20 @@ import {useAuth} from "@/components/auth-provider"
 import { Notification } from '@/types/notification'
 import { fetchNotificationsApi, fetchUnreadCountApi, markAsReadApi, markAllAsReadApi } from '@/lib/api/notification'
 import { getNotificationMessage } from './notification-utils'
-import { API_BASE_URL } from '@/lib/api-client'
+import { api } from "@/lib/api-client"
 
-const API_BASE = `${API_BASE_URL}/sse/subscribe`
+const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}/${process.env.NEXT_PUBLIC_API_VERSION}/sse/subscribe`
 
-// SSE 설정 상수
+// SSE 설정 상수 (운영 환경 최적화)
 const SSE_CONFIG = {
     URL: API_BASE,
-    HEARTBEAT_TIMEOUT: 120000, // 2분으로 증가
-    CONNECTION_TIMEOUT: 15000,  // 연결 타임아웃 증가
-    RECONNECT_INTERVAL: 3000,   // 재연결 간격 단축
-    MAX_RECONNECT_ATTEMPTS: 10, // 최대 재연결 시도 횟수
+    HEARTBEAT_TIMEOUT: 300000,  // 5분으로 대폭 증가
+    CONNECTION_TIMEOUT: 20000,  // 연결 타임아웃 증가
+    RECONNECT_INTERVAL: 1000,   // 재연결 간격 단축 (1초)
+    MAX_RECONNECT_ATTEMPTS: 50, // 최대 재연결 시도 횟수 대폭 증가
+    HEALTH_CHECK_INTERVAL: 15000, // 15초마다 헬스체크
+    CONNECTION_RETRY_DELAY: 500, // 초기 재연결 지연
+    MAX_RETRY_DELAY: 30000,      // 최대 재연결 지연 (30초)
 } as const
 
 // 전역 SSE 연결 관리
@@ -35,6 +38,9 @@ let heartbeatIntervalId: NodeJS.Timeout | null = null
 let globalCurrentChatRoomId: number | null = null
 let reconnectAttempts = 0
 let isReconnecting = false
+let healthCheckIntervalId: NodeJS.Timeout | null = null
+let lastSuccessfulConnection = Date.now()
+let connectionQuality = 'good' // 'good', 'poor', 'critical'
 
 // 전역 채팅방 ID 설정 함수
 const setGlobalCurrentChatRoomId = (chatRoomId: number | null): void => {
@@ -124,13 +130,17 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
         eventSource.onopen = () => {
             console.log('SSE 연결 성공')
             lastHeartbeatTime = Date.now() // 하트비트 시간 초기화
+            lastSuccessfulConnection = Date.now() // 성공적인 연결 시간 기록
             reconnectAttempts = 0 // 재연결 시도 횟수 리셋
             isReconnecting = false // 재연결 상태 리셋
+            connectionQuality = 'good' // 연결 품질 리셋
             startHeartbeatMonitoring() // 하트비트 모니터링 시작
         }
 
         eventSource.addEventListener('connected', () => {
             lastHeartbeatTime = Date.now() // 하트비트 시간 업데이트
+            lastSuccessfulConnection = Date.now() // 성공적인 연결 시간 업데이트
+            connectionQuality = 'good' // 연결 품질 개선
             globalListeners.forEach(listener => listener.onConnected(true))
         })
 
@@ -138,6 +148,8 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
             try {
                 hasReceivedMessage = true
                 lastHeartbeatTime = Date.now() // 하트비트 시간 업데이트
+                lastSuccessfulConnection = Date.now() // 성공적인 연결 시간 업데이트
+                connectionQuality = 'good' // 연결 품질 개선
                 const notification = JSON.parse(event.data)
                 globalListeners.forEach(listener => listener.onNotification(notification))
             } catch (error) {
@@ -149,6 +161,8 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
             try {
                 hasReceivedMessage = true
                 lastHeartbeatTime = Date.now() // 하트비트 시간 업데이트
+                lastSuccessfulConnection = Date.now() // 성공적인 연결 시간 업데이트
+                connectionQuality = 'good' // 연결 품질 개선
                 const {chatRoomId, unreadCount, lastestMessageTime} = JSON.parse(event.data)
                 if (typeof window !== 'undefined') {
                     if (!globalCurrentChatRoomId || globalCurrentChatRoomId !== chatRoomId) {
@@ -169,6 +183,8 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
             try {
                 hasReceivedMessage = true
                 lastHeartbeatTime = Date.now() // 하트비트 시간 업데이트
+                lastSuccessfulConnection = Date.now() // 성공적인 연결 시간 업데이트
+                connectionQuality = 'good' // 연결 품질 개선
                 const presenceData = JSON.parse(event.data)
                 if (typeof window !== 'undefined') {
                     window.dispatchEvent(new CustomEvent('presence-update', {
@@ -182,6 +198,8 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
 
         eventSource.addEventListener('heartbeat', () => {
             lastHeartbeatTime = Date.now();
+            lastSuccessfulConnection = Date.now(); // 성공적인 연결 시간 업데이트
+            connectionQuality = 'good'; // 연결 품질 개선
         });
 
         eventSource.onerror = async (error: Event) => {
@@ -244,48 +262,113 @@ const closeGlobalSSEConnection = (): void => {
     }
 }
 
-// 연결 상태 검증 함수
+// 연결 상태 검증 함수 (운영 환경 강화)
 const validateConnection = (): boolean => {
     if (!globalEventSource) return false
     
-    // 하트비트 타임아웃 체크 (2분 이상 응답 없으면 연결 끊어진 것으로 간주)
+    // 하트비트 타임아웃 체크 (5분 이상 응답 없으면 연결 끊어진 것으로 간주)
     const now = Date.now()
     const timeSinceLastHeartbeat = now - lastHeartbeatTime
-    const heartbeatTimeout = 2 * 60 * 1000 // 2분
+    const timeSinceLastConnection = now - lastSuccessfulConnection
     
-    if (timeSinceLastHeartbeat > heartbeatTimeout) {
-        console.log('하트비트 타임아웃 - 연결이 끊어진 것으로 간주')
+    // 연결 품질 평가
+    if (timeSinceLastHeartbeat > 60000) { // 1분 이상
+        connectionQuality = 'poor'
+    }
+    if (timeSinceLastHeartbeat > 180000) { // 3분 이상
+        connectionQuality = 'critical'
+    }
+    
+    // 하트비트 타임아웃 체크
+    if (timeSinceLastHeartbeat > SSE_CONFIG.HEARTBEAT_TIMEOUT) {
+        console.log(`하트비트 타임아웃 - 연결이 끊어진 것으로 간주 (${Math.round(timeSinceLastHeartbeat / 1000)}초 경과)`)
+        return false
+    }
+    
+    // 연결 품질이 critical이면 강제 재연결
+    if (connectionQuality === 'critical' && timeSinceLastConnection > 300000) { // 5분 이상
+        console.log('연결 품질이 critical - 강제 재연결 시도')
         return false
     }
     
     return true
 }
 
-// 하트비트 모니터링 시작
+// 하트비트 모니터링 시작 (운영 환경 강화)
 const startHeartbeatMonitoring = (): void => {
     if (heartbeatIntervalId) {
         clearInterval(heartbeatIntervalId)
     }
+    if (healthCheckIntervalId) {
+        clearInterval(healthCheckIntervalId)
+    }
+    
+    // 하트비트 모니터링 (30초마다)
     heartbeatIntervalId = setInterval(() => {
         if (globalConnectionCount > 0 && !validateConnection()) {
-            console.log('하트비트 모니터링에서 연결 끊김 감지 - 재연결 시도')
-            
-            // 재연결 중이 아닌 경우에만 재연결 시도
-            if (!isReconnecting && reconnectAttempts < SSE_CONFIG.MAX_RECONNECT_ATTEMPTS) {
-                isReconnecting = true
-                if (globalEventSource) {
-                    globalEventSource.close();
-                }
-                // 직접 재연결 시도
-                createGlobalSSEConnection().finally(() => {
-                    isReconnecting = false
-                });
-            } else if (reconnectAttempts >= SSE_CONFIG.MAX_RECONNECT_ATTEMPTS) {
-                console.warn('최대 재연결 시도 횟수 초과로 하트비트 모니터링 중단')
-                stopHeartbeatMonitoring()
+            console.log('하트비트 모니터링에서 연결 끊김 감지 - 강화된 재연결 시도')
+            if (globalEventSource) {
+                globalEventSource.close();
+                // 지수 백오프로 재연결 시도
+                scheduleReconnection();
             }
         }
-    }, 30000) // 30초마다 체크
+    }, 30000)
+    
+    // 헬스체크 모니터링 (15초마다)
+    healthCheckIntervalId = setInterval(() => {
+        if (globalConnectionCount > 0) {
+            performHealthCheck();
+        }
+    }, SSE_CONFIG.HEALTH_CHECK_INTERVAL)
+}
+
+// 지수 백오프 재연결 스케줄링
+const scheduleReconnection = (): void => {
+    if (isReconnecting) return;
+    
+    isReconnecting = true;
+    const delay = Math.min(
+        SSE_CONFIG.CONNECTION_RETRY_DELAY * Math.pow(2, reconnectAttempts),
+        SSE_CONFIG.MAX_RETRY_DELAY
+    );
+    
+    console.log(`재연결 시도 ${reconnectAttempts + 1}/${SSE_CONFIG.MAX_RECONNECT_ATTEMPTS} - ${delay}ms 후 시도`);
+    
+    setTimeout(async () => {
+        try {
+            await createGlobalSSEConnection();
+            isReconnecting = false;
+        } catch (error) {
+            console.error('재연결 실패:', error);
+            isReconnecting = false;
+            if (reconnectAttempts < SSE_CONFIG.MAX_RECONNECT_ATTEMPTS) {
+                scheduleReconnection();
+            }
+        }
+    }, delay);
+}
+
+// 헬스체크 수행
+const performHealthCheck = (): void => {
+    if (!globalEventSource) return;
+    
+    const now = Date.now();
+    const timeSinceLastHeartbeat = now - lastHeartbeatTime;
+    
+    // 연결 상태가 좋지 않으면 경고
+    if (timeSinceLastHeartbeat > 30000) { // 30초 이상
+        console.warn(`연결 상태 불안정 - 마지막 하트비트로부터 ${Math.round(timeSinceLastHeartbeat / 1000)}초 경과`);
+    }
+    
+    // 연결 품질에 따른 조치
+    if (connectionQuality === 'critical') {
+        console.log('연결 품질이 critical - 즉시 재연결 시도');
+        if (globalEventSource) {
+            globalEventSource.close();
+            scheduleReconnection();
+        }
+    }
 }
 
 // 하트비트 모니터링 중단
@@ -293,6 +376,10 @@ const stopHeartbeatMonitoring = (): void => {
     if (heartbeatIntervalId) {
         clearInterval(heartbeatIntervalId)
         heartbeatIntervalId = null
+    }
+    if (healthCheckIntervalId) {
+        clearInterval(healthCheckIntervalId)
+        healthCheckIntervalId = null
     }
 }
 
@@ -439,7 +526,7 @@ export const useNotificationSSE = () => {
         }, 300) // 300ms 디바운스
     }, [isAuthenticated, isConnected, connectSSE])
 
-    // 네트워크 상태 변화 감지 및 자동 재연결
+    // 네트워크 상태 변화 감지 및 자동 재연결 (운영 환경 강화)
     useEffect(() => {
         const handleOnline = () => {
             if (isAuthenticated && !isConnected) {
@@ -451,6 +538,7 @@ export const useNotificationSSE = () => {
         const handleOffline = () => {
             console.log('네트워크 연결 끊김')
             setIsConnected(false)
+            connectionQuality = 'critical'
         }
 
         // 페이지 가시성 변화 감지 (절전 모드, 탭 전환 등)
@@ -463,7 +551,11 @@ export const useNotificationSSE = () => {
                 } else if (isAuthenticated && isConnected) {
                     // 연결이 유지되고 있다면 하트비트 확인
                     console.log('SSE 연결 상태 확인 중...')
-                    // 간단한 연결 상태 확인 (선택사항)
+                    // 연결 품질 체크
+                    if (connectionQuality === 'poor' || connectionQuality === 'critical') {
+                        console.log('연결 품질이 좋지 않음 - 재연결 시도')
+                        debouncedConnectSSE()
+                    }
                 }
             } else {
                 console.log('페이지 가시성 손실')
@@ -476,12 +568,32 @@ export const useNotificationSSE = () => {
             if (isAuthenticated && !isConnected) {
                 console.log('포커스 시 SSE 재연결 시도')
                 debouncedConnectSSE()
+            } else if (isAuthenticated && isConnected) {
+                // 연결 품질 체크
+                if (connectionQuality === 'poor' || connectionQuality === 'critical') {
+                    console.log('포커스 시 연결 품질 개선을 위한 재연결 시도')
+                    debouncedConnectSSE()
+                }
             }
         }
 
         const handleBlur = () => {
             console.log('페이지 포커스 손실')
         }
+
+        // 주기적인 연결 상태 체크 (운영 환경용)
+        const periodicConnectionCheck = setInterval(() => {
+            if (isAuthenticated && isConnected) {
+                const now = Date.now()
+                const timeSinceLastHeartbeat = now - lastHeartbeatTime
+                
+                // 2분 이상 응답이 없으면 재연결 시도
+                if (timeSinceLastHeartbeat > 120000) {
+                    console.log('주기적 체크에서 연결 불안정 감지 - 재연결 시도')
+                    debouncedConnectSSE()
+                }
+            }
+        }, 60000) // 1분마다 체크
 
         // 이벤트 리스너 등록
         window.addEventListener('online', handleOnline)
@@ -496,6 +608,7 @@ export const useNotificationSSE = () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange)
             window.removeEventListener('focus', handleFocus)
             window.removeEventListener('blur', handleBlur)
+            clearInterval(periodicConnectionCheck)
 
             // 디바운스 타이머 정리
             if (reconnectDebounceRef.current) {
