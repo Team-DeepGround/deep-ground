@@ -43,7 +43,7 @@ type TabValue = typeof TAB_VALUES[keyof typeof TAB_VALUES]
 export const NotificationDropdown = ({ isOpen, onClose }: NotificationDropdownProps) => {
   const [activeTab, setActiveTab] = useState<TabValue>('all')
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const {notifications, unreadCount, isConnected, markAsRead, markAllAsRead, loadMoreNotifications, isLoading, hasNext, fetchNotifications, deleteNotification} = useNotificationContext()
+  const {notifications, unreadCount, isConnected, markAsRead, markAllAsRead, loadMoreNotifications, isLoading, hasNext, fetchNotifications, deleteNotification, reconnect} = useNotificationContext()
   const {isAuthenticated} = useAuth()
   const router = useRouter()
   const { toast } = useToast()
