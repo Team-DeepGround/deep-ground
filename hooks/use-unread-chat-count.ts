@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useEffect } from 'react';
-import { fetchFriendChatRooms, fetchStudyGroupChatRooms } from '@/lib/api/chat';
+import { auth } from '@/lib/auth';
 
-export function useUnreadChatCount() {
+export function useUnreadChatCount(enabled: boolean = true) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -11,13 +11,28 @@ export function useUnreadChatCount() {
     try {
       setIsLoading(true);
       
+      if (!enabled) {
+        setUnreadCount(0);
+        setIsLoading(false);
+        return;
+      }
+      
+      // 로그인 토큰이 없으면 네트워크 호출을 건너뜀
+      const token = await auth.getToken();
+      if (!token) {
+        setUnreadCount(0);
+        setIsLoading(false);
+        return;
+      }
+      
       // 전체 채팅방 API를 사용해서 읽지 않은 메시지 개수 가져오기
       const { api } = await import('@/lib/api-client');
       const allRoomsResponse = await api.get('/chatrooms');
       
       // 모든 채팅방의 unreadCount를 합산
-      const totalUnreadCount = (allRoomsResponse.result.chatRooms || []).reduce(
-        (sum, room) => sum + (room.unreadCount || 0), 
+      const rooms = (allRoomsResponse.result.chatRooms || []) as Array<{ unreadCount?: number }>
+      const totalUnreadCount = rooms.reduce(
+        (sum: number, room: { unreadCount?: number }) => sum + (room.unreadCount || 0), 
         0
       );
 
@@ -31,6 +46,12 @@ export function useUnreadChatCount() {
   };
 
   useEffect(() => {
+    if (!enabled) {
+      setUnreadCount(0);
+      setIsLoading(false);
+      return;
+    }
+
     fetchUnreadCount();
     
     // 5초마다 읽지 않은 메시지 개수 업데이트 (더 빠른 반영)
@@ -59,7 +80,7 @@ export function useUnreadChatCount() {
       window.removeEventListener('chat-unread-count', handleChatMessage);
       window.removeEventListener('focus', handleFocus);
     };
-  }, []);
+  }, [enabled]);
 
   return { unreadCount, isLoading, refetch: fetchUnreadCount };
 }

@@ -53,6 +53,8 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
   }
 
   // 공유는 HybridShareButton 사용 (Web Share / 카카오 / 링크복사)
+  const origin = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_SITE_URL || '')
+  const shareUrl = new URL(`/feed/${post.feedId}`, origin).toString()
 
   // 댓글 토글
   const handleToggleComments = () => setShowComments(!showComments)
@@ -257,8 +259,7 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
                 onClick={(e) => e.stopPropagation()}
               >
                 <HybridShareButton
-
-                  shareUrl={`${process.env.NEXT_PUBLIC_SITE_URL}/feed/${post.feedId}`}
+                  shareUrl={shareUrl}
                   shareTitle={post.memberName + '님의 피드'}
                   shareText={post.content.substring(0, 100)} // 내용은 일부만 잘라서 전달
                   shareImageUrl={
