@@ -25,13 +25,31 @@ import Link from "next/link"
 import { toast } from "sonner"
 import { auth } from "@/lib/auth"
 
+// StudyCard 컴포넌트에 맞는 타입 정의
+interface StudyGroup {
+  id: number;
+  title: string;
+  description: string;
+  period: string;
+  recruitmentPeriod: string;
+  tags: { id: number; name: string }[];
+  maxMembers: number;
+  currentMembers: number;
+  organizer: {
+    name: string;
+    avatar: string;
+  };
+  isOnline: boolean;
+  location: string;
+}
+
 export default function ProfilePage() {
   const { isAuthenticated } = useAuth()
   const router = useRouter()
   const [isEditing, setIsEditing] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [createdStudies, setCreatedStudies] = useState([])
-  const [joinedStudies, setJoinedStudies] = useState([])
+  const [joinedStudies, setJoinedStudies] = useState<StudyGroup[]>([])
   const [feeds, setFeeds] = useState<FetchFeedSummaryResponse[]>([])
   const [feedsLoading, setFeedsLoading] = useState(false)
 
@@ -93,8 +111,33 @@ export default function ProfilePage() {
 
         // 참여중인 스터디
         const joinedStudiesResponse = await api.get("/study-group/joined")
+        console.log("프로필 페이지 - 참여한 스터디 API 응답:", joinedStudiesResponse)
         if (joinedStudiesResponse && joinedStudiesResponse.result) {
-          setJoinedStudies(joinedStudiesResponse.result)
+          console.log("프로필 페이지 - 참여한 스터디 원본 데이터:", joinedStudiesResponse.result)
+          // StudyCard 컴포넌트에 맞게 데이터 변환
+          const formattedJoinedStudies = joinedStudiesResponse.result.map((study: any) => {
+            console.log("프로필 페이지 - 개별 스터디 데이터:", study)
+            const studyId = study.studyGroupId || study.id
+            console.log("프로필 페이지 - 스터디 ID:", studyId)
+            return {
+              id: studyId,
+              title: study.title || "제목 없음",
+              description: study.description || study.explanation || "",
+              period: study.period || "기간 정보 없음",
+              recruitmentPeriod: study.recruitmentPeriod || "모집 기간 정보 없음",
+              tags: study.tags || study.techStacks || [],
+              maxMembers: study.maxMembers || study.groupLimit || 0,
+              currentMembers: study.currentMembers || study.memberCount || 0,
+              organizer: {
+                name: study.organizer?.name || study.createdBy || "작성자 정보 없음",
+                avatar: study.organizer?.avatar || "/placeholder-user.jpg"
+              },
+              isOnline: study.isOnline !== undefined ? study.isOnline : !study.offline,
+              location: study.location || "장소 정보 없음"
+            }
+          }).filter(study => study.id && study.id !== undefined)
+          console.log("프로필 페이지 - 최종 변환된 스터디 데이터:", formattedJoinedStudies)
+          setJoinedStudies(formattedJoinedStudies)
         }
       } catch (error) {
         console.error("사용자 데이터 로딩 실패:", error)
