@@ -37,6 +37,7 @@ export interface StudyGroupDetail {
   offline: boolean
   sessions: StudySession[]
   memberStatus: "NOT_APPLIED" | "PENDING" | "APPROVED"
+  techStacks?: { name: string; category: string }[]
 }
 
 export interface StudySession {

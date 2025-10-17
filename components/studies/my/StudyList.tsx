@@ -2,8 +2,21 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ChevronLeft, ChevronRight, Calendar, Users } from "lucide-react"
+import { ChevronLeft, ChevronRight, Calendar, Users, LogOut } from "lucide-react"
 import Link from "next/link"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { useState } from "react"
+import { api } from "@/lib/api-client"
+import { useToast } from "@/hooks/use-toast"
 
 interface MyStudy {
   id: number
@@ -19,6 +32,7 @@ interface StudyListProps {
   currentPage: number
   totalPages: number
   onPageChange: (page: number) => void
+  onStudyLeave?: (studyId: number) => void
 }
 
 const ITEMS_PER_PAGE = 8
@@ -29,9 +43,13 @@ export function StudyList({
   isCreated = false,
   currentPage,
   totalPages,
-  onPageChange
+  onPageChange,
+  onStudyLeave
 }: StudyListProps) {
   const router = useRouter()
+  const { toast } = useToast()
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false)
+  const [selectedStudyId, setSelectedStudyId] = useState<number | null>(null)
 
   const getStatusBadge = (status: MyStudy["groupStatus"]) => {
     switch (status) {
@@ -49,6 +67,35 @@ export function StudyList({
   const handlePageChange = (page: number) => {
     onPageChange(page)
     window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  const handleLeaveClick = (e: React.MouseEvent, studyId: number) => {
+    e.stopPropagation()
+    setSelectedStudyId(studyId)
+    setShowLeaveDialog(true)
+  }
+
+  const handleLeaveConfirm = async () => {
+    if (!selectedStudyId) return
+
+    try {
+      await api.delete(`/study-group/${selectedStudyId}/leave`)
+      toast({
+        title: "스터디에서 나갔습니다",
+        description: "스터디 참여가 취소되었습니다",
+      })
+      setShowLeaveDialog(false)
+      setSelectedStudyId(null)
+      if (onStudyLeave) {
+        onStudyLeave(selectedStudyId)
+      }
+    } catch (error) {
+      toast({
+        title: "스터디 나가기에 실패했습니다",
+        description: "잠시 후 다시 시도해주세요",
+        variant: "destructive",
+      })
+    }
   }
 
   const renderPagination = () => {
@@ -119,13 +166,35 @@ export function StudyList({
           <Card 
             key={study.id} 
             className="cursor-pointer hover:shadow-lg transition-all duration-200 border-2 hover:border-primary/50 hover:scale-[1.02] group" 
-            onClick={() => router.push(isCreated ? `/studies/manage/${study.id}` : `/studies/${study.id}`)}
+            onClick={() => {
+              console.log("스터디 카드 클릭:", study)
+              console.log("스터디 ID:", study.id, "타입:", typeof study.id)
+              if (study.id) {
+                const url = isCreated ? `/studies/manage/${study.id}` : `/studies/${study.id}`
+                console.log("이동할 URL:", url)
+                router.push(url)
+              } else {
+                console.error("스터디 ID가 없습니다:", study)
+              }
+            }}
           >
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-xl font-semibold line-clamp-1 group-hover:text-primary transition-colors">
                 {study.title}
               </CardTitle>
-              {getStatusBadge(study.groupStatus)}
+              <div className="flex items-center gap-2">
+                {getStatusBadge(study.groupStatus)}
+                {!isCreated && study.id && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={(e) => handleLeaveClick(e, study.id)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -143,6 +212,24 @@ export function StudyList({
         ))}
       </div>
       {renderPagination()}
+
+      {/* 스터디 나가기 확인 다이얼로그 */}
+      <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>스터디에서 나가시겠습니까?</AlertDialogTitle>
+            <AlertDialogDescription>
+              정말로 이 스터디에서 나가시겠습니까? 나가면 다시 참여하려면 스터디장의 승인이 필요합니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction onClick={handleLeaveConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              나가기
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 } 

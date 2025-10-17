@@ -42,7 +42,8 @@ export default function Home() {
           params: {
             page: '0',
             size: '10',
-            onOffline: 'ALL'
+            onOffline: 'ALL',
+            sort: 'createdAt,desc'
           }
         });
         console.log('스터디 API 응답:', response);
@@ -135,9 +136,9 @@ export default function Home() {
         
         
         {isLoading ? (
-          <div className="flex gap-4 overflow-x-auto pb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="flex-shrink-0 w-80 bg-white rounded-xl p-6 shadow-md animate-pulse border border-gray-200">
+              <div key={i} className="bg-white rounded-xl p-6 shadow-md animate-pulse border border-gray-200">
                 <div className="h-8 bg-gray-200 rounded mb-4"></div>
                 <div className="space-y-3">
                   <div className="h-4 bg-gray-200 rounded"></div>
@@ -149,9 +150,9 @@ export default function Home() {
             ))}
           </div>
         ) : studies.length > 0 ? (
-          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-            {studies.map((study) => (
-              <Link key={study.id} href={`/studies/${study.id}`} className="flex-shrink-0 w-80 block">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {studies.slice(0, 4).map((study) => (
+              <Link key={study.id} href={`/studies/${study.id}`} className="block">
                 <div className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow border border-gray-200 h-full">
                   {/* 제목 */}
                   <h3 className="text-xl font-bold mb-4 text-black">
