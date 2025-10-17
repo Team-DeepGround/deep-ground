@@ -42,6 +42,7 @@ interface ProfileFormProps {
     jobTitle?: string
     company?: string
     education?: string
+    profileImage?: string
   }
   onSubmit: (profileDto: any, profileImage: File | null) => Promise<any>
   onCancel?: () => void
@@ -76,6 +77,21 @@ export default function ProfileForm({
     company: initialProfile?.company || "",
     education: initialProfile?.education || "",
   })
+
+  useEffect(() => {
+    if (!initialProfile) return
+    setFormData({
+      nickname: initialProfile.nickname || "",
+      email: initialProfile.email || "",
+      bio: initialProfile.bio || "",
+      techStack: initialProfile.techStack || [],
+      links: initialProfile.links || {},
+      liveIn: initialProfile.liveIn || "",
+      jobTitle: initialProfile.jobTitle || "",
+      company: initialProfile.company || "",
+      education: initialProfile.education || "",
+    })
+  }, [initialProfile])
 
   const handleProfileImageUpload = (file: File) => {
     setProfileImage(file)
