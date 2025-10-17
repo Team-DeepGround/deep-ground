@@ -18,6 +18,11 @@ export const fetchFriendChatRooms = async (page: number): Promise<{
   chatRooms: FriendChatRoom[];
   hasNext: boolean;
 }> => {
+  // 인증 토큰이 없으면 네트워크 요청을 하지 않고 빈 결과 반환
+  const token = await auth.getToken();
+  if (!token) {
+    return { chatRooms: [], hasNext: false };
+  }
   const response: ApiResponse<ChatRoomBase> = await api.get('/chatrooms', {
     params: {
       type: 'FRIEND',
@@ -46,6 +51,11 @@ export const fetchStudyGroupChatRooms = async (page: number): Promise<{
   chatRooms: StudyGroupChatRoom[];
   hasNext: boolean;
 }> => {
+  // 인증 토큰이 없으면 네트워크 요청을 하지 않고 빈 결과 반환
+  const token = await auth.getToken();
+  if (!token) {
+    return { chatRooms: [], hasNext: false };
+  }
   const response: ApiResponse<ChatRoomBase> = await api.get('/chatrooms', {
     params: {
       type: 'STUDY_GROUP',
@@ -69,6 +79,10 @@ export const fetchStudyGroupChatRooms = async (page: number): Promise<{
 
 // 온라인 상태 조회
 export const fetchOnlineStatuses = async (): Promise<Record<number, boolean>> => {
+  const token = await auth.getToken();
+  if (!token) {
+    return {};
+  }
   const response: OnlineStatusResponse = await api.get('/members/online');
   const statusMap: Record<number, boolean> = {};
   response.result.forEach(status => {
@@ -79,6 +93,11 @@ export const fetchOnlineStatuses = async (): Promise<Record<number, boolean>> =>
 
 // 채팅방 멤버 정보 조회
 export const fetchMemberInfo = async (chatRoomId: number, memberId: number): Promise<MemberInfo> => {
+  const token = await auth.getToken();
+  if (!token) {
+    // 비인증 상태에서는 멤버 정보 요청을 하지 않음
+    throw new Error('Unauthenticated');
+  }
   const response: ApiResponse<any> = await api.get(`/chatrooms/${chatRoomId}/members/${memberId}`);
   return {
     memberId: response.result.memberId ?? 0,
@@ -93,6 +112,10 @@ export const fetchOlderMessages = async (chatRoomId: number, cursor: string): Pr
   nextCursor: string | null;
   hasNext: boolean;
 }> => {
+  const token = await auth.getToken();
+  if (!token) {
+    return { messages: [], nextCursor: null, hasNext: false };
+  }
   const response: ApiResponse<any> = await api.get(`/chatrooms/${chatRoomId}/messages`, {
     params: { cursor: cursor }
   });
