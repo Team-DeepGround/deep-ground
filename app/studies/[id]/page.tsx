@@ -18,6 +18,16 @@ import { Card } from "@/components/ui/card"
 import { Calendar, Clock } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 const dummySessions: StudySession[] = [
   {
@@ -57,11 +67,26 @@ export default function StudyDetailPage() {
   const [study, setStudy] = useState<StudyGroupDetail | null>(null)
   const [participants, setParticipants] = useState<Participant[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false)
 
   useEffect(() => {
     const fetchStudy = async () => {
+      // params.id가 없거나 유효하지 않은 경우 처리
+      if (!params.id || params.id === 'undefined') {
+        console.error("유효하지 않은 스터디 ID:", params.id)
+        toast({
+          title: "스터디를 찾을 수 없습니다",
+          description: "잘못된 스터디 링크입니다",
+          variant: "destructive",
+        })
+        setIsLoading(false)
+        return
+      }
+
       try {
+        console.log("스터디 상세 조회 API 호출, ID:", params.id)
         const response = await api.get(`/study-group/${params.id}`)
+        console.log("스터디 상세 조회 응답:", response)
         setStudy({
           ...response.result,
           sessions: dummySessions,
@@ -70,6 +95,7 @@ export default function StudyDetailPage() {
         const participantResponse = await api.get(`/study-group/${params.id}/participants`)
         setParticipants(participantResponse.result)
       } catch (error) {
+        console.error("스터디 상세 조회 실패:", error)
         toast({
           title: "스터디 정보를 불러오는데 실패했습니다",
           description: "잠시 후 다시 시도해주세요",
@@ -93,7 +119,7 @@ export default function StudyDetailPage() {
       return
     }
 
-    if (!study) return
+    if (!study || !params.id) return
 
     try {
       await api.post(`/study-group/${study.id}/join`)
@@ -131,6 +157,26 @@ export default function StudyDetailPage() {
     }
   }
 
+  const handleLeaveStudy = async () => {
+    if (!study || !study.id) return
+
+    try {
+      await api.delete(`/study-group/${study.id}/leave`)
+      toast({
+        title: "스터디에서 나갔습니다",
+        description: "스터디 참여가 취소되었습니다",
+      })
+      setShowLeaveDialog(false)
+      router.push("/studies/my")
+    } catch (error) {
+      toast({
+        title: "스터디 나가기에 실패했습니다",
+        description: "잠시 후 다시 시도해주세요",
+        variant: "destructive",
+      })
+    }
+  }
+
   const handleCommentSubmit = async (content: string) => {
     if (!isAuthenticated || !memberId) {
       toast({
@@ -141,7 +187,7 @@ export default function StudyDetailPage() {
       return
     }
 
-    if (!study) return
+    if (!study || !study.id) return
 
     try {
       await api.post(`/study-group/comments`, {
@@ -165,7 +211,7 @@ export default function StudyDetailPage() {
       return
     }
 
-    if (!study) return
+    if (!study || !study.id) return
 
     try {
       await api.post(`/study-group/replies`, {
@@ -196,7 +242,7 @@ export default function StudyDetailPage() {
   }
 
   const handleTabChange = async (value: string) => {
-    if (value === "schedule") {
+    if (value === "schedule" && params.id) {
       try {
         const schedulesDto = await fetchStudySchedulesByGroup(Number(params.id))
         const schedules: StudySession[] = schedulesDto
@@ -235,6 +281,7 @@ export default function StudyDetailPage() {
           memberStatus={study.memberStatus}
           onJoinStudy={handleJoinStudy}
           onShare={handleShare}
+          onLeaveStudy={() => setShowLeaveDialog(true)}
         />
         <StudyInfo study={study} />
       </div>
@@ -286,7 +333,7 @@ export default function StudyDetailPage() {
         </TabsContent>
 
         <TabsContent value="participants" className="mt-6">
-          {study?.id && (
+          {study?.id && study.id && (
           <ParticipantList
             studyId={Number(study.id)}
             writerId={Number(study.writer)}
@@ -295,6 +342,24 @@ export default function StudyDetailPage() {
         )}
         </TabsContent>
       </Tabs>
+
+      {/* 스터디 나가기 확인 다이얼로그 */}
+      <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>스터디에서 나가시겠습니까?</AlertDialogTitle>
+            <AlertDialogDescription>
+              정말로 이 스터디에서 나가시겠습니까? 나가면 다시 참여하려면 스터디장의 승인이 필요합니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction onClick={handleLeaveStudy} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              나가기
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

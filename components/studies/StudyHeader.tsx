@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button"
-import { Share2 } from "lucide-react"
+import { Share2, LogOut } from "lucide-react"
 import { StudyGroupDetail } from "@/types/study"
 
 interface StudyHeaderProps {
@@ -7,6 +7,7 @@ interface StudyHeaderProps {
   memberStatus: "NOT_APPLIED" | "PENDING" | "APPROVED"
   onJoinStudy: () => void
   onShare: () => void
+  onLeaveStudy?: () => void
 }
 
 export function StudyHeader({
@@ -14,6 +15,7 @@ export function StudyHeader({
   memberStatus,
   onJoinStudy,
   onShare,
+  onLeaveStudy,
 }: StudyHeaderProps) {
   const getButtonText = () => {
     switch (memberStatus) {
@@ -35,6 +37,15 @@ export function StudyHeader({
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-3xl font-bold">{study.title}</h1>
         <div className="flex gap-2">
+          {memberStatus === "APPROVED" && onLeaveStudy && (
+            <Button
+              variant="destructive"
+              onClick={onLeaveStudy}
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              나가기
+            </Button>
+          )}
           <Button
             variant={memberStatus === "APPROVED" ? "secondary" : "default"}
             disabled={isButtonDisabled}
