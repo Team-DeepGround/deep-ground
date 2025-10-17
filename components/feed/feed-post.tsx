@@ -13,7 +13,7 @@ import {
   FetchFeedResponse
 } from "@/lib/api/feed"
 import { FeedComments } from "./feed-comments"
-import { ShareFeedDialog } from "./share-feed-dialog"
+import HybridShareButton from "@/components/share/shareButton"
 import { AuthImage } from "@/components/ui/auth-image"
 import { ReportModal } from "@/components/report/report-modal"
 import ReactMarkdown from "react-markdown"
@@ -29,7 +29,6 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
   const router = useRouter()
   const [post, setPost] = useState(initialPost)
   const [showComments, setShowComments] = useState(false)
-  const [showShareDialog, setShowShareDialog] = useState(false)
   const [showReportModal, setShowReportModal] = useState(false)
 
   // 좋아요/좋아요 취소
@@ -53,14 +52,7 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
     }
   }
 
-  // 공유 다이얼로그 열기
-  const handleShareClick = () => setShowShareDialog(true)
-
-  // 공유 성공 시 전체 피드 리프레시
-  const handleShareSuccess = () => {
-    setShowShareDialog(false)
-    onRefresh()
-  }
+  // 공유는 HybridShareButton 사용 (Web Share / 카카오 / 링크복사)
 
   // 댓글 토글
   const handleToggleComments = () => setShowComments(!showComments)
@@ -149,11 +141,10 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
               </Avatar>
 
               <div>
-                {/* ✅ 작성자 이름 클릭 시 해당 프로필로 이동 */}
                 <button
                   onClick={(e) => {
-                    e.stopPropagation()
-                    router.push(`/profile/${post.profileId}`)
+                    e.stopPropagation();
+                    router.push(`/profile/${post.profileId}`);
                   }}
                   className="font-medium hover:underline focus:outline-none"
                   type="button"
@@ -183,11 +174,13 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={(e) => e.stopPropagation()}>저장하기</DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                  저장하기
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={(e) => {
-                    e.stopPropagation()
-                    setShowReportModal(true)
+                    e.stopPropagation();
+                    setShowReportModal(true);
                   }}
                 >
                   신고하기
@@ -228,23 +221,29 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
             <Button
               variant="ghost"
               size="sm"
-              className={`flex items-center gap-1 ${post.liked ? "text-primary" : ""}`}
+              className={`flex items-center gap-1 ${
+                post.liked ? 'text-primary' : ''
+              }`}
               onClick={(e) => {
-                e.stopPropagation()
-                handleLike(post.feedId, post.liked)
+                e.stopPropagation();
+                handleLike(post.feedId, post.liked);
               }}
             >
-              <ThumbsUp className={`h-4 w-4 ${post.liked ? "fill-primary" : ""}`} />
+              <ThumbsUp
+                className={`h-4 w-4 ${post.liked ? 'fill-primary' : ''}`}
+              />
               <span>{post.likeCount}</span>
             </Button>
 
             <Button
               variant="ghost"
               size="sm"
-              className={`flex items-center gap-1 ${showComments ? "text-primary" : ""}`}
+              className={`flex items-center gap-1 ${
+                showComments ? 'text-primary' : ''
+              }`}
               onClick={(e) => {
-                e.stopPropagation()
-                handleToggleComments()
+                e.stopPropagation();
+                handleToggleComments();
               }}
             >
               <MessageSquare className="h-4 w-4" />
@@ -253,18 +252,23 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
 
             {/* 공유된 피드가 아닌 경우에만 공유 버튼 표시 */}
             {!post.isShared && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex items-center gap-1"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleShareClick()
-                }}
+              <div
+                className="flex items-center gap-2"
+                onClick={(e) => e.stopPropagation()}
               >
-                <Share2 className="h-4 w-4" />
-                <span>{post.shareCount}</span>
-              </Button>
+                <HybridShareButton
+
+                  shareUrl={`${process.env.NEXT_PUBLIC_SITE_URL}/feed/${post.feedId}`}
+                  shareTitle={post.memberName + '님의 피드'}
+                  shareText={post.content.substring(0, 100)} // 내용은 일부만 잘라서 전달
+                  shareImageUrl={
+                    post.mediaIds && post.mediaIds.length > 0
+                      ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/media/${post.mediaIds[0]}` // 첫 번째 이미지를 썸네일로 사용
+                      : undefined
+                  }
+                />
+                <span className="text-sm">{post.shareCount}</span>
+              </div>
             )}
           </div>
         </CardFooter>
@@ -272,13 +276,7 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
         {showComments && <FeedComments feedId={post.feedId} onShow={true} />}
       </Card>
 
-      {/* 공유 다이얼로그 */}
-      <ShareFeedDialog
-        isOpen={showShareDialog}
-        onClose={() => setShowShareDialog(false)}
-        originalFeed={post}
-        onSuccess={handleShareSuccess}
-      />
+      {/* 공유 다이얼로그 제거: HybridShareButton 사용 */}
 
       {/* 신고 모달 */}
       <ReportModal
@@ -286,8 +284,8 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
         targetType="FEED"
         open={showReportModal}
         setOpen={setShowReportModal}
-        triggerText={""}
+        triggerText={''}
       />
     </>
-  )
+  );
 }
