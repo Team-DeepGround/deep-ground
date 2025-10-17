@@ -67,12 +67,14 @@ async function apiClient(endpoint: string, options: RequestOptions = {}) {
 
         if (!response.ok && response.status !== 302) {
             if (response.status === 401) {
-                // 401 에러 발생 시 로그인 페이지로 리다이렉트
+            if (!window.location.pathname.startsWith('/auth/')) {
+                toast.error('세션이 만료되었습니다. 다시 로그인해주세요.');
+                auth.removeToken();
                 window.location.href = '/auth/login';
             }
-            throw new ApiError(response.status, data.message || 'API 요청 실패');
         }
-
+        throw new ApiError(response.status, data.message || 'API 요청 실패');
+        }
         return data;
     } catch (error) {
         console.error('API 요청 실패:', error);
