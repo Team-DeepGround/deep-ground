@@ -72,7 +72,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       setMemberId(savedMemberId)
 
       // ✅ ROLE_GUEST 접근 차단
-      if ((!token || savedRole === "ROLE_GUEST") && !publicPaths.includes(pathname)) {
+      if ((savedRole === "ROLE_GUEST") && !publicPaths.includes(pathname)) {
         console.log("인증 필요: 이메일 인증 페이지로 리다이렉트")
 
         const emailQuery = savedEmail ? `?email=${encodeURIComponent(savedEmail)}` : ""
