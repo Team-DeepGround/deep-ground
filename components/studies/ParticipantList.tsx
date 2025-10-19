@@ -12,38 +12,41 @@ interface ParticipantListProps {
   studyId: number
   writerId: number
   groupLimit: number
+  currentMemberId?: number   // ✅ 추가
 }
 
-export function ParticipantList({ studyId, writerId, groupLimit }: ParticipantListProps) {
+export function ParticipantList({ studyId, writerId, groupLimit, currentMemberId }: ParticipantListProps) {
   const [participants, setParticipants] = useState<Participant[]>([])
   const [reportTargetId, setReportTargetId] = useState<number | null>(null)
 
   useEffect(() => {
-    if (!studyId) return; // 유효하지 않은 ID는 무시
-
-  const fetchParticipants = async () => {
-    try {
-      const res = await api.get(`/study-group/${studyId}/participants`)
-      setParticipants(res.result)
-    } catch (e) {
-      console.error("Failed to fetch participants", e)
+    if (!studyId) return
+    const fetchParticipants = async () => {
+      try {
+        const res = await api.get(`/study-group/${studyId}/participants`)
+        setParticipants(res.result)
+      } catch (e) {
+        console.error("Failed to fetch participants", e)
+      }
     }
-  }
-
     fetchParticipants()
   }, [studyId])
 
+  const handleReportClick = (memberId: number) => setReportTargetId(memberId)
+  const handleReportClose = () => setReportTargetId(null)
 
-  const leader = participants.find((p) => p.memberId === writerId)
-  const others = participants.filter((p) => p.memberId !== writerId)
+  // ✅ 정렬: 스터디장 → 나 → 나머지(가나다)
+  const sorted = [...participants].sort((a, b) => {
+    const aLeader = a.memberId === writerId
+    const bLeader = b.memberId === writerId
+    if (aLeader !== bLeader) return aLeader ? -1 : 1
 
-  const handleReportClick = (memberId: number) => {
-    setReportTargetId(memberId)
-  }
+    const aYou = currentMemberId && a.memberId === currentMemberId
+    const bYou = currentMemberId && b.memberId === currentMemberId
+    if (aYou !== bYou) return aYou ? -1 : 1
 
-  const handleReportClose = () => {
-    setReportTargetId(null)
-  }
+    return (a.nickname || "").localeCompare(b.nickname || "")
+  })
 
   return (
     <>
@@ -56,41 +59,45 @@ export function ParticipantList({ studyId, writerId, groupLimit }: ParticipantLi
             </span>
           </CardTitle>
         </CardHeader>
+
         <CardContent>
           <div className="space-y-4">
-            {leader && (
-              <div className="flex items-center gap-4 p-2 border rounded-lg">
-                <Avatar>
-                  <AvatarFallback>{leader.nickname.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="font-medium">{leader.nickname}</div>
+            {sorted.map((p) => {
+              const isLeader = p.memberId === writerId
+              const isYou = !!currentMemberId && p.memberId === currentMemberId
+
+              return (
+                <div
+                  key={p.memberId}
+                  className="flex items-center gap-4 p-2 border rounded-lg"
+                >
+
+                  <Avatar>
+                    {/* 필요하면 AvatarImage 사용 가능 */}
+                    {/* <AvatarImage src={p.profileImage} alt={p.nickname} /> */}
+                    <AvatarFallback>{p.nickname?.charAt(0) || "?"}</AvatarFallback>
+                  </Avatar>
+
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{p.nickname}</span>
+                      {isLeader && <Badge variant="secondary">스터디장</Badge>}
+                      {isYou && <Badge variant="default">나</Badge>}
+                    </div>
+                  </div>
+
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href={`/profile/${p.profileId}`}>프로필</Link>
+                  </Button>
+
+                  {!isYou && (
+                    <Button variant="ghost" size="sm" onClick={() => handleReportClick(p.memberId)}>
+                      신고
+                    </Button>
+                  )}
                 </div>
-                <Badge variant="secondary">스터디장</Badge>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href={`/profile/${leader.profileId}`}>프로필</Link>
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => handleReportClick(leader.memberId)}>
-                  신고
-                </Button>
-              </div>
-          )}
-            {others.map((p) => (
-              <div key={p.memberId} className="flex items-center gap-4 p-2 border rounded-lg">
-                <Avatar>
-                  <AvatarFallback>{p.nickname.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="font-medium">{p.nickname}</div>
-                </div>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href={`/profile/${p.profileId}`}>프로필</Link>
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => handleReportClick(p.memberId)}>
-                  신고
-                </Button>
-              </div>
-         ))}
+              )
+            })}
           </div>
         </CardContent>
       </Card>
@@ -101,7 +108,7 @@ export function ParticipantList({ studyId, writerId, groupLimit }: ParticipantLi
           targetType="MEMBER"
           open={true}
           setOpen={handleReportClose}
-          triggerText="" // 수동 컨트롤이므로 트리거 텍스트 없음
+          triggerText=""
         />
       )}
     </>

@@ -9,7 +9,9 @@ interface AuthContextType {
   role: string | null
   email: string | null
   memberId: number | null
-  login: (token: string, role?: string, email?: string, memberId?: number) => void
+  nickname: string | null
+  // 닉네임까지 받도록 시그니처 확장
+  login: (token: string, role?: string, email?: string, memberId?: number, nickname?: string) => void
   logout: () => void
 }
 
@@ -25,6 +27,7 @@ const publicPaths = [
   "/feed",
   "/studies",
   "/questions",
+  // 필요하면 "/oauth2/redirect" 등도 허용 경로에 추가
 ]
 
 export function useAuth() {
@@ -40,92 +43,103 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const [role, setRole] = useState<string | null>(null)
   const [email, setEmail] = useState<string | null>(null)
   const [memberId, setMemberId] = useState<number | null>(null)
+  const [nickname, setNickname] = useState<string | null>(null) // ✅ 닉네임 상태
   const router = useRouter()
   const pathname = usePathname()
 
   useEffect(() => {
     const checkAuth = async () => {
       const token = await auth.getToken()
-      const exp = token ? getTokenExp(token) : null;
+      const exp = token ? getTokenExp(token) : null
       const savedRole = await auth.getRole()
       const savedEmail = await auth.getEmail()
       const savedMemberId = await auth.getMemberId()
+      const savedNickname = await auth.getNickname?.() // ✅ 닉네임 복구
 
+      // 만료 처리
       if (exp && Date.now() / 1000 > exp) {
-            // 만료됨: 로그아웃 처리 및 저장소 정리
-            auth.removeToken();
-            auth.removeRole();
-            auth.removeEmail();
-            auth.removeMemberId();
-            localStorage.removeItem("token_exp");
-            setIsAuthenticated(false);
-            setRole(null);
-            setEmail(null);
-            setMemberId(null);
-            router.push("/auth/login");
-            return;
-        }
+        auth.removeToken()
+        auth.removeRole()
+        auth.removeEmail()
+        auth.removeMemberId()
+        auth.removeNickname?.()
+        localStorage.removeItem("token_exp")
+        setIsAuthenticated(false)
+        setRole(null)
+        setEmail(null)
+        setMemberId(null)
+        setNickname(null)
+        router.push("/auth/login")
+        return
+      }
 
+      // 상태 복구
       setIsAuthenticated(!!token)
       setRole(savedRole)
       setEmail(savedEmail)
       setMemberId(savedMemberId)
+      setNickname(savedNickname || null)
 
-      // ✅ ROLE_GUEST 접근 차단
-
-      // 동적 경로도 체크 (예: /feed/123, /questions/456 등)
-      const isPublicPath = publicPaths.includes(pathname) || 
-        pathname.startsWith('/feed/') || 
-        pathname.startsWith('/questions/') ||
-        pathname.startsWith('/studies/')
-      
-      if ((!token || savedRole === "ROLE_GUEST") && !isPublicPath) {
-
-      
-        console.log("인증 필요: 이메일 인증 페이지로 리다이렉트")
-
+      // ROLE_GUEST 접근 차단
+      if ((savedRole === "ROLE_GUEST") && !publicPaths.includes(pathname)) {
         const emailQuery = savedEmail ? `?email=${encodeURIComponent(savedEmail)}` : ""
         router.push(`/auth/verify-email${emailQuery}`)
-        }
-
+      }
     }
 
     checkAuth()
   }, [pathname, router])
 
-  const login = (token: string, role?: string, email?: string, memberId?: number) => {
-    console.log("로그인 처리 시작")
+  // ✅ 로그인: 닉네임까지 저장
+  const login = (
+    token: string,
+    roleArg?: string,
+    emailArg?: string,
+    memberIdArg?: number,
+    nicknameArg?: string
+  ) => {
     auth.setToken(token)
-    if (role) {
-      auth.setRole(role)
-      setRole(role)
+
+    if (roleArg) {
+      auth.setRole(roleArg)
+      setRole(roleArg)
     }
-    const exp = getTokenExp(token);
-    if (exp) localStorage.setItem("token_exp", exp.toString());
-    if (email) {
-      auth.setEmail(email)
-      setEmail(email)
+
+    const exp = getTokenExp(token)
+    if (exp) localStorage.setItem("token_exp", exp.toString())
+
+    if (emailArg) {
+      auth.setEmail(emailArg)
+      setEmail(emailArg)
     }
-    if (memberId !== undefined) {
-      auth.setMemberId(memberId)
-      setMemberId(memberId)
+
+    if (memberIdArg !== undefined) {
+      auth.setMemberId(memberIdArg)
+      setMemberId(memberIdArg)
     }
+
+    if (nicknameArg) {
+      auth.setNickname?.(nicknameArg)
+      setNickname(nicknameArg)
+    }
+
     setIsAuthenticated(true)
-    console.log("로그인 처리 완료")
   }
 
+  // ✅ 로그아웃: 닉네임 포함 정리
   const logout = () => {
-    console.log("로그아웃 처리 시작")
     auth.removeToken()
     auth.removeRole()
     auth.removeEmail()
     auth.removeMemberId()
+    auth.removeNickname?.()
+    localStorage.removeItem("token_exp")
     setIsAuthenticated(false)
     setRole(null)
     setEmail(null)
     setMemberId(null)
+    setNickname(null)
     router.push("/auth/login")
-    console.log("로그아웃 처리 완료")
   }
 
   return (
@@ -135,8 +149,9 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         role,
         email,
         memberId,
+        nickname, // ✅ 컨텍스트로 노출
         login,
-        logout
+        logout,
       }}
     >
       {children}
