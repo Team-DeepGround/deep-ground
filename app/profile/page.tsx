@@ -176,44 +176,56 @@ export default function ProfilePage() {
       setFeedsLoading(false)
     }
   }
+  // 화면용 상태 변환 함수
+  const normalizeToUi = (r: any) => ({
+    nickname: r.nickname ?? "",
+    email: r.email ?? "",
+    bio: r.bio ?? r.introduction ?? "",
+    techStack: r.techStack ?? [],
+    links: {
+      github: r.links?.github ?? r.githubUrl ?? "",
+      linkedin: r.links?.linkedin ?? r.linkedInUrl ?? "",
+      website: r.links?.website ?? r.websiteUrl ?? "",
+      twitter: r.links?.twitter ?? r.twitterUrl ?? "",
+    },
+    location: r.location ?? r.liveIn ?? "",
+    jobTitle: r.jobTitle ?? r.job ?? "",
+    company: r.company ?? "",
+    education: r.education ?? "",
+    profileImage: r.profileImage ?? "",
+  });
 
-      // 프로필 업데이트 핸들러
-    const handleProfileUpdate = async (updatedProfile: any, profileImage: File | null) => {
-      const formData = new FormData();
-      formData.append("profile", new Blob([JSON.stringify(updatedProfile)], { type: "application/json" }));
-      if (profileImage) formData.append("profileImage", profileImage);
+  const handleProfileUpdate = async (updatedProfile: any, profileImage: File | null) => {
+    const formData = new FormData();
+    formData.append("profile", new Blob([JSON.stringify(updatedProfile)], { type: "application/json" }));
+    if (profileImage) formData.append("profileImage", profileImage);
 
-      const token = await auth.getToken();
-      const response = await fetch("/api/v1/members/profile", {
-        method: "PUT",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
+    const token = await auth.getToken();
+    const response = await fetch("/api/v1/members/profile", {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
 
-      // 응답 바디는 한 번만 파싱 가능하므로 여기서 고정
-      let data: any = null;
-      try {
-        data = await response.json();
-      } catch {
-        data = null;
-      }
+    let data: any = null;
+    try { data = await response.json(); } catch {}
 
-      if (!response.ok) {
-        // ❗ 실패 바디를 그대로 throw → ProfileForm에서 catch해서
-        //    "자기소개를 입력해주세요." 같은 메시지를 토스트/필드 에러로 사용
-        throw (data ?? { message: "요청에 실패했습니다.", status: response.status });
-      }
-
-      // 성공 처리만 여기서
-      setProfile(data?.result || updatedProfile);
-      setIsEditing(false);
-      toast({
-        title: "프로필 업데이트 성공",
-        description: "프로필 정보가 성공적으로 업데이트되었습니다.",
-      });
-
-      return data;
+    if (!response.ok) {
+      throw (data ?? { message: "요청에 실패했습니다.", status: response.status });
     }
+
+    // ✅ 저장 후 바로 화면 상태로 변환해서 반영
+    const next = data?.result ? normalizeToUi(data.result) : normalizeToUi(updatedProfile);
+    setProfile(next);
+    setIsEditing(false);
+
+    toast({
+      title: "프로필 업데이트 성공",
+      description: "프로필 정보가 성공적으로 업데이트되었습니다.",
+    });
+
+    return data;
+  };
 
   // 스터디 카드 컴포넌트 (tags 배지 완전 제거!)
   const StudyCard = ({ study, isCreated = false }) => (
@@ -300,10 +312,21 @@ export default function ProfilePage() {
                   <CardDescription>프로필 정보를 수정하세요</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ProfileForm 
-                    initialProfile={profile} 
-                    onSubmit={handleProfileUpdate} 
-                    onCancel={() => setIsEditing(false)} 
+                  <ProfileForm
+                    initialProfile={{
+                      nickname: profile.nickname,
+                      email: profile.email,
+                      bio: profile.bio,
+                      techStack: profile.techStack,
+                      links: profile.links,
+                      liveIn: profile.location,          // ✅ location → liveIn으로 맞춤
+                      jobTitle: profile.jobTitle,
+                      company: profile.company,
+                      education: profile.education,
+                      profileImage: profile.profileImage, // ✅ 프로필 이미지 미리보기용 (선택)
+                    }}
+                    onSubmit={handleProfileUpdate}
+                    onCancel={() => setIsEditing(false)}
                   />
                 </CardContent>
               </Card>

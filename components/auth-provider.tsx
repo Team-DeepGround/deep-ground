@@ -72,6 +72,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       setMemberId(savedMemberId)
 
       // ✅ ROLE_GUEST 접근 차단
+
       // 동적 경로도 체크 (예: /feed/123, /questions/456 등)
       const isPublicPath = publicPaths.includes(pathname) || 
         pathname.startsWith('/feed/') || 
@@ -79,6 +80,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         pathname.startsWith('/studies/')
       
       if ((!token || savedRole === "ROLE_GUEST") && !isPublicPath) {
+
+      
         console.log("인증 필요: 이메일 인증 페이지로 리다이렉트")
 
         const emailQuery = savedEmail ? `?email=${encodeURIComponent(savedEmail)}` : ""
