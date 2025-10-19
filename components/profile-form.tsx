@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -70,6 +70,12 @@ export default function ProfileForm({
     initialProfile?.profileImage ?? null
   )
 
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handlePickImage = () => {
+    fileInputRef.current?.click()
+  }
+
   const [formData, setFormData] = useState({
     nickname: initialProfile?.nickname || "",
     email: initialProfile?.email || "",
@@ -104,6 +110,26 @@ export default function ProfileForm({
   const handleProfileImageUpload = (file: File) => {
     setProfileImage(file)
     // ✅ 새 파일 미리보기 생성
+    const url = URL.createObjectURL(file)
+    setPreviewUrl(url)
+  }
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // 최대 5MB 제한
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "파일 용량 초과",
+        description: "최대 5MB 이미지만 업로드할 수 있어요.",
+        variant: "destructive",
+      })
+      e.currentTarget.value = ""
+      return
+    }
+
+    setProfileImage(file)
     const url = URL.createObjectURL(file)
     setPreviewUrl(url)
   }
@@ -255,42 +281,56 @@ const validateClient = (fd: typeof formData) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-2">
+      {/* === 프로필 이미지 섹션 (가운데 원 + 버튼) === */}
+      <div className="space-y-3">
         <Label htmlFor="profileImage">프로필 이미지</Label>
 
-        <div className="flex items-center gap-4">
-          <FileUpload onFileSelect={handleProfileImageUpload} accept="image/*" maxSize={5} />
+        <div className="flex flex-col items-center gap-4">
+          {/* 미리보기 (원형, 가운데) */}
+          {previewUrl ? (
+            <img
+              src={previewUrl}
+              alt="프로필 미리보기"
+              className="h-40 w-40 rounded-full object-cover border shadow-sm"
+            />
+          ) : (
+            <div className="h-40 w-40 rounded-full bg-muted flex items-center justify-center text-sm text-muted-foreground border shadow-sm">
+              이미지 없음
+            </div>
+          )}
 
-          {/* ✅ 프리뷰 영역 추가 */}
-          <div className="flex items-center gap-3">
-            {previewUrl ? (
-              <img
-                src={previewUrl}
-                alt="프로필 미리보기"
-                className="h-32 w-32 rounded-lg object-cover border shadow-sm"
-              />
-            ) : (
-              <div className="h-32 w-32 rounded-lg bg-muted flex items-center justify-center text-sm text-muted-foreground border shadow-sm">
-                No image
-              </div>
-            )}
+          {/* 숨겨진 파일 입력 */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileInputChange}
+          />
 
-            {previewUrl && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setProfileImage(null)
-                  setPreviewUrl(null)
-                }}
-              >
-                이미지 제거
-              </Button>
-            )}
+          {/* 액션 버튼들 */}
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="outline" onClick={handlePickImage}>
+              사진 올리기
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setProfileImage(null)
+                setPreviewUrl(null)
+                if (fileInputRef.current) fileInputRef.current.value = ""
+              }}
+              disabled={!previewUrl}
+            >
+              이미지 제거
+            </Button>
           </div>
-        </div>
 
-        <p className="text-sm text-muted-foreground">최대 5MB의 이미지 파일을 업로드하세요.</p>
+          <p className="text-xs text-muted-foreground">
+            최대 5MB의 이미지 파일을 업로드하세요.
+          </p>
+        </div>
       </div>
 
 
