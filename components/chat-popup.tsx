@@ -18,7 +18,8 @@ import { ChatSidebar } from './chat/chat-sidebar';
 import { ChatContent } from './chat/chat-content';
 
 // API 함수들 임포트
-import { leaveChatRoom, sendMessage } from '@/lib/api/websocket';
+import { sendMessage } from '@/lib/api/websocket';
+import { leaveChatRoom } from '@/lib/api/chat';
 
 interface ChatPopupProps {
   isOpen: boolean;

@@ -18,6 +18,7 @@ interface ChatSidebarProps {
   friendHasNext: boolean;
   studyGroupHasNext: boolean;
   onLoadMore: () => void;
+  onLeaveChatRoom: (chatRoomId: number, chatRoomName: string) => void;
 }
 
 export const ChatSidebar: React.FC<ChatSidebarProps> = ({
@@ -32,7 +33,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   isLoadingChatRooms,
   friendHasNext,
   studyGroupHasNext,
-  onLoadMore
+  onLoadMore,
+  onLeaveChatRoom
 }) => {
   // 친구 검색 필터링
   const filteredFriends = friendChatRooms.filter(
@@ -76,6 +78,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                   isSelected={selectedChatRoom?.chatRoomId === friend.chatRoomId}
                   onClick={() => onChatRoomSelect(friend)}
                   isGroup={false}
+                  onLeaveChatRoom={onLeaveChatRoom}
                 />
               ))}
               {friendHasNext && (
@@ -108,6 +111,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                     isSelected={selectedChatRoom?.chatRoomId === friend.chatRoomId}
                     onClick={() => onChatRoomSelect(friend)}
                     isGroup={false}
+                    onLeaveChatRoom={onLeaveChatRoom}
                   />
                 ))}
               {friendHasNext && (
@@ -138,6 +142,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                   isSelected={selectedChatRoom?.chatRoomId === group.chatRoomId}
                   onClick={() => onChatRoomSelect(group)}
                   isGroup={true}
+                  onLeaveChatRoom={onLeaveChatRoom}
                 />
               ))}
               {studyGroupHasNext && (
