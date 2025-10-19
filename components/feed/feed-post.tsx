@@ -104,16 +104,8 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
       <CardContent className="p-3">
         <div className="flex items-center gap-2 mb-2">
           <Avatar className="h-6 w-6">
-            {sharedFeed.profileImageId ? (
-              <AuthImage
-                mediaId={sharedFeed.profileImageId}
-                type="profile"
-                alt={sharedFeed.memberName}
-                className="h-6 w-6 rounded-full object-cover"
-              />
-            ) : (
-              <AvatarImage src="/placeholder.svg" alt={sharedFeed.memberName} />
-            )}
+            {/* ✅ URL 직접 사용으로 변경 */}
+            <AvatarImage src={sharedFeed.profileImageUrl || "/placeholder.svg"} alt={sharedFeed.memberName} />
             <AvatarFallback className="text-xs">{sharedFeed.memberName[0]}</AvatarFallback>
           </Avatar>
 
@@ -162,16 +154,8 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
           <div className="flex justify-between items-start">
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
-                {post.profileImageId ? (
-                  <AuthImage
-                    mediaId={post.profileImageId}
-                    type="profile"
-                    alt={post.memberName}
-                    className="h-10 w-10 rounded-full object-cover"
-                  />
-                ) : (
-                  <AvatarImage src="/placeholder.svg" alt={post.memberName} />
-                )}
+                {/* ✅ URL 직접 사용으로 변경 */}
+                <AvatarImage src={post.profileImageUrl || "/placeholder.svg"} alt={post.memberName} />
                 <AvatarFallback>{post.memberName[0]}</AvatarFallback>
               </Avatar>
 

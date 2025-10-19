@@ -197,3 +197,12 @@ export const downloadMedia = async (chatRoomId: number, mediaId: string): Promis
 
   return { url, contentType, fileName, fileSize };
 };
+
+// 채팅방 나가기
+export const leaveChatRoom = async (chatRoomId: number): Promise<ApiResponse<null>> => {
+  const token = await auth.getToken();
+  if (!token) {
+    throw new ApiError(401, '인증이 필요합니다.');
+  }
+  return await api.delete(`/chatrooms/${chatRoomId}/leave`);
+};
