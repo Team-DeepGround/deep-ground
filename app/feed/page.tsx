@@ -5,9 +5,11 @@ import { useToast } from "@/hooks/use-toast"
 import { fetchFeeds, FetchFeedResponse, FetchFeedsResponse } from "@/lib/api/feed"
 import { FeedCreatePost } from "@/components/feed/feed-create-post"
 import { FeedPost } from "@/components/feed/feed-post"
+import { useAuth } from "@/components/auth-provider"
 
 export default function FeedPage() {
   const { toast } = useToast()
+  const { isAuthenticated } = useAuth()
   const [feeds, setFeeds] = useState<FetchFeedResponse[]>([])
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
@@ -129,8 +131,8 @@ export default function FeedPage() {
       <div className="max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold mb-8">기술 피드</h1>
 
-        {/* 새 게시물 작성 */}
-        <FeedCreatePost onPostCreated={handlePostCreated} />
+        {/* 새 게시물 작성 - 로그인한 사용자만 표시 */}
+        {isAuthenticated && <FeedCreatePost onPostCreated={handlePostCreated} />}
 
         {/* 피드 게시물 */}
         <div className="space-y-6">
