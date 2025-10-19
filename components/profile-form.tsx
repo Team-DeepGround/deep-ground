@@ -66,6 +66,10 @@ export default function ProfileForm({
     getTechStacks().then(setAvailableTags)
   }, [])
 
+  const [previewUrl, setPreviewUrl] = useState<string | null>(
+    initialProfile?.profileImage ?? null
+  )
+
   const [formData, setFormData] = useState({
     nickname: initialProfile?.nickname || "",
     email: initialProfile?.email || "",
@@ -93,8 +97,15 @@ export default function ProfileForm({
     })
   }, [initialProfile])
 
+  useEffect(() => {
+    setPreviewUrl(initialProfile?.profileImage ?? null)
+  }, [initialProfile?.profileImage])
+
   const handleProfileImageUpload = (file: File) => {
     setProfileImage(file)
+    // ✅ 새 파일 미리보기 생성
+    const url = URL.createObjectURL(file)
+    setPreviewUrl(url)
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -246,11 +257,42 @@ const validateClient = (fd: typeof formData) => {
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
         <Label htmlFor="profileImage">프로필 이미지</Label>
+
         <div className="flex items-center gap-4">
           <FileUpload onFileSelect={handleProfileImageUpload} accept="image/*" maxSize={5} />
-          <p className="text-sm text-muted-foreground">최대 5MB의 이미지 파일을 업로드하세요.</p>
+
+          {/* ✅ 프리뷰 영역 추가 */}
+          <div className="flex items-center gap-3">
+            {previewUrl ? (
+              <img
+                src={previewUrl}
+                alt="프로필 미리보기"
+                className="h-32 w-32 rounded-lg object-cover border shadow-sm"
+              />
+            ) : (
+              <div className="h-32 w-32 rounded-lg bg-muted flex items-center justify-center text-sm text-muted-foreground border shadow-sm">
+                No image
+              </div>
+            )}
+
+            {previewUrl && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setProfileImage(null)
+                  setPreviewUrl(null)
+                }}
+              >
+                이미지 제거
+              </Button>
+            )}
+          </div>
         </div>
+
+        <p className="text-sm text-muted-foreground">최대 5MB의 이미지 파일을 업로드하세요.</p>
       </div>
+
 
       <div className="space-y-2">
         <Label htmlFor="nickname">닉네임</Label>

@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import axios, { isAxiosError } from "axios"
 import {
   Select,
   SelectContent,
@@ -13,7 +14,48 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-import axios from "axios"
+
+function extractServerErrorMessage(err: unknown): string {
+  if (!isAxiosError(err)) {
+    // Axios 에러가 아닌 경우
+    // Error 객체면 message, 아니면 문자열화
+    if (err instanceof Error) return err.message || "알 수 없는 오류가 발생했습니다."
+    return typeof err === "string" ? err : "알 수 없는 오류가 발생했습니다."
+  }
+
+  const res = err.response
+  if (!res) {
+    // 네트워크/타임아웃 등으로 response가 없는 경우
+    return err.message || "네트워크 오류가 발생했습니다."
+  }
+
+  // response.data가 Blob/String일 수도 있으니 최대한 안전하게 파싱
+  const data = res.data
+
+  // 1) 문자열이면 그대로
+  if (typeof data === "string") return data
+
+  // 2) Blob(JSON)일 수 있음 → 동기 파싱은 불가라 우선 statusText 사용
+  if (data instanceof Blob) {
+    // 서버가 JSON Blob을 보냈을 수도 있으므로 힌트 제공
+    return res.statusText || "요청이 실패했습니다."
+  }
+
+  // 3) 일반 객체(JSON)일 때 필드 우선순위대로 메시지 추출
+  //    (백엔드 포맷에 맞춰 커스텀)
+  const msg =
+    data?.message ||
+    data?.error ||
+    data?.detail ||
+    (Array.isArray(data?.errors) && data.errors.map((e: any) => e.reason || e.defaultMessage || e.message).filter(Boolean).join("\n")) ||
+    data?.title ||
+    data?.msg ||
+    res.statusText ||
+    err.message
+
+  // 4) 최종 fallback
+  return msg || "요청이 실패했습니다."
+}
 
 interface ReportModalProps {
   targetId: number
@@ -71,9 +113,10 @@ export function ReportModal({
       setReason("")
       setContent("")
     } catch (error) {
+      const description = extractServerErrorMessage(error)
       toast({
         title: "신고 실패",
-        description: "문제가 발생했습니다.",
+        description,
         variant: "destructive",
       })
     }
