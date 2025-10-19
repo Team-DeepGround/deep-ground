@@ -59,18 +59,22 @@ function extractServerErrorMessage(err: unknown): string {
 
 interface ReportModalProps {
   targetId: number
-  targetType: "FEED" | "MEMBER"
+  targetType: "FEED" | "MEMBER" | "QUESTION"
+  reportedMemberId?: number
   triggerText?: string
   open?: boolean
   setOpen?: (value: boolean) => void
+  children?: React.ReactNode
 }
 
 export function ReportModal({
   targetId,
   targetType,
+  reportedMemberId,
   triggerText = "신고",
   open,
   setOpen,
+  children,
 }: ReportModalProps) {
   const { toast } = useToast()
   const [reason, setReason] = useState<"ABUSE" | "SEXUAL_CONTENT" | "SPAM" | "OTHER" | "">("")
@@ -95,6 +99,7 @@ export function ReportModal({
         {
           targetType,
           targetId,
+          reportedMemberId,
           reason,
           content,
         },
@@ -124,13 +129,13 @@ export function ReportModal({
 
   return (
     <Dialog open={dialogOpen} onOpenChange={handleOpenChange}>
-      {triggerText && (
-        <DialogTrigger asChild>
+      <DialogTrigger asChild>
+        {children || (triggerText && (
           <Button variant="ghost" className="text-red-500 text-sm">
             {triggerText}
           </Button>
-        </DialogTrigger>
-      )}
+        ))}
+      </DialogTrigger>
       <DialogContent className="space-y-4">
         <h2 className="text-lg font-semibold">신고하기</h2>
 

@@ -6,6 +6,7 @@ import { Calendar, CheckCircle2, Pencil, Trash, Clock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { formatDateTime, formatReadableDate } from "@/lib/utils";
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
+import { api } from "@/lib/api-client";
 
 interface QuestionDetailCardProps {
   question: any;
@@ -25,6 +26,24 @@ export default function QuestionDetailCard({
   onDelete 
 }: QuestionDetailCardProps) {
   const router = useRouter();
+
+  const handleProfileClick = async () => {
+    const profileId = question.memberProfileId || question.profileId || question.memberId;
+    if (profileId) {
+      try {
+        // API 클라이언트를 사용하여 프로필 존재 여부 확인
+        await api.get(`/members/profile/${profileId}`);
+        router.push(`/profile/${profileId}`);
+      } catch (error: any) {
+        console.error('프로필 조회 오류:', error);
+        if (error.status === 400) {
+          alert('해당 사용자의 프로필이 존재하지 않습니다.');
+        } else {
+          alert('프로필을 조회하는 중 오류가 발생했습니다.');
+        }
+      }
+    }
+  };
   
   
   
@@ -135,7 +154,11 @@ export default function QuestionDetailCard({
             </AvatarFallback>
           </Avatar>
           <div>
-            <div className="font-medium">
+            <button 
+              className="font-medium hover:underline focus:outline-none text-left" 
+              type="button"
+              onClick={handleProfileClick}
+            >
               {question?.author?.name
                 ? question.author.name
                 : question?.author?.nickname
@@ -145,7 +168,7 @@ export default function QuestionDetailCard({
                 : question?.memberId
                 ? `ID: ${question.memberId}`
                 : "알 수 없음"}
-            </div>
+            </button>
             <div className="text-xs text-muted-foreground">작성자</div>
           </div>
         </div>

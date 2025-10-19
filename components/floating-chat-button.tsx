@@ -10,7 +10,7 @@ import { useUnreadChatCount } from "@/hooks/use-unread-chat-count"
 export default function FloatingChatButton() {
   const [isOpen, setIsOpen] = useState(false)
   const { isAuthenticated } = useAuth() // 로그인 상태 확인을 위해 useAuth 훅 사용
-  const { unreadCount, isLoading, refetch } = useUnreadChatCount() // 읽지 않은 메시지 수
+  const { unreadCount, isLoading, refetch } = useUnreadChatCount(isAuthenticated) // 읽지 않은 메시지 수
 
 
   // 로그인하지 않은 경우 채팅 버튼을 표시하지 않음

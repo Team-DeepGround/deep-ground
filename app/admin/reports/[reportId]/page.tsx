@@ -33,7 +33,7 @@ export default function ReportDetailPage() {
       }
 
       try {
-        const response = await api.get(`/api/v1/admin/report/${reportId}`)
+        const response = await api.get(`/admin/report/${reportId}`)
         setReport(response.data.result)
       } catch (error) {
         console.error("신고 상세 조회 실패:", error)
@@ -46,25 +46,25 @@ export default function ReportDetailPage() {
   }, [reportId, router])
 
   const handleDeleteFeed = async () => {
-    await api.post(`/api/v1/admin/report/${reportId}/delete-feed`)
+    await api.post(`/admin/report/${reportId}/delete-feed`)
     alert("피드가 삭제되고 신고가 처리되었습니다.")
     router.push("/admin/reports")
   }
 
   const handleKeepFeed = async () => {
-    await api.post(`/api/v1/admin/report/${reportId}/keep-feed`)
+    await api.post(`/admin/report/${reportId}/keep-feed`)
     alert("피드를 유지하고 신고를 처리했습니다.")
     router.push("/admin/reports")
   }
 
   const handleBanMember = async () => {
-    await api.post(`/api/v1/admin/report/${reportId}/ban-member?days=${banDays}`)
+    await api.post(`/admin/report/${reportId}/ban-member?days=${banDays}`)
     alert("회원이 정지되고 신고가 처리되었습니다.")
     router.push("/admin/reports")
   }
 
   const handleIgnoreMember = async () => {
-    await api.post(`/api/v1/admin/report/${reportId}/keep-member`)
+    await api.post(`/admin/report/${reportId}/keep-member`)
     alert("신고를 무시하고 처리했습니다.")
     router.push("/admin/reports")
   }
