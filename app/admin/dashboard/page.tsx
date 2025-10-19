@@ -37,7 +37,7 @@ export default function AdminDashboardPage() {
       }
 
       try {
-        const response = await api.get("/admin/dashboard")
+        const response = await api.get("/admin")
         setStats(response.data.result)
       } catch (error) {
         console.error("대시보드 통계 로딩 실패:", error)
