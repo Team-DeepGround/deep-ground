@@ -338,6 +338,7 @@ export default function StudyDetailPage() {
             studyId={Number(study.id)}
             writerId={Number(study.writer)}
             groupLimit={study.groupLimit}
+            currentMemberId={memberId ?? undefined}
           />
         )}
         </TabsContent>
