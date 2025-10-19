@@ -174,6 +174,10 @@ export async function unlikeFeed(feedId: number): Promise<any> {
   return await api.delete(`/feed/${feedId}/like`);
 }
 
+export async function deleteFeed(feedId: number): Promise<any> {
+  return await api.delete(`/feed/${feedId}`);
+}
+
 export function getFeedMediaUrl(mediaId: number): string {
   return `${API_BASE_URL}/api/v1/feed/media/${mediaId}`;
 }
