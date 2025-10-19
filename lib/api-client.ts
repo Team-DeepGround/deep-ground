@@ -58,7 +58,26 @@ async function apiClient(endpoint: string, options: RequestOptions = {}) {
         });
 
         const response = await fetch(url, init);
-        const data = await response.json();
+        
+        // 응답이 비어있거나 JSON이 아닌 경우 처리
+        let data;
+        const contentType = response.headers.get('content-type');
+        const text = await response.text();
+        
+        if (text.trim() === '') {
+            // 빈 응답인 경우 (DELETE 요청 등)
+            data = { success: true };
+        } else if (contentType && contentType.includes('application/json')) {
+            try {
+                data = JSON.parse(text);
+            } catch (parseError) {
+                console.error('JSON 파싱 실패:', parseError);
+                throw new ApiError(response.status, '응답을 파싱할 수 없습니다');
+            }
+        } else {
+            // JSON이 아닌 응답인 경우
+            data = { message: text };
+        }
 
         console.log('API 응답:', {
             status: response.status,
@@ -67,13 +86,13 @@ async function apiClient(endpoint: string, options: RequestOptions = {}) {
 
         if (!response.ok && response.status !== 302) {
             if (response.status === 401) {
-            if (!window.location.pathname.startsWith('/auth/')) {
-                toast.error('세션이 만료되었습니다. 다시 로그인해주세요.');
-                auth.removeToken();
-                window.location.href = '/auth/login';
+                if (!window.location.pathname.startsWith('/auth/')) {
+                    toast.error('세션이 만료되었습니다. 다시 로그인해주세요.');
+                    auth.removeToken();
+                    window.location.href = '/auth/login';
+                }
             }
-        }
-        throw new ApiError(response.status, data.message || 'API 요청 실패');
+            throw new ApiError(response.status, data.message || 'API 요청 실패');
         }
         return data;
     } catch (error) {

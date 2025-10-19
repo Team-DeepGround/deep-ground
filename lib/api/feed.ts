@@ -24,14 +24,13 @@ export interface FeedResponse {
 export interface FetchFeedResponse {
   memberId: number;
   feedId: number;
-  profileId?: number | null;
   memberName: string;
   content: string;
   likeCount: number;
   liked: boolean;
   commentCount: number;
   shareCount: number;
-  profileImageId: number;
+  profileId: number;
   createdAt: string;
   mediaIds: number[];
   isShared: boolean;
@@ -88,7 +87,7 @@ export interface FetchFeedCommentResponse {
   replyCount: number;
   likeCount: number;
   liked: boolean;
-  profileImageId: number;
+  profileId: number;
   createdAt: string;
   mediaIds: number[];
 }
@@ -113,7 +112,7 @@ export interface FetchFeedReplyResponse {
   content: string;
   likeCount: number;
   liked: boolean;
-  profileImageId: number;
+  profileId: number;
   createdAt: string;
   mediaIds: number[];
 }

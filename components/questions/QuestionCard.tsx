@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { MessageSquare, Calendar } from "lucide-react";
 import Link from "next/link";
 import { formatReadableDate } from "@/lib/utils";
+import { useRouter } from "next/navigation";
+import { api } from "@/lib/api-client";
 
 interface QuestionCardProps {
   question: any;
@@ -12,6 +14,8 @@ interface QuestionCardProps {
 }
 
 export default function QuestionCard({ question, onTitleClick }: QuestionCardProps) {
+  const router = useRouter();
+  
   const authorName = question.nickname || "알 수 없음";
   const authorAvatar = question.imageUrl || question.author?.avatar || "/placeholder.svg";
   const statusLabel = (status?: string) => {
@@ -19,6 +23,24 @@ export default function QuestionCard({ question, onTitleClick }: QuestionCardPro
     if (status === "RESOLVED") return "해결중";
     if (status === "CLOSED") return "해결완료";
     return "미해결";
+  };
+
+  const handleProfileClick = async () => {
+    const profileId = question.memberProfileId || question.profileId || question.memberId;
+    if (profileId) {
+      try {
+        // API 클라이언트를 사용하여 프로필 존재 여부 확인
+        await api.get(`/members/profile/${profileId}`);
+        router.push(`/profile/${profileId}`);
+      } catch (error: any) {
+        console.error('프로필 조회 오류:', error);
+        if (error.status === 400) {
+          alert('해당 사용자의 프로필이 존재하지 않습니다.');
+        } else {
+          alert('프로필을 조회하는 중 오류가 발생했습니다.');
+        }
+      }
+    }
   };
   return (
     <Card>
@@ -31,7 +53,13 @@ export default function QuestionCard({ question, onTitleClick }: QuestionCardPro
             </Avatar>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">{authorName}</span>
+                <button 
+                  className="text-sm font-medium hover:underline focus:outline-none" 
+                  type="button"
+                  onClick={handleProfileClick}
+                >
+                  {authorName}
+                </button>
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
                   {question.createdAt ? formatReadableDate(question.createdAt) : ''}
@@ -46,6 +74,14 @@ export default function QuestionCard({ question, onTitleClick }: QuestionCardPro
                 </button>
                 {question.isResolved && <span className="ml-2 text-green-500">해결됨</span>}
               </h3>
+              {/* 기술 스택 표시 */}
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {question.techStacks && question.techStacks.map((tag: any, idx: number) => (
+                  <Badge key={tag + '-' + idx} variant="secondary" className="font-normal text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
             </div>
           </div>
           {/* 상태 pill */}
@@ -68,13 +104,6 @@ export default function QuestionCard({ question, onTitleClick }: QuestionCardPro
       </CardHeader>
       <CardContent className="p-4">
         <p className="text-sm text-muted-foreground line-clamp-2">{question.content}</p>
-        <div className="flex flex-wrap gap-1.5 mt-3">
-          {question.techStacks && question.techStacks.map((tag: any, idx: number) => (
-            <Badge key={tag + '-' + idx} variant="secondary" className="font-normal">
-              {tag}
-            </Badge>
-          ))}
-        </div>
       </CardContent>
       <CardFooter className="p-4 pt-0 flex justify-between items-center">
         <div className="flex items-center gap-4">
