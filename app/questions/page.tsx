@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { MessageSquare, ThumbsUp, CheckCircle2, Search, Plus, SortAsc, SortDesc, Calendar } from "lucide-react"
+import { MessageSquare, ThumbsUp, CheckCircle2, Search, Plus, SortAsc, SortDesc, Calendar, AlertTriangle } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -22,6 +22,7 @@ import {
 
 import { api } from "@/lib/api-client"
 import { formatReadableDate } from "@/lib/utils";
+import { ReportModal } from "@/components/report/report-modal";
 
 // 미리 정의된 태그 목록 (질문 생성과 동일)
 const predefinedTags = [
@@ -606,14 +607,34 @@ interface QuestionCardProps {
 }
 
 function QuestionCard({ question, onTitleClick }: QuestionCardProps) {
+  const router = useRouter();
   const authorName = question.nickname || "알 수 없음";
   const authorAvatar = question.imageUrl || question.author?.avatar || "/placeholder.svg";
+  
   // 상태 한글 변환 함수
   const statusLabel = (status?: string) => {
     if (status === "OPEN") return "미해결";
     if (status === "RESOLVED") return "해결중";
     if (status === "CLOSED") return "해결완료";
     return "미해결";
+  };
+
+  const handleProfileClick = async () => {
+    const profileId = question.memberProfileId || question.profileId || question.memberId;
+    if (profileId) {
+      try {
+        // API 클라이언트를 사용하여 프로필 존재 여부 확인
+        await api.get(`/members/profile/${profileId}`);
+        router.push(`/profile/${profileId}`);
+      } catch (error: any) {
+        console.error('프로필 조회 오류:', error);
+        if (error.status === 400) {
+          alert('해당 사용자의 프로필이 존재하지 않습니다.');
+        } else {
+          alert('프로필을 조회하는 중 오류가 발생했습니다.');
+        }
+      }
+    }
   };
   return (
     <Card>
@@ -626,7 +647,13 @@ function QuestionCard({ question, onTitleClick }: QuestionCardProps) {
             </Avatar>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">{authorName}</span>
+                <button 
+                  className="text-sm font-medium hover:underline focus:outline-none" 
+                  type="button"
+                  onClick={handleProfileClick}
+                >
+                  {authorName}
+                </button>
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
                   {question.createdAt ? formatReadableDate(question.createdAt) : ''}
@@ -648,35 +675,53 @@ function QuestionCard({ question, onTitleClick }: QuestionCardProps) {
                 </button>
                 {question.isResolved && <CheckCircle2 className="h-4 w-4 text-green-500" />}
               </h3>
+              {/* 기술 스택 표시 */}
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {question.techStacks && question.techStacks.map((tag: any, idx: number) => (
+                  <Badge key={tag + '-' + idx} variant="secondary" className="font-normal text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
             </div>
           </div>
-          {/* 상태 pill */}
-          <span
-            className="text-xs font-semibold px-2 py-0.5 rounded-full border-2 shadow-sm text-black bg-gray-200 border-gray-400 min-w-[48px] text-center"
-            style={{
-              color: '#111',
-              background: "#e5e7eb",
-              borderColor: "#9ca3af",
-              lineHeight: "1.2",
-              fontWeight: 600,
-              fontSize: "0.75rem",
-              minWidth: "48px",
-              textAlign: "center"
-            }}
-          >
-            {statusLabel(question.status)}
-          </span>
+          {/* 상태 pill과 신고 버튼 */}
+          <div className="flex items-center gap-2">
+            <span
+              className="text-xs font-semibold px-2 py-0.5 rounded-full border-2 shadow-sm text-black bg-gray-200 border-gray-400 min-w-[60px] text-center whitespace-nowrap"
+              style={{
+                color: '#111',
+                background: "#e5e7eb",
+                borderColor: "#9ca3af",
+                lineHeight: "1.2",
+                fontWeight: 600,
+                fontSize: "0.75rem",
+                minWidth: "60px",
+                textAlign: "center"
+              }}
+            >
+              {statusLabel(question.status)}
+            </span>
+            <ReportModal
+              targetId={question.questionId || question.id}
+              targetType="QUESTION"
+              reportedMemberId={question.memberId}
+              triggerText=""
+            >
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-6 w-6 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50"
+                title="신고하기"
+              >
+                <AlertTriangle className="h-3.5 w-3.5" />
+              </Button>
+            </ReportModal>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-4">
         <p className="text-sm text-muted-foreground line-clamp-2">{question.content}</p>
-        <div className="flex flex-wrap gap-1.5 mt-3">
-          {question.tags && question.tags.map((tag: any, idx: number) => (
-            <Badge key={tag + '-' + idx} variant="secondary" className="font-normal">
-              {tag}
-            </Badge>
-          ))}
-        </div>
       </CardContent>
       <CardFooter className="p-4 pt-0 flex justify-between items-center">
         <div className="flex items-center gap-4">

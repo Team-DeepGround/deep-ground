@@ -7,6 +7,7 @@ import { ThumbsUp, Pencil, Trash, CheckCircle2, Calendar } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { formatDateTime, formatReadableDate } from "@/lib/utils";
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
+import { api } from "@/lib/api-client";
 
 interface AnswerListProps {
   answers: any[];
@@ -54,6 +55,22 @@ export default function AnswerList({
   memberId
 }: AnswerListProps) {
   const router = useRouter();
+
+  const handleProfileClick = async (memberId: number, memberProfileId?: number) => {
+    const targetProfileId = memberProfileId || memberId;
+    try {
+      // API 클라이언트를 사용하여 프로필 존재 여부 확인
+      await api.get(`/members/profile/${targetProfileId}`);
+      router.push(`/profile/${targetProfileId}`);
+    } catch (error: any) {
+      console.error('프로필 조회 오류:', error);
+      if (error.status === 400) {
+        alert('해당 사용자의 프로필이 존재하지 않습니다.');
+      } else {
+        alert('프로필을 조회하는 중 오류가 발생했습니다.');
+      }
+    }
+  };
   
   
   return (
@@ -73,9 +90,13 @@ export default function AnswerList({
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <div className="font-medium">
+                  <button 
+                    className="font-medium hover:underline focus:outline-none text-left" 
+                    type="button"
+                    onClick={() => handleProfileClick(answer.memberId, answer.memberProfileId)}
+                  >
                     {answer.nickname || answer.author?.nickname || answer.author?.name || `User ${answer.memberId}`}
-                  </div>
+                  </button>
                   <div className="text-xs text-muted-foreground flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
                     {answer.createdAt ? (
@@ -215,7 +236,13 @@ export default function AnswerList({
               <div className="space-y-3 mb-4 w-full">
                 {answerCommentsData[answer.answerId].map((comment: any, idx: number) => (
                   <div key={comment.commentId ? String(comment.commentId) : idx} className="flex items-center border-b py-2 w-full">
-                    <span className="font-medium text-xs mr-2">{comment.nickname || comment.nickName || comment.memberNickname || comment.memberId}</span>
+                    <button 
+                      className="font-medium text-xs mr-2 hover:underline focus:outline-none text-left" 
+                      type="button"
+                      onClick={() => handleProfileClick(comment.memberId, comment.memberProfileId)}
+                    >
+                      {comment.nickname || comment.nickName || comment.memberNickname || comment.memberId}
+                    </button>
                     {editingCommentId === comment.commentId ? (
                       <>
                         <Textarea
