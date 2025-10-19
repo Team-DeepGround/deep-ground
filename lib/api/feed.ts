@@ -31,6 +31,7 @@ export interface FetchFeedResponse {
   commentCount: number;
   shareCount: number;
   profileId: number;
+  profileImageUrl?: string; // ✅ 프로필 이미지 URL 필드 추가
   createdAt: string;
   mediaIds: number[];
   isShared: boolean;
@@ -38,7 +39,7 @@ export interface FetchFeedResponse {
   sharedBy?: {
     memberId: number;
     memberName: string;
-    profileImageId: number;
+    profileImageUrl?: string; // ✅ 프로필 이미지 URL 필드 추가
   };
 }
 
@@ -88,6 +89,7 @@ export interface FetchFeedCommentResponse {
   likeCount: number;
   liked: boolean;
   profileId: number;
+  profileImageUrl?: string; // ✅ 댓글 작성자 프로필 이미지 URL 추가
   createdAt: string;
   mediaIds: number[];
 }
@@ -113,6 +115,7 @@ export interface FetchFeedReplyResponse {
   likeCount: number;
   liked: boolean;
   profileId: number;
+  profileImageUrl?: string; // ✅ 답글 작성자 프로필 이미지 URL 추가
   createdAt: string;
   mediaIds: number[];
 }
@@ -296,4 +299,3 @@ export async function getFeedReplyMediaBlob(mediaId: number): Promise<Blob> {
   }
   return await response.blob();
 } 
-

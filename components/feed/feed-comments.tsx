@@ -211,7 +211,7 @@ export function FeedComments({ feedId, onShow }: FeedCommentsProps) {
             <div key={comment.feedCommentId} className="flex gap-2 items-start">
               <Avatar className="h-8 w-8">
                 <AvatarImage 
-                  src={(comment as any).profileImageUrl || (comment as any).profileImage || "/placeholder.svg"} 
+                  src={comment.profileImageUrl || "/placeholder.svg"} 
                   alt={comment.memberName} 
                 />
                 <AvatarFallback>{comment.memberName[0]}</AvatarFallback>

@@ -219,7 +219,7 @@ export function FeedReplies({ feedCommentId, onShow }: FeedRepliesProps) {
               {replyStates[feedCommentId].replies.map((reply) => (
                 <div key={reply.feedReplyId} className="flex gap-2 items-start">
                   <Avatar className="h-7 w-7">
-                    <AvatarImage src="/placeholder.svg" alt={reply.memberName} />
+                    <AvatarImage src={reply.profileImageUrl || "/placeholder.svg"} alt={reply.memberName} />
                     <AvatarFallback>{reply.memberName[0]}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1 bg-background rounded-md px-2 py-1 border border-muted">
