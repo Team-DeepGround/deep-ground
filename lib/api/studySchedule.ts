@@ -81,8 +81,12 @@ export interface CreateStudyScheduleRequest {
   export async function deleteStudySchedule(
     studyGroupId: number,
     scheduleId: number
-  ) {
-    await api.delete(`/study-group/${studyGroupId}/schedules/${scheduleId}`)
+  ): Promise<{ status: number; message: string }> {
+    const response = await api.delete(`/study-group/${studyGroupId}/schedules/${scheduleId}`)
+    return {
+      status: 200,
+      message: response.message || '일정이 성공적으로 삭제되었습니다.'
+    }
   }
 
   // 변환 함수

@@ -33,7 +33,7 @@ interface StudyMember {
 interface StudyMembersProps {
   members: StudyMember[]
   onInviteMember: (email: string) => void
-  onKickMember: (memberId: number) => void
+  onKickMember: (memberId: number) => Promise<void>
 }
 
 export function StudyMembers({ members, onInviteMember, onKickMember }: StudyMembersProps) {
@@ -41,6 +41,7 @@ export function StudyMembers({ members, onInviteMember, onKickMember }: StudyMem
   const [kickMemberId, setKickMemberId] = useState<number | null>(null)
   const [showKickDialog, setShowKickDialog] = useState(false)
   const [reportTargetId, setReportTargetId] = useState<number | null>(null) // ✅ 신고 대상 상태
+  const [kickingMemberId, setKickingMemberId] = useState<number | null>(null) // 강퇴 중인 멤버 ID
   const { toast } = useToast()
 
   const handleInviteMember = () => {
@@ -58,15 +59,34 @@ export function StudyMembers({ members, onInviteMember, onKickMember }: StudyMem
   }
 
   const openKickDialog = (memberId: number) => {
+    // 이미 강퇴 중인 멤버인지 확인
+    if (kickingMemberId === memberId) {
+      toast({
+        title: "처리 중",
+        description: "이미 강퇴 처리 중입니다. 잠시만 기다려주세요.",
+        variant: "destructive",
+      })
+      return
+    }
+    
     setKickMemberId(memberId)
     setShowKickDialog(true)
   }
 
-  const handleKickMember = () => {
+  const handleKickMember = async () => {
     if (!kickMemberId) return
-    onKickMember(kickMemberId)
+    
+    // 강퇴 중 상태로 설정
+    setKickingMemberId(kickMemberId)
     setShowKickDialog(false)
-    setKickMemberId(null)
+    
+    try {
+      await onKickMember(kickMemberId)
+    } finally {
+      // 강퇴 완료 후 상태 초기화
+      setKickingMemberId(null)
+      setKickMemberId(null)
+    }
   }
 
   return (
@@ -107,13 +127,15 @@ export function StudyMembers({ members, onInviteMember, onKickMember }: StudyMem
                         size="sm"
                         className="text-destructive"
                         onClick={() => openKickDialog(member.memberId)}
+                        disabled={kickingMemberId === member.memberId}
                       >
-                        강퇴
+                        {kickingMemberId === member.memberId ? "강퇴 중..." : "강퇴"}
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => setReportTargetId(member.memberId)}
+                        disabled={kickingMemberId === member.memberId}
                       >
                         신고
                       </Button>

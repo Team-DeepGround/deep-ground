@@ -280,9 +280,14 @@ export function StudySchedule() {
   
     try {
       const studyGroupId = Number(params.id)
-      await deleteStudySchedule(studyGroupId, scheduleId)
-      alert("일정이 삭제되었습니다.")
+      const result = await deleteStudySchedule(studyGroupId, scheduleId)
+      
+      // 성공 메시지 표시
+      if (result.status === 200) {
+        alert(result.message || "일정이 삭제되었습니다.")
+      }
   
+      // 일정 목록 새로고침
       const updated = await fetchStudySchedulesByGroup(studyGroupId)
       const formatted = updated.map((item) => {
         const date = new Date(item.startTime)   // string -> Date
@@ -318,7 +323,14 @@ export function StudySchedule() {
   
     } catch (error) {
       console.error("❌ 일정 삭제 실패:", error)
-      alert("❌ 일정 삭제에 실패했습니다.")
+      
+      // 더 구체적인 에러 메시지 표시
+      let errorMessage = "일정 삭제에 실패했습니다."
+      if (error instanceof Error) {
+        errorMessage = error.message
+      }
+      
+      alert(`❌ ${errorMessage}`)
     }
   }
 

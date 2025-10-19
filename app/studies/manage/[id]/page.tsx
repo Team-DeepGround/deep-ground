@@ -93,11 +93,14 @@ export default function StudyManagementPage() {
     })
   }
 
-  const handleKickMember = async (memberId: number) => {
+  const handleKickMember = async (memberId: number): Promise<void> => {
     try {
+      // 먼저 UI에서 해당 멤버를 제거 (즉시 반영)
+      setMembers(prevMembers => prevMembers.filter(member => member.memberId !== memberId))
+      
       await api.delete(`/study-group/${params.id}/kick/${memberId}`)
 
-      // 강퇴 후 목록 새로고침
+      // API 호출 성공 후 서버에서 최신 목록을 가져와서 동기화
       const response = await api.get(`/study-group/${params.id}/members`)
       setMembers(response.result)
 
@@ -106,6 +109,10 @@ export default function StudyManagementPage() {
         description: "멤버가 스터디에서 강퇴되었습니다.",
       })
     } catch (error) {
+      // API 호출 실패 시 UI를 원래 상태로 복원
+      const response = await api.get(`/study-group/${params.id}/members`)
+      setMembers(response.result)
+      
       toast({
         title: "오류 발생",
         description: "멤버 강퇴에 실패했습니다.",
