@@ -44,7 +44,8 @@ export default function LoginPage() {
           response.result.accessToken,
           response.result.role,
           response.result.email,
-          response.result.memberId
+          response.result.memberId,
+          response.result.nickname
         )
 
         const role = response.result.role
