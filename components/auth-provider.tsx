@@ -19,6 +19,9 @@ interface AuthContextType {
   login: (token: string) => void
   logout: () => void
   isLoading: boolean
+  memberId?: number
+  email?: string
+  role?: string
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -111,6 +114,9 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         login,
         logout,
         isLoading,
+        memberId: user?.id,
+        email: user?.email,
+        role: user?.role,
       }}
     >
       {children}
