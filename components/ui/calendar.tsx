@@ -22,15 +22,15 @@ function Calendar({
       classNames={{
         months: "flex flex-col space-y-2",
         month: "space-y-2",
-        caption: "flex justify-center items-center gap-4",
+        caption: "flex justify-center items-center gap-2",
         caption_label: "text-sm font-medium",
-        nav: "flex items-center justify-center gap-2",
+        nav: "flex items-center gap-1",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
           "h-6 w-6 bg-transparent p-0 opacity-50 hover:opacity-100"
         ),
-        nav_button_previous: "",
-        nav_button_next: "",
+        nav_button_previous: "order-first",
+        nav_button_next: "order-last",
         table: "rdp-month_grid",
         head_row: "rdp-weekdays",
         head_cell: "rdp-weekday",
