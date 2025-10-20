@@ -113,17 +113,17 @@ body {
     margin: 0;
   }
 
-  .rdp-table {
+  .rdp-month_grid {
     width: 100%;
     border-collapse: collapse;
   }
 
-  .rdp-head_row {
+  .rdp-weekdays {
     display: flex;
     width: 100%;
   }
 
-  .rdp-head_cell {
+  .rdp-weekday {
     flex: 1;
     text-align: center;
     font-size: 0.8rem;
@@ -132,13 +132,13 @@ body {
     padding: 0.5rem 0;
   }
 
-  .rdp-row {
+  .rdp-week {
     display: flex;
     width: 100%;
     margin-top: 0.5rem;
   }
 
-  .rdp-cell {
+  .rdp-week td {
     flex: 1;
     height: 2.25rem;
     text-align: center;
@@ -197,29 +197,35 @@ body {
 
   /* 모바일 환경에서의 반응형 스타일 */
   @media (max-width: 640px) {
-    .rdp-cell {
+    .rdp-week td {
       height: 2rem;
     }
     
-    .rdp-head_cell {
+    .rdp-weekday {
       font-size: 0.75rem;
     }
   }
 
   /* 배포환경에서의 강제 레이아웃 수정 */
-  .rdp-table,
-  .rdp-head_row,
-  .rdp-row {
+  .rdp-month_grid,
+  .rdp-weekdays,
+  .rdp-week {
     display: flex !important;
     flex-direction: row !important;
     flex-wrap: nowrap !important;
   }
 
-  .rdp-head_cell,
-  .rdp-cell {
+  .rdp-weekday,
+  .rdp-week td {
     flex: 1 1 0% !important;
     min-width: 0 !important;
     max-width: none !important;
+    display: block !important;
+  }
+
+  /* inline-flex 클래스가 flexbox를 방해하는 것을 방지 */
+  .rdp-week td.inline-flex {
+    display: block !important;
   }
 
   /* 브라우저 호환성을 위한 추가 스타일 */
@@ -232,17 +238,17 @@ body {
 
   /* IE 호환성을 위한 fallback */
   @supports not (display: flex) {
-    .rdp-table {
+    .rdp-month_grid {
       display: table !important;
     }
     
-    .rdp-head_row,
-    .rdp-row {
+    .rdp-weekdays,
+    .rdp-week {
       display: table-row !important;
     }
     
-    .rdp-head_cell,
-    .rdp-cell {
+    .rdp-weekday,
+    .rdp-week td {
       display: table-cell !important;
       width: 14.28% !important;
     }
