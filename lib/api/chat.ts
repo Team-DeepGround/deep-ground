@@ -33,6 +33,7 @@ export const fetchFriendChatRooms = async (page: number): Promise<{
   const mappedFriends: FriendChatRoom[] = (response.result.chatRooms || []).map((room) => ({
     chatRoomId: room.chatRoomId,
     name: room.name,
+    lastMessageTime: room.lastMessageTime,
     lastReadMessageTime: room.lastReadMessageTime,
     unreadCount: room.unreadCount,
     id: room.id,
@@ -66,6 +67,7 @@ export const fetchStudyGroupChatRooms = async (page: number): Promise<{
   const mappedGroups: StudyGroupChatRoom[] = (response.result.chatRooms || []).map((room) => ({
     chatRoomId: room.chatRoomId,
     name: room.name,
+    lastMessageTime: room.lastMessageTime,
     lastReadMessageTime: room.lastReadMessageTime,
     unreadCount: room.unreadCount,
     memberCount: room.memberCount || 0,

@@ -2,6 +2,7 @@
 export interface ChatRoomBase {
     chatRoomId: number;
     name: string;
+    lastMessageTime?: string; // 마지막 메시지 시간 (정렬용)
     lastReadMessageTime: string;
     unreadCount: number;
     id?: number; // 친구 채팅방의 경우 친구 멤버 id, 스터디 그룹 채팅방은 스터디 그룹 id
@@ -110,4 +111,4 @@ export interface UploadingFile {
 export type SelectedChatRoom = FriendChatRoom | StudyGroupChatRoom | null;
 
 // 탭 타입
-export type ChatTab = 'all' | 'online' | 'groups'; 
+export type ChatTab = 'chat' | 'online' | 'groups'; 
