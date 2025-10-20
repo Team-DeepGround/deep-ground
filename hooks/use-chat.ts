@@ -48,7 +48,7 @@ export const useChat = (isOpen: boolean) => {
   const [selectedChatRoom, setSelectedChatRoom] = useState<SelectedChatRoom>(null);
   
   // 탭 상태
-  const [activeTab, setActiveTab] = useState<ChatTab>('all');
+  const [activeTab, setActiveTab] = useState<ChatTab>('chat');
   
   // 로딩 상태
   const [isFriendChatRoomsLoaded, setIsFriendChatRoomsLoaded] = useState(false);
@@ -269,8 +269,8 @@ export const useChat = (isOpen: boolean) => {
 
   // 온라인 상태가 로드된 후 친구 채팅방 목록 로드
   useEffect(() => {
-    if (isOpen && authToken && !isOnlineStatusesLoading) {
-      if (activeTab === 'all' || activeTab === 'online') {
+    if (isOpen && authToken && !isOnlineStatusesLoading) { // 'chat' 탭일 때도 친구 목록은 필요
+      if (activeTab === 'chat' || activeTab === 'online') {
         if (!isFriendChatRoomsLoaded) {
           setFriendCurrentPage(0);
           setFriendHasNext(false);
@@ -279,11 +279,11 @@ export const useChat = (isOpen: boolean) => {
       }
     }
   }, [isOpen, activeTab, authToken, isOnlineStatusesLoading, isFriendChatRoomsLoaded, loadFriendChatRooms]);
-
+  
   // 스터디 그룹 채팅방 목록 로드
   useEffect(() => {
     if (isOpen && authToken !== null) {
-      if (activeTab === 'groups') {
+      if (activeTab === 'chat' || activeTab === 'groups') { // 'chat' 탭일 때도 그룹 목록 필요
         if (!isStudyGroupChatRoomsLoaded) {
           setStudyGroupCurrentPage(0);
           setStudyGroupHasNext(false);

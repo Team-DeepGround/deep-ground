@@ -41,6 +41,17 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
     (friend) => friend.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // '채팅' 탭을 위한 데이터: 친구 + 그룹 채팅방을 합치고 최신 메시지 순으로 정렬
+  const allChatRooms = [...friendChatRooms, ...studyGroupChatRooms]
+    .sort((a, b) => {
+      // lastMessageTime이 없으면 lastReadMessageTime을 사용하고, 그것도 없으면 아주 오래된 시간으로 간주
+      const timeA = new Date(a.lastMessageTime || a.lastReadMessageTime || 0).getTime();
+      const timeB = new Date(b.lastMessageTime || b.lastReadMessageTime || 0).getTime();
+      return timeB - timeA; // 내림차순 정렬 (최신이 위로)
+    })
+    .filter(room => room.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+
   return (
     <div className="w-[280px] border-r">
       <div className="p-3 border-b">
@@ -55,7 +66,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
       <Tabs defaultValue="all" value={activeTab} onValueChange={(value) => onTabChange(value as ChatTab)} className="w-full">
         <div className="px-3 pt-3">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="all">전체</TabsTrigger>
+            <TabsTrigger value="chat">채팅</TabsTrigger>
             <TabsTrigger value="online">온라인</TabsTrigger>
             <TabsTrigger value="groups">스터디그룹</TabsTrigger>
           </TabsList>
@@ -65,19 +76,20 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           <div className="p-4 text-center text-muted-foreground">채팅방을 불러오는 중...</div>
         )}
 
-        <TabsContent value="all" className="m-0">
+        <TabsContent value="chat" className="m-0">
           <div className="h-full max-h-[420px] overflow-y-auto">
             <div className="p-3 space-y-2">
-              {!isLoadingChatRooms && filteredFriends.length === 0 && (
-                <div className="text-center text-muted-foreground">친구 채팅방이 없습니다.</div>
+              {!isLoadingChatRooms && allChatRooms.length === 0 && (
+                <div className="text-center text-muted-foreground">채팅방이 없습니다.</div>
               )}
-              {filteredFriends.map((friend) => (
+              {allChatRooms.map((room) => (
                 <ChatRoomItem
-                  key={friend.chatRoomId}
-                  room={friend}
-                  isSelected={selectedChatRoom?.chatRoomId === friend.chatRoomId}
-                  onClick={() => onChatRoomSelect(friend)}
-                  isGroup={false}
+                  key={room.chatRoomId}
+                  room={room}
+                  isSelected={selectedChatRoom?.chatRoomId === room.chatRoomId}
+                  onClick={() => onChatRoomSelect(room)}
+                  // 'status' 속성 유무로 친구/그룹 채팅방 구분
+                  isGroup={!('status' in room)}
                   onLeaveChatRoom={onLeaveChatRoom}
                 />
               ))}
@@ -99,11 +111,10 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
         <TabsContent value="online" className="m-0">
           <div className="h-full max-h-[420px] overflow-y-auto">
             <div className="p-3 space-y-2">
-              {!isLoadingChatRooms && filteredFriends.filter((friend) => friend.status === "online").length === 0 && (
-                <div className="text-center text-muted-foreground">온라인 친구가 없습니다.</div>
+              {!isLoadingChatRooms && filteredFriends.length === 0 && (
+                <div className="text-center text-muted-foreground">친구가 없습니다.</div>
               )}
               {filteredFriends
-                .filter((friend) => friend.status === "online")
                 .map((friend) => (
                   <ChatRoomItem
                     key={friend.chatRoomId}
@@ -111,7 +122,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                     isSelected={selectedChatRoom?.chatRoomId === friend.chatRoomId}
                     onClick={() => onChatRoomSelect(friend)}
                     isGroup={false}
-                    onLeaveChatRoom={onLeaveChatRoom}
+                    onLeaveChatRoom={onLeaveChatRoom} // 친구 채팅방에서도 나가기 기능 사용
                   />
                 ))}
               {friendHasNext && (
