@@ -574,7 +574,7 @@ export default function QuestionDetailPage() {
         {/* 질문 카드 컴포넌트 */}
         <QuestionDetailCard
           question={question}
-          memberId={memberId}
+          memberId={memberId ?? null}
           statusUpdating={statusUpdating}
           handleStatusChange={handleStatusChange}
           onEdit={() => router.push(`/questions/${params.id}/edit`)}
@@ -617,7 +617,7 @@ export default function QuestionDetailPage() {
           setEditingCommentId={setEditingCommentId}
           question={question}
           toast={toast}
-          memberId={memberId}
+          memberId={memberId ?? null}
         />
 
         {/* 답변 작성 폼 컴포넌트 */}
