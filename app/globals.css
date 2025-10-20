@@ -111,10 +111,13 @@ body {
     --rdp-outline: 2px solid var(--rdp-accent-color);
     --rdp-outline-selected: 2px solid var(--rdp-accent-color);
     margin: 0;
+    max-width: 320px !important;
+    width: 320px !important;
   }
 
   .rdp-month_grid {
-    width: 100%;
+    width: 100% !important;
+    max-width: 320px !important;
     border-collapse: collapse;
     table-layout: fixed;
   }
@@ -126,7 +129,8 @@ body {
 
   .rdp-weekday {
     display: table-cell;
-    width: 14.2857%;
+    width: 45px;
+    max-width: 45px;
     text-align: center;
     font-size: 0.8rem;
     font-weight: normal;
@@ -141,7 +145,8 @@ body {
 
   .rdp-week td {
     display: table-cell;
-    width: 14.2857%;
+    width: 45px;
+    max-width: 45px;
     height: 2.25rem;
     text-align: center;
     font-size: 0.875rem;
@@ -199,7 +204,19 @@ body {
 
   /* 모바일 환경에서의 반응형 스타일 */
   @media (max-width: 640px) {
-    .rdp-week td {
+    .rdp {
+      max-width: 280px !important;
+      width: 280px !important;
+    }
+    
+    .rdp-month_grid {
+      max-width: 280px !important;
+    }
+    
+    .rdp-week td,
+    .rdp-weekday {
+      width: 40px !important;
+      max-width: 40px !important;
       height: 2rem;
     }
     
@@ -212,6 +229,7 @@ body {
   .rdp-month_grid {
     display: table !important;
     width: 100% !important;
+    max-width: 320px !important;
     table-layout: fixed !important;
   }
 
@@ -224,7 +242,8 @@ body {
   .rdp-weekday,
   .rdp-week td {
     display: table-cell !important;
-    width: 14.2857% !important; /* 100% / 7 = 14.2857% */
+    width: 45px !important; /* 320px / 7 ≈ 45px */
+    max-width: 45px !important;
     text-align: center !important;
     vertical-align: middle !important;
     padding: 0.5rem 0 !important;
@@ -234,7 +253,8 @@ body {
   .rdp-week td.rdp-day,
   .rdp-week td[role="gridcell"] {
     display: table-cell !important;
-    width: 14.2857% !important;
+    width: 45px !important;
+    max-width: 45px !important;
     text-align: center !important;
     vertical-align: middle !important;
   }
