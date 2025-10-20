@@ -116,15 +116,17 @@ body {
   .rdp-month_grid {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
   }
 
   .rdp-weekdays {
-    display: flex;
+    display: table-row;
     width: 100%;
   }
 
   .rdp-weekday {
-    flex: 1;
+    display: table-cell;
+    width: 14.2857%;
     text-align: center;
     font-size: 0.8rem;
     font-weight: normal;
@@ -133,13 +135,13 @@ body {
   }
 
   .rdp-week {
-    display: flex;
+    display: table-row;
     width: 100%;
-    margin-top: 0.5rem;
   }
 
   .rdp-week td {
-    flex: 1;
+    display: table-cell;
+    width: 14.2857%;
     height: 2.25rem;
     text-align: center;
     font-size: 0.875rem;
@@ -207,25 +209,34 @@ body {
   }
 
   /* 배포환경에서의 강제 레이아웃 수정 */
-  .rdp-month_grid,
+  .rdp-month_grid {
+    display: table !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+  }
+
   .rdp-weekdays,
   .rdp-week {
-    display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
+    display: table-row !important;
+    width: 100% !important;
   }
 
   .rdp-weekday,
   .rdp-week td {
-    flex: 1 1 0% !important;
-    min-width: 0 !important;
-    max-width: none !important;
-    display: block !important;
+    display: table-cell !important;
+    width: 14.2857% !important; /* 100% / 7 = 14.2857% */
+    text-align: center !important;
+    vertical-align: middle !important;
+    padding: 0.5rem 0 !important;
   }
 
-  /* inline-flex 클래스가 flexbox를 방해하는 것을 방지 */
-  .rdp-week td.inline-flex {
-    display: block !important;
+  /* 모든 가능한 클래스 조합에 대응 */
+  .rdp-week td.rdp-day,
+  .rdp-week td[role="gridcell"] {
+    display: table-cell !important;
+    width: 14.2857% !important;
+    text-align: center !important;
+    vertical-align: middle !important;
   }
 
   /* 브라우저 호환성을 위한 추가 스타일 */
@@ -236,21 +247,16 @@ body {
     box-sizing: border-box !important;
   }
 
-  /* IE 호환성을 위한 fallback */
-  @supports not (display: flex) {
-    .rdp-month_grid {
-      display: table !important;
-    }
-    
-    .rdp-weekdays,
-    .rdp-week {
-      display: table-row !important;
-    }
-    
-    .rdp-weekday,
-    .rdp-week td {
-      display: table-cell !important;
-      width: 14.28% !important;
-    }
+  /* 추가 안전장치 - 모든 브라우저에서 일관된 표시 */
+  .rdp-month_grid * {
+    box-sizing: border-box !important;
+  }
+
+  .rdp-week td button {
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
 }
