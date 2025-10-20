@@ -204,5 +204,5 @@ export const leaveChatRoom = async (chatRoomId: number): Promise<ApiResponse<nul
   if (!token) {
     throw new ApiError(401, '인증이 필요합니다.');
   }
-  return await api.delete(`/chatrooms/${chatRoomId}/leave`);
+  return await api.delete(`/chatrooms/${chatRoomId}`);
 };

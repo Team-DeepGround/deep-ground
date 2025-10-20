@@ -15,7 +15,6 @@ import {
 } from "@/lib/api/feed"
 import { FeedComments } from "./feed-comments"
 import HybridShareButton from "@/components/share/shareButton"
-import { AuthImage } from "@/components/ui/auth-image"
 import { ReportModal } from "@/components/report/report-modal"
 import ReactMarkdown from "react-markdown"
 import { useState } from "react"
@@ -130,15 +129,14 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
           <ReactMarkdown>{sharedFeed.content}</ReactMarkdown>
         </div>
 
-        {sharedFeed.mediaIds && sharedFeed.mediaIds.length > 0 && (
+        {sharedFeed.mediaUrls && sharedFeed.mediaUrls.length > 0 && (
           <div className="mt-2 rounded-md overflow-hidden">
-            {sharedFeed.mediaIds.map((id) => (
-              <AuthImage
-                key={id}
-                mediaId={id}
-                type="feed"
+            {sharedFeed.mediaUrls.map((url, index) => (
+              <img
+                key={index}
+                src={url}
                 alt="공유된 피드 이미지"
-                className="w-full h-auto max-h-48 object-cover"
+                className="w-full h-auto max-h-48 object-cover mb-2"
               />
             ))}
           </div>
@@ -229,15 +227,14 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
             <ReactMarkdown>{post.content}</ReactMarkdown>
           </div>
 
-          {post.mediaIds && post.mediaIds.length > 0 && (
+          {post.mediaUrls && post.mediaUrls.length > 0 && (
             <div className="mt-3 rounded-md overflow-hidden">
-              {post.mediaIds.map((id) => (
-                <AuthImage
-                  key={id}
-                  mediaId={id}
-                  type="feed"
+              {post.mediaUrls.map((url, index) => (
+                <img
+                  key={index}
+                  src={url}
                   alt="피드 이미지"
-                  className="w-full h-auto mb-2"
+                  className="w-full h-auto mb-2 rounded-md"
                 />
               ))}
             </div>
@@ -292,8 +289,8 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
                   shareTitle={post.memberName + '님의 피드'}
                   shareText={post.content.substring(0, 100)} // 내용은 일부만 잘라서 전달
                   shareImageUrl={
-                    post.mediaIds && post.mediaIds.length > 0
-                      ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/media/${post.mediaIds[0]}` // 첫 번째 이미지를 썸네일로 사용
+                    post.mediaUrls && post.mediaUrls.length > 0
+                      ? post.mediaUrls[0] // 첫 번째 이미지 URL을 썸네일로 사용
                       : undefined
                   }
                 />

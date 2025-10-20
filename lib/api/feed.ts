@@ -13,14 +13,6 @@ export interface FeedUpdateRequest {
   images?: File[];
 }
 
-export interface FeedResponse {
-  id: number;
-  content: string;
-  memberName: string;
-  createdAt: string;
-  imageIds: number[];
-}
-
 export interface FetchFeedResponse {
   memberId: number;
   feedId: number;
@@ -31,15 +23,15 @@ export interface FetchFeedResponse {
   commentCount: number;
   shareCount: number;
   profileId: number;
-  profileImageUrl?: string; // ✅ 프로필 이미지 URL 필드 추가
+  profileImageUrl?: string;
   createdAt: string;
-  mediaIds: number[];
+  mediaUrls: string[];
   isShared: boolean;
   sharedFeed?: FetchFeedResponse;
   sharedBy?: {
     memberId: number;
     memberName: string;
-    profileImageUrl?: string; // ✅ 프로필 이미지 URL 필드 추가
+    profileImageUrl?: string;
   };
 }
 
@@ -91,7 +83,7 @@ export interface FetchFeedCommentResponse {
   profileId: number;
   profileImageUrl?: string;
   createdAt: string;
-  mediaIds: number[];
+  mediaUrls: string[];
 }
 
 export interface FetchFeedCommentsResponse {
@@ -117,7 +109,7 @@ export interface FetchFeedReplyResponse {
   profileId: number;
   profileImageUrl?: string;
   createdAt: string;
-  mediaIds: number[];
+  mediaUrls: string[];
 }
 
 export interface FetchFeedRepliesResponse {
@@ -245,57 +237,3 @@ export async function unlikeFeedReply(feedReplyId: number): Promise<any> {
 export function getFeedReplyMediaUrl(mediaId: number): string {
   return `${API_BASE_URL}/feed/reply/media/${mediaId}`;
 }
-
-// ====== 이미지 Blob 가져오기 함수들 ======
-export async function getFeedMediaBlob(mediaId: number): Promise<Blob> {
-  const token = await auth.getToken();
-  const headers: HeadersInit = {};
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  
-  const response = await fetch(`${API_BASE_URL}/feed/media/${mediaId}`, { headers });
-  if (!response.ok) {
-    throw new ApiError(response.status, '피드 이미지를 가져올 수 없습니다');
-  }
-  return await response.blob();
-}
-
-export async function getProfileMediaBlob(mediaId: number): Promise<Blob> {
-  const token = await auth.getToken();
-  const headers: HeadersInit = {};
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  const response = await fetch(`${API_BASE_URL}/profile/media/${mediaId}`, { headers });
-  if (!response.ok) {
-    throw new ApiError(response.status, '프로필 이미지를 가져올 수 없습니다');
-  }
-  return await response.blob();
-}
-
-export async function getFeedCommentMediaBlob(mediaId: number): Promise<Blob> {
-  const token = await auth.getToken();
-  const headers: HeadersInit = {};
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  const response = await fetch(`${API_BASE_URL}/feed/comment/media/${mediaId}`, { headers });
-  if (!response.ok) {
-    throw new ApiError(response.status, '이미지를 가져올 수 없습니다');
-  }
-  return await response.blob();
-}
-
-export async function getFeedReplyMediaBlob(mediaId: number): Promise<Blob> {
-  const token = await auth.getToken();
-  const headers: HeadersInit = {};
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  const response = await fetch(`${API_BASE_URL}/feed/reply/media/${mediaId}`, { headers });
-  if (!response.ok) {
-    throw new ApiError(response.status, '이미지를 가져올 수 없습니다');
-  }
-  return await response.blob();
-} 

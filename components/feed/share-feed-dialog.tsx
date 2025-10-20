@@ -115,8 +115,8 @@ export function ShareFeedDialog({ isOpen, onClose, originalFeed, onSuccess }: Sh
             <div className="prose max-w-none text-sm text-gray-700 line-clamp-3">
               <ReactMarkdown>{originalFeed.content}</ReactMarkdown>
             </div>
-            {originalFeed.mediaIds && originalFeed.mediaIds.length > 0 && (
-              <p className="text-xs text-gray-500 mt-1">📷 이미지 {originalFeed.mediaIds.length}개</p>
+            {originalFeed.mediaUrls && originalFeed.mediaUrls.length > 0 && (
+              <p className="text-xs text-gray-500 mt-1">📷 이미지 {originalFeed.mediaUrls.length}개</p>
             )}
           </div>
 
