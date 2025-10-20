@@ -24,8 +24,10 @@ export interface FetchFeedResponse {
   shareCount: number;
   profileId: number;
   profileImageUrl?: string;
+  profileImageId?: number;
   createdAt: string;
   mediaUrls: string[];
+  mediaIds?: number[];
   isShared: boolean;
   sharedFeed?: FetchFeedResponse;
   sharedBy?: {
