@@ -303,8 +303,8 @@ export function FeedComments({ feedId, onShow }: FeedCommentsProps) {
       {/* 댓글 입력창 */}
       <div className="flex gap-2 items-end mt-2">
         <Avatar className="h-8 w-8">
-          <AvatarImage src="/placeholder.svg" alt={user?.email || "사용자"} />
-          <AvatarFallback>{user?.email?.charAt(0).toUpperCase() || "U"}</AvatarFallback>
+          <AvatarImage src={user?.profileImageUrl || "/placeholder.svg"} alt={user?.nickname || "사용자"} />
+          <AvatarFallback>{user?.nickname?.charAt(0).toUpperCase() || "U"}</AvatarFallback>
         </Avatar>
         <div className="flex-1">
           <Textarea

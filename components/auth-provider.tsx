@@ -1,21 +1,27 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useState, useCallback } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { auth, getTokenExp } from "@/lib/auth"
+import { auth } from "@/lib/auth"
+import { api } from "@/lib/api-client"
+
+export interface UserProfile {
+  id: number
+  email: string
+  nickname: string
+  profileImageUrl?: string
+  role: string
+}
 
 interface AuthContextType {
   isAuthenticated: boolean
-  role: string | null
-  email: string | null
-  memberId: number | null
-  nickname: string | null
-  // 닉네임까지 받도록 시그니처 확장
-  login: (token: string, role?: string, email?: string, memberId?: number, nickname?: string) => void
+  user: UserProfile | null
+  login: (token: string) => void
   logout: () => void
+  isLoading: boolean
 }
 
-const AuthContext = createContext<AuthContextType | null>(null)
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 const publicPaths = [
   "/",
@@ -40,118 +46,71 @@ export function useAuth() {
 
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [role, setRole] = useState<string | null>(null)
-  const [email, setEmail] = useState<string | null>(null)
-  const [memberId, setMemberId] = useState<number | null>(null)
-  const [nickname, setNickname] = useState<string | null>(null) // ✅ 닉네임 상태
+  const [user, setUser] = useState<UserProfile | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   const pathname = usePathname()
 
+  const fetchUser = useCallback(async () => {
+    try {
+      const res = await api.get("/members/profile/me")
+      if (res.result) {
+        setUser({
+          id: res.result.memberId,
+          email: res.result.email,
+          nickname: res.result.nickname,
+          profileImageUrl: res.result.profileImage,
+          role: res.result.role,
+        })
+      }
+    } catch (error) {
+      console.error("Failed to fetch user profile:", error)
+      // 프로필 로드 실패 시 로그아웃 처리
+      await auth.removeToken()
+      setIsAuthenticated(false)
+      setUser(null)
+    }
+  }, [])
+
   useEffect(() => {
     const checkAuth = async () => {
+      setIsLoading(true)
       const token = await auth.getToken()
-      const exp = token ? getTokenExp(token) : null
-      const savedRole = await auth.getRole()
-      const savedEmail = await auth.getEmail()
-      const savedMemberId = await auth.getMemberId()
-      const savedNickname = await auth.getNickname?.() // ✅ 닉네임 복구
-
-      // 만료 처리
-      if (exp && Date.now() / 1000 > exp) {
-        auth.removeToken()
-        auth.removeRole()
-        auth.removeEmail()
-        auth.removeMemberId()
-        auth.removeNickname?.()
-        localStorage.removeItem("token_exp")
+      if (token) {
+        setIsAuthenticated(true)
+        await fetchUser()
+      } else {
         setIsAuthenticated(false)
-        setRole(null)
-        setEmail(null)
-        setMemberId(null)
-        setNickname(null)
-        router.push("/auth/login")
-        return
+        setUser(null)
       }
-
-      // 상태 복구
-      setIsAuthenticated(!!token)
-      setRole(savedRole)
-      setEmail(savedEmail)
-      setMemberId(savedMemberId)
-      setNickname(savedNickname || null)
-
-      // ROLE_GUEST 접근 차단
-      if ((savedRole === "ROLE_GUEST") && !publicPaths.includes(pathname)) {
-        const emailQuery = savedEmail ? `?email=${encodeURIComponent(savedEmail)}` : ""
-        router.push(`/auth/verify-email${emailQuery}`)
-      }
+      setIsLoading(false)
     }
 
     checkAuth()
-  }, [pathname, router])
+  }, [pathname, fetchUser])
 
-  // ✅ 로그인: 닉네임까지 저장
-  const login = (
-    token: string,
-    roleArg?: string,
-    emailArg?: string,
-    memberIdArg?: number,
-    nicknameArg?: string
-  ) => {
+  const login = (token: string) => {
     auth.setToken(token)
-
-    if (roleArg) {
-      auth.setRole(roleArg)
-      setRole(roleArg)
-    }
-
-    const exp = getTokenExp(token)
-    if (exp) localStorage.setItem("token_exp", exp.toString())
-
-    if (emailArg) {
-      auth.setEmail(emailArg)
-      setEmail(emailArg)
-    }
-
-    if (memberIdArg !== undefined) {
-      auth.setMemberId(memberIdArg)
-      setMemberId(memberIdArg)
-    }
-
-    if (nicknameArg) {
-      auth.setNickname?.(nicknameArg)
-      setNickname(nicknameArg)
-    }
-
     setIsAuthenticated(true)
+    fetchUser()
+    router.push("/")
   }
 
-  // ✅ 로그아웃: 닉네임 포함 정리
   const logout = () => {
     auth.removeToken()
-    auth.removeRole()
-    auth.removeEmail()
-    auth.removeMemberId()
-    auth.removeNickname?.()
-    localStorage.removeItem("token_exp")
     setIsAuthenticated(false)
-    setRole(null)
-    setEmail(null)
-    setMemberId(null)
-    setNickname(null)
+    setUser(null)
     router.push("/auth/login")
   }
 
   return (
     <AuthContext.Provider
       value={{
-        isAuthenticated,
-        role,
-        email,
-        memberId,
-        nickname, // ✅ 컨텍스트로 노출
+        isAuthenticated: isAuthenticated && user !== null,
+        user,
         login,
         logout,
+        isLoading,
       }}
     >
       {children}
