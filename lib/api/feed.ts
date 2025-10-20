@@ -89,7 +89,7 @@ export interface FetchFeedCommentResponse {
   likeCount: number;
   liked: boolean;
   profileId: number;
-  profileImageUrl?: string; // ✅ 댓글 작성자 프로필 이미지 URL 추가
+  profileImageUrl?: string;
   createdAt: string;
   mediaIds: number[];
 }
@@ -115,7 +115,7 @@ export interface FetchFeedReplyResponse {
   likeCount: number;
   liked: boolean;
   profileId: number;
-  profileImageUrl?: string; // ✅ 답글 작성자 프로필 이미지 URL 추가
+  profileImageUrl?: string;
   createdAt: string;
   mediaIds: number[];
 }
@@ -254,7 +254,7 @@ export async function getFeedMediaBlob(mediaId: number): Promise<Blob> {
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`/api/v1/feed/media/${mediaId}`, { headers });
+  const response = await fetch(`${API_BASE_URL}/feed/media/${mediaId}`, { headers });
   if (!response.ok) {
     throw new ApiError(response.status, '피드 이미지를 가져올 수 없습니다');
   }
@@ -267,7 +267,7 @@ export async function getProfileMediaBlob(mediaId: number): Promise<Blob> {
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  const response = await fetch(`/api/v1/profile/media/${mediaId}`, { headers });
+  const response = await fetch(`${API_BASE_URL}/profile/media/${mediaId}`, { headers });
   if (!response.ok) {
     throw new ApiError(response.status, '프로필 이미지를 가져올 수 없습니다');
   }

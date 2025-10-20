@@ -154,7 +154,6 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
           <div className="flex justify-between items-start">
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
-                {/* ✅ URL 직접 사용으로 변경 */}
                 <AvatarImage src={post.profileImageUrl || "/placeholder.svg"} alt={post.memberName} />
                 <AvatarFallback>{post.memberName[0]}</AvatarFallback>
               </Avatar>
