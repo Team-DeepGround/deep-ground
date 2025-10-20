@@ -115,6 +115,46 @@ body {
     width: 320px !important;
   }
 
+  /* 달력 헤더 레이아웃 수정 */
+  .rdp .flex.flex-col.sm\\:flex-row {
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  .rdp nav {
+    order: 2 !important;
+    margin-top: 0.5rem !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+  }
+
+  .rdp .rdp-month_caption {
+    order: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 1rem !important;
+  }
+
+  .rdp .rdp-month_caption span {
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+  }
+
+  /* 달력 테이블 중앙 정렬 */
+  .rdp .rdp-month_grid {
+    margin: 0 auto !important;
+  }
+
+  /* 전체 달력 컨테이너 중앙 정렬 */
+  .rdp > div {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
   .rdp-month_grid {
     width: 100% !important;
     max-width: 320px !important;
