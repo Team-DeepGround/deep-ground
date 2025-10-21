@@ -68,6 +68,7 @@ export default function StudyDetailPage() {
   const [participants, setParticipants] = useState<Participant[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showLeaveDialog, setShowLeaveDialog] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
   useEffect(() => {
     const fetchStudy = async () => {
@@ -171,6 +172,26 @@ export default function StudyDetailPage() {
     } catch (error) {
       toast({
         title: "스터디 나가기에 실패했습니다",
+        description: "잠시 후 다시 시도해주세요",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDeleteStudy = async () => {
+    if (!study || !study.id) return
+
+    try {
+      await api.delete(`/study-group/${study.id}`)
+      toast({
+        title: "스터디가 삭제되었습니다",
+        description: "스터디가 성공적으로 삭제되었습니다",
+      })
+      setShowDeleteDialog(false)
+      router.push("/studies/my")
+    } catch (error) {
+      toast({
+        title: "스터디 삭제에 실패했습니다",
         description: "잠시 후 다시 시도해주세요",
         variant: "destructive",
       })
@@ -282,6 +303,8 @@ export default function StudyDetailPage() {
           onJoinStudy={handleJoinStudy}
           onShare={handleShare}
           onLeaveStudy={() => setShowLeaveDialog(true)}
+          onDeleteStudy={() => setShowDeleteDialog(true)}
+          currentMemberId={memberId ?? undefined}
         />
         <StudyInfo study={study} />
       </div>
@@ -357,6 +380,24 @@ export default function StudyDetailPage() {
             <AlertDialogCancel>취소</AlertDialogCancel>
             <AlertDialogAction onClick={handleLeaveStudy} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               나가기
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 스터디 삭제 확인 다이얼로그 */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>스터디를 삭제하시겠습니까?</AlertDialogTitle>
+            <AlertDialogDescription>
+              정말로 이 스터디를 삭제하시겠습니까? 삭제된 스터디는 복구할 수 없으며, 모든 참여자들이 스터디에서 제외됩니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteStudy} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              삭제하기
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

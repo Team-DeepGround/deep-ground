@@ -2,7 +2,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ChevronLeft, ChevronRight, Calendar, Users, LogOut } from "lucide-react"
+import { ChevronLeft, ChevronRight, Calendar, Users, LogOut, Trash2 } from "lucide-react"
 import Link from "next/link"
 import {
   AlertDialog,
@@ -33,6 +33,7 @@ interface StudyListProps {
   totalPages: number
   onPageChange: (page: number) => void
   onStudyLeave?: (studyId: number) => void
+  onStudyDelete?: (studyId: number) => void
 }
 
 const ITEMS_PER_PAGE = 8
@@ -44,11 +45,13 @@ export function StudyList({
   currentPage,
   totalPages,
   onPageChange,
-  onStudyLeave
+  onStudyLeave,
+  onStudyDelete
 }: StudyListProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [showLeaveDialog, setShowLeaveDialog] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [selectedStudyId, setSelectedStudyId] = useState<number | null>(null)
 
   const getStatusBadge = (status: MyStudy["groupStatus"]) => {
@@ -92,6 +95,35 @@ export function StudyList({
     } catch (error) {
       toast({
         title: "스터디 나가기에 실패했습니다",
+        description: "잠시 후 다시 시도해주세요",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDeleteClick = (e: React.MouseEvent, studyId: number) => {
+    e.stopPropagation()
+    setSelectedStudyId(studyId)
+    setShowDeleteDialog(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedStudyId) return
+
+    try {
+      await api.delete(`/study-group/${selectedStudyId}`)
+      toast({
+        title: "스터디가 삭제되었습니다",
+        description: "스터디가 성공적으로 삭제되었습니다",
+      })
+      setShowDeleteDialog(false)
+      setSelectedStudyId(null)
+      if (onStudyDelete) {
+        onStudyDelete(selectedStudyId)
+      }
+    } catch (error) {
+      toast({
+        title: "스터디 삭제에 실패했습니다",
         description: "잠시 후 다시 시도해주세요",
         variant: "destructive",
       })
@@ -184,15 +216,28 @@ export function StudyList({
               </CardTitle>
               <div className="flex items-center gap-2">
                 {getStatusBadge(study.groupStatus)}
-                {!isCreated && study.id && (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={(e) => handleLeaveClick(e, study.id)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <LogOut className="h-4 w-4" />
-                  </Button>
+                {study.id && (
+                  <>
+                    {isCreated ? (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={(e) => handleDeleteClick(e, study.id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={(e) => handleLeaveClick(e, study.id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <LogOut className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
             </CardHeader>
@@ -226,6 +271,24 @@ export function StudyList({
             <AlertDialogCancel>취소</AlertDialogCancel>
             <AlertDialogAction onClick={handleLeaveConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               나가기
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 스터디 삭제 확인 다이얼로그 */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>스터디를 삭제하시겠습니까?</AlertDialogTitle>
+            <AlertDialogDescription>
+              정말로 이 스터디를 삭제하시겠습니까? 삭제된 스터디는 복구할 수 없으며, 모든 참여자들이 스터디에서 제외됩니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              삭제하기
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

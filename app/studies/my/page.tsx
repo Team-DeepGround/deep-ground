@@ -60,7 +60,7 @@ export default function MyStudiesPage() {
         if (joinedResponse.status === 200 && joinedResponse.result) {
           console.log("참여한 스터디 API 응답:", joinedResponse.result)
           // 참여한 스터디 데이터 형식 변환
-          const formattedJoinedStudies: MyStudy[] = joinedResponse.result.map((study: JoinedStudy, index: number) => {
+          const formattedJoinedStudies: MyStudy[] = joinedResponse.result.map((study: any, index: number) => {
             console.log(`스터디 ${index + 1} 원본 데이터:`, study)
             const studyId = study.studyGroupId || study.id
             console.log(`스터디 ${index + 1} ID:`, studyId, "studyGroupId:", study.studyGroupId, "id:", study.id)
@@ -70,7 +70,7 @@ export default function MyStudiesPage() {
               createdAt: study.participatedAt,
               groupStatus: "IN_PROGRESS" as const // 참여한 스터디는 진행중 상태로 표시
             }
-          }).filter(study => {
+          }).filter((study: MyStudy) => {
             console.log("필터링 전 스터디:", study)
             return study.id && study.id !== undefined
           }) // id가 있는 스터디만 필터링
@@ -244,6 +244,12 @@ export default function MyStudiesPage() {
               currentPage={createdCurrentPage}
               totalPages={createdTotalPages}
               onPageChange={setCreatedCurrentPage}
+              onStudyDelete={(studyId) => {
+                setCreatedStudies(prev => prev.filter(study => study.id !== studyId))
+                if (createdCurrentPage > 1 && createdStudies.length <= (createdCurrentPage - 1) * ITEMS_PER_PAGE) {
+                  setCreatedCurrentPage(createdCurrentPage - 1)
+                }
+              }}
             />
           </div>
 
