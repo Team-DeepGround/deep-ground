@@ -1,7 +1,7 @@
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { MessageSquare, ThumbsUp, Share2, MoreHorizontal } from "lucide-react"
+import { MessageSquare, ThumbsUp, Share2, MoreHorizontal, Trash2 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 // 임시 데이터
@@ -60,7 +60,10 @@ export default function TechFeed() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem>저장하기</DropdownMenuItem>
+                  <DropdownMenuItem className="text-destructive focus:text-destructive">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    삭제하기
+                  </DropdownMenuItem>
                   <DropdownMenuItem>신고하기</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

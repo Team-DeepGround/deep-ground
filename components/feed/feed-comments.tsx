@@ -217,46 +217,50 @@ export function FeedComments({ feedId, onShow }: FeedCommentsProps) {
                 <AvatarFallback>{comment.memberName[0]}</AvatarFallback>
               </Avatar>
               <div className="flex-1 bg-muted rounded-md px-3 py-2">
-                <div className="flex items-center gap-2">
-                  <Popover open={friendPopoverOpen === comment.feedCommentId} onOpenChange={open => setFriendPopoverOpen(open ? comment.feedCommentId : null)}>
-                    <PopoverTrigger asChild>
-                      <button className="font-medium text-sm hover:underline focus:outline-none" type="button">
-                        {comment.memberName}
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent align="start" className="w-56 p-4">
-                      <div className="mb-2 font-semibold">친구 추가</div>
-                      <div className="mb-2 text-xs text-muted-foreground">{comment.memberName}님과 친구를 맺어보세요.</div>
-                      <Button
-                        size="sm"
-                        disabled={friendLoading}
-                        onClick={() => handleAddFriend(comment.memberId, comment.memberName)}
-                        className="w-full"
-                      >
-                        {friendLoading ? "요청 중..." : "친구 요청 보내기"}
-                      </Button>
-                      {friendSuccess && <div className="text-green-600 text-xs mt-2">{friendSuccess}</div>}
-                      {friendError && <div className="text-destructive text-xs mt-2">{friendError}</div>}
-                    </PopoverContent>
-                  </Popover>
-                  <span className="text-xs text-muted-foreground">{new Date(comment.createdAt).toLocaleDateString()}</span>
-                  {/* 좋아요 버튼 */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={`ml-2 ${comment.liked ? "text-primary" : ""}`}
-                    onClick={() => handleLikeComment(feedId, comment)}
-                  >
-                    <ThumbsUp className={`h-4 w-4 ${comment.liked ? "fill-primary" : ""}`} />
-                    <span className="text-xs ml-1">{comment.likeCount}</span>
-                  </Button>
-                  {/* 수정/삭제 버튼 (본인만 노출) */}
-                  {(user?.id as number) === comment.memberId && (
-                    <>
-                      <Button variant="ghost" size="icon" onClick={() => handleEditComment(comment)}><span className="sr-only">수정</span>✏️</Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDeleteComment(feedId, comment.feedCommentId)}><span className="sr-only">삭제</span>🗑️</Button>
-                    </>
-                  )}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Popover open={friendPopoverOpen === comment.feedCommentId} onOpenChange={open => setFriendPopoverOpen(open ? comment.feedCommentId : null)}>
+                      <PopoverTrigger asChild>
+                        <button className="font-medium text-sm hover:underline focus:outline-none" type="button">
+                          {comment.memberName}
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent align="start" className="w-56 p-4">
+                        <div className="mb-2 font-semibold">친구 추가</div>
+                        <div className="mb-2 text-xs text-muted-foreground">{comment.memberName}님과 친구를 맺어보세요.</div>
+                        <Button
+                          size="sm"
+                          disabled={friendLoading}
+                          onClick={() => handleAddFriend(comment.memberId, comment.memberName)}
+                          className="w-full"
+                        >
+                          {friendLoading ? "요청 중..." : "친구 요청 보내기"}
+                        </Button>
+                        {friendSuccess && <div className="text-green-600 text-xs mt-2">{friendSuccess}</div>}
+                        {friendError && <div className="text-destructive text-xs mt-2">{friendError}</div>}
+                      </PopoverContent>
+                    </Popover>
+                    <span className="text-xs text-muted-foreground">{new Date(comment.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex items-center">
+                    {/* 좋아요 버튼 */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={`h-auto px-2 py-1 ${comment.liked ? "text-primary" : ""}`}
+                      onClick={() => handleLikeComment(feedId, comment)}
+                    >
+                      <ThumbsUp className={`h-4 w-4 ${comment.liked ? "fill-primary" : ""}`} />
+                      <span className="text-xs ml-1">{comment.likeCount}</span>
+                    </Button>
+                    {/* 수정/삭제 버튼 (본인만 노출) */}
+                    {(user?.id as number) === comment.memberId && (
+                      <>
+                        <Button variant="ghost" size="icon" className="h-auto px-1 py-1" onClick={() => handleEditComment(comment)}><span className="sr-only">수정</span>✏️</Button>
+                        <Button variant="ghost" size="icon" className="h-auto px-1 py-1" onClick={() => handleDeleteComment(feedId, comment.feedCommentId)}><span className="sr-only">삭제</span>🗑️</Button>
+                      </>
+                    )}
+                  </div>
                 </div>
                 {/* 댓글 수정 모드 */}
                 {editingCommentId === comment.feedCommentId ? (
