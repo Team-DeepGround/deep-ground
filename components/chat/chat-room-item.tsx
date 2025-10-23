@@ -18,6 +18,7 @@ interface ChatRoomItemProps {
   isGroup?: boolean;
   onLeaveChatRoom: (chatRoomId: number, chatRoomName: string) => void;
   onStartChat?: (friend: FriendChatRoom) => void;
+  isFriendList?: boolean; // 친구목록 탭인지 구분
 }
 
 export const ChatRoomItem: React.FC<ChatRoomItemProps> = ({
@@ -27,6 +28,7 @@ export const ChatRoomItem: React.FC<ChatRoomItemProps> = ({
   isGroup = false,
   onLeaveChatRoom,
   onStartChat,
+  isFriendList = false,
 }) => {
   const [showChatButton, setShowChatButton] = useState(false);
   if (isGroup) {
@@ -94,7 +96,13 @@ export const ChatRoomItem: React.FC<ChatRoomItemProps> = ({
       className={`group flex items-center gap-3 p-2 rounded-md hover:bg-accent cursor-pointer ${
         isSelected ? 'bg-accent' : ''
       }`}
-      onClick={() => setShowChatButton(!showChatButton)}
+      onClick={() => {
+        if (isFriendList) {
+          setShowChatButton(!showChatButton);
+        } else {
+          onClick();
+        }
+      }}
     >
       <div className="relative">
         <span className="relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full">
@@ -124,37 +132,44 @@ export const ChatRoomItem: React.FC<ChatRoomItemProps> = ({
           </div>
         </div>
         
-        {/* 대화하기 버튼 또는 나가기 버튼 */}
-        {showChatButton ? (
-          <div className="flex gap-1">
-            {onStartChat && (
+        {/* 친구목록 탭에서만 대화하기 버튼 표시 */}
+        {isFriendList ? (
+          showChatButton ? (
+            <div className="flex gap-1">
+              {onStartChat && (
+                <Button
+                  size="sm"
+                  variant="default"
+                  className="h-7 px-2 text-xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onStartChat(friendRoom);
+                    setShowChatButton(false);
+                  }}
+                >
+                  <MessageCircle className="h-3 w-3 mr-1" />
+                  대화하기
+                </Button>
+              )}
               <Button
                 size="sm"
-                variant="default"
+                variant="outline"
                 className="h-7 px-2 text-xs"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onStartChat(friendRoom);
                   setShowChatButton(false);
                 }}
               >
-                <MessageCircle className="h-3 w-3 mr-1" />
-                대화하기
+                취소
               </Button>
-            )}
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 px-2 text-xs"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowChatButton(false);
-              }}
-            >
-              취소
-            </Button>
-          </div>
+            </div>
+          ) : (
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="text-xs text-muted-foreground">클릭하여 대화하기</span>
+            </div>
+          )
         ) : (
+          /* 채팅탭에서는 나가기 버튼만 표시 */
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
