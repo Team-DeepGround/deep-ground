@@ -36,6 +36,7 @@ export default function ChatPopup({ isOpen, onClose }: ChatPopupProps) {
   const {
     friendChatRooms,
     studyGroupChatRooms,
+    friendList, // 친구 목록 추가
     selectedChatRoom,
     activeTab,
     isLoadingChatRooms,
@@ -346,6 +347,7 @@ export default function ChatPopup({ isOpen, onClose }: ChatPopupProps) {
             activeTab={activeTab}
             onTabChange={setActiveTab}
             friendChatRooms={friendChatRooms}
+            friendList={friendList} // 친구 목록 전달
             studyGroupChatRooms={studyGroupChatRooms}
             selectedChatRoom={selectedChatRoom}
             onChatRoomSelect={handleSelectChatRoom}
