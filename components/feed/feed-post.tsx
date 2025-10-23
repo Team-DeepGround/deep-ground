@@ -182,13 +182,12 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
         <div className="prose max-w-none text-sm text-gray-700">
           <ReactMarkdown>{sharedFeed.content}</ReactMarkdown>
         </div>
-            {sharedFeed.mediaIds && sharedFeed.mediaIds.length > 0 && (
+            {sharedFeed.mediaUrls && sharedFeed.mediaUrls.length > 0 && (
               <div className="mt-2 rounded-md overflow-hidden">
-                {sharedFeed.mediaIds.map((id: number) => (
-                  <AuthImage 
-                    key={id} 
-                    mediaId={id} 
-                    type="feed" 
+                {sharedFeed.mediaUrls.map((url: string, index: number) => (
+                  <img 
+                    key={index}
+                    src={url} 
                     alt="공유된 피드 이미지" 
                     className="w-full h-auto max-h-48 object-cover" 
                   />
@@ -288,13 +287,12 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
           <div className="prose max-w-none text-sm">
             <ReactMarkdown>{post.content}</ReactMarkdown>
           </div>
-          {post.mediaIds && post.mediaIds.length > 0 && (
+          {post.mediaUrls && post.mediaUrls.length > 0 && (
             <div className="mt-3 rounded-md overflow-hidden">
-              {post.mediaIds.map((id: number) => (
-                <AuthImage 
-                  key={id} 
-                  mediaId={id} 
-                  type="feed" 
+              {post.mediaUrls.map((url: string, index: number) => (
+                <img 
+                  key={index}
+                  src={url} 
                   alt="피드 이미지" 
                   className="w-full h-auto mb-2" 
                 />
