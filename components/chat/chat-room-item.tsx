@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AvatarGroup as UIAvatarGroup } from '@/components/ui/avatar-group';
 import { FriendChatRoom, StudyGroupChatRoom } from '@/types/chat';
-import { MoreHorizontal, LogOut } from 'lucide-react';
+import { MoreHorizontal, LogOut, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -17,6 +17,7 @@ interface ChatRoomItemProps {
   onClick: () => void;
   isGroup?: boolean;
   onLeaveChatRoom: (chatRoomId: number, chatRoomName: string) => void;
+  onStartChat?: (friend: FriendChatRoom) => void;
 }
 
 export const ChatRoomItem: React.FC<ChatRoomItemProps> = ({
@@ -25,7 +26,9 @@ export const ChatRoomItem: React.FC<ChatRoomItemProps> = ({
   onClick,
   isGroup = false,
   onLeaveChatRoom,
+  onStartChat,
 }) => {
+  const [showChatButton, setShowChatButton] = useState(false);
   if (isGroup) {
     const groupRoom = room as StudyGroupChatRoom;
     return (
@@ -91,7 +94,7 @@ export const ChatRoomItem: React.FC<ChatRoomItemProps> = ({
       className={`group flex items-center gap-3 p-2 rounded-md hover:bg-accent cursor-pointer ${
         isSelected ? 'bg-accent' : ''
       }`}
-      onClick={onClick}
+      onClick={() => setShowChatButton(!showChatButton)}
     >
       <div className="relative">
         <span className="relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full">
@@ -120,32 +123,64 @@ export const ChatRoomItem: React.FC<ChatRoomItemProps> = ({
             {friendRoom.status === 'online' ? '온라인' : '오프라인'}
           </div>
         </div>
-        {/* 나가기 버튼을 포함한 드롭다운 메뉴 */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+        
+        {/* 대화하기 버튼 또는 나가기 버튼 */}
+        {showChatButton ? (
+          <div className="flex gap-1">
+            {onStartChat && (
+              <Button
+                size="sm"
+                variant="default"
+                className="h-7 px-2 text-xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStartChat(friendRoom);
+                  setShowChatButton(false);
+                }}
+              >
+                <MessageCircle className="h-3 w-3 mr-1" />
+                대화하기
+              </Button>
+            )}
             <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={(e) => e.stopPropagation()} // 부모의 onClick 이벤트 방지
-            >
-              <MoreHorizontal className="h-4 w-4" />
-              <span className="sr-only">더보기</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 text-xs"
               onClick={(e) => {
                 e.stopPropagation();
-                onLeaveChatRoom(friendRoom.chatRoomId, friendRoom.name);
+                setShowChatButton(false);
               }}
             >
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>채팅방 나가기</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              취소
+            </Button>
+          </div>
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={(e) => e.stopPropagation()} // 부모의 onClick 이벤트 방지
+              >
+                <MoreHorizontal className="h-4 w-4" />
+                <span className="sr-only">더보기</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onLeaveChatRoom(friendRoom.chatRoomId, friendRoom.name);
+                }}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>채팅방 나가기</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
     </div>
   );
