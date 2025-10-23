@@ -116,7 +116,7 @@ export default function ChatPopup({ isOpen, onClose }: ChatPopupProps) {
 
     // "더 불러오기" 버튼 클릭 핸들러 (채팅방 목록 페이지네이션)
   const handleLoadMoreChatRooms = () => {
-        if (activeTab === 'all' || activeTab === 'online') {
+        if (activeTab === 'chat' || activeTab === 'online') {
             if (friendHasNext && !isLoadingChatRooms) {
         loadFriendChatRooms(friendCurrentPage + 1);
             }
@@ -312,6 +312,22 @@ export default function ChatPopup({ isOpen, onClose }: ChatPopupProps) {
       }
     };
 
+    // 친구와 대화 시작 핸들러
+    const handleStartChat = (friend: FriendChatRoom) => {
+      // 이미 해당 친구와의 채팅방이 있는지 확인
+      const existingChatRoom = friendChatRooms.find(room => room.chatRoomId === friend.chatRoomId);
+      
+      if (existingChatRoom) {
+        // 기존 채팅방이 있으면 해당 채팅방 선택
+        setSelectedChatRoom(existingChatRoom);
+      } else {
+        // 기존 채팅방이 없으면 새로 생성하거나 친구 목록에서 선택
+        // 여기서는 친구 정보를 기반으로 채팅방을 생성하거나 찾는 로직을 구현해야 함
+        // 현재는 기존 채팅방이 있다고 가정하고 처리
+        setSelectedChatRoom(friend);
+      }
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -338,6 +354,7 @@ export default function ChatPopup({ isOpen, onClose }: ChatPopupProps) {
             studyGroupHasNext={studyGroupHasNext}
             onLoadMore={handleLoadMoreChatRooms}
             onLeaveChatRoom={handleLeaveChatRoom} // ✅ ChatSidebar에 나가기 핸들러 전달
+            onStartChat={handleStartChat} // ✅ 대화하기 핸들러 전달
           />
           
           <ChatContent

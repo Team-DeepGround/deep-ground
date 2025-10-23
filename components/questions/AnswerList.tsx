@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { formatDateTime, formatReadableDate } from "@/lib/utils";
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer";
 import { api } from "@/lib/api-client";
+import { useState, useEffect } from "react";
 
 interface AnswerListProps {
   answers: any[];
@@ -30,6 +31,41 @@ interface AnswerListProps {
   question: any;
   toast: any;
   memberId: number | null;
+}
+
+// 인증 헤더가 필요한 이미지 렌더링용 컴포넌트
+function AuthImage({ imageUrl, alt = "이미지" }: { imageUrl: string; alt?: string }) {
+  // S3 URL 등 외부 URL이면 바로 렌더링
+  if (imageUrl.startsWith("http")) {
+    return <img src={imageUrl} alt={alt} style={{ maxWidth: "100%" }} />;
+  }
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!imageUrl) return;
+    let isMounted = true;
+    const fetchImage = async () => {
+      const token = localStorage.getItem("auth_token");
+      try {
+        const res = await fetch(`${imageUrl}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!res.ok) throw new Error("이미지 로드 실패");
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        if (isMounted) setBlobUrl(url);
+      } catch (e) {
+        if (isMounted) setBlobUrl(null);
+      }
+    };
+    fetchImage();
+    return () => {
+      isMounted = false;
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
+  }, [imageUrl]);
+
+  if (!blobUrl) return <div style={{ width: 100, height: 100, background: "#eee" }}>이미지 없음</div>;
+  return <img src={blobUrl} alt={alt} style={{ maxWidth: "100%" }} />;
 }
 
 export default function AnswerList({ 
@@ -205,13 +241,25 @@ export default function AnswerList({
           <CardContent className="pt-0">
             <div className="space-y-4">
               <MarkdownRenderer content={answer.answerContent || ""} />
-              {answer.mediaUrls && answer.mediaUrls.length > 0 && (
+              {answer.mediaUrl && answer.mediaUrl.length > 0 && (
                 <div className="space-y-4">
-                  {answer.mediaUrls.map((url: string, idx: number) => (
-                    <div key={url || idx} className="rounded-md overflow-hidden">
-                      <img src={url} alt={`답변 이미지 ${idx + 1}`} style={{ maxWidth: "100%" }} />
-                    </div>
-                  ))}
+                  {answer.mediaUrl.map((url: string, idx: number) => {
+                    if (url.startsWith('http')) {
+                      // S3 URL이면 바로 렌더링
+                      return (
+                        <div key={url || idx} className="rounded-md overflow-hidden">
+                          <img src={url} alt={`답변 이미지 ${idx + 1}`} style={{ maxWidth: '100%' }} />
+                        </div>
+                      );
+                    }
+                    // /media/파일명.확장자 → 파일명.확장자 추출
+                    const fileName = url.replace("/media/", "");
+                    return (
+                      <div key={url || idx} className="rounded-md overflow-hidden">
+                        <AuthImage imageUrl={`/answer/media/${fileName}`} alt={`답변 이미지 ${idx + 1}`} />
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

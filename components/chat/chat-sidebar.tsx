@@ -19,6 +19,7 @@ interface ChatSidebarProps {
   studyGroupHasNext: boolean;
   onLoadMore: () => void;
   onLeaveChatRoom: (chatRoomId: number, chatRoomName: string) => void;
+  onStartChat?: (friend: FriendChatRoom) => void;
 }
 
 export const ChatSidebar: React.FC<ChatSidebarProps> = ({
@@ -34,7 +35,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   friendHasNext,
   studyGroupHasNext,
   onLoadMore,
-  onLeaveChatRoom
+  onLeaveChatRoom,
+  onStartChat
 }) => {
   // 친구 검색 필터링
   const filteredFriends = friendChatRooms.filter(
@@ -67,7 +69,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
         <div className="px-3 pt-3">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="chat">채팅</TabsTrigger>
-            <TabsTrigger value="online">온라인</TabsTrigger>
+            <TabsTrigger value="online">친구목록</TabsTrigger>
             <TabsTrigger value="groups">스터디그룹</TabsTrigger>
           </TabsList>
         </div>
@@ -123,6 +125,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                     onClick={() => onChatRoomSelect(friend)}
                     isGroup={false}
                     onLeaveChatRoom={onLeaveChatRoom} // 친구 채팅방에서도 나가기 기능 사용
+                    onStartChat={onStartChat} // 대화하기 기능 추가
                   />
                 ))}
               {friendHasNext && (
