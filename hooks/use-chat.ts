@@ -38,6 +38,9 @@ export const useChat = (isOpen: boolean) => {
   const [studyGroupChatRooms, setStudyGroupChatRooms] = useState<StudyGroupChatRoom[]>([]);
   const [isLoadingChatRooms, setIsLoadingChatRooms] = useState(true);
   
+  // 친구 목록 상태 (채팅방과 분리)
+  const [friendList, setFriendList] = useState<FriendChatRoom[]>([]);
+  
   // 페이지네이션 상태
   const [friendCurrentPage, setFriendCurrentPage] = useState(0);
   const [friendHasNext, setFriendHasNext] = useState(false);
@@ -92,7 +95,9 @@ export const useChat = (isOpen: boolean) => {
       setFriendHasNext(hasNext);
       setFriendCurrentPage(page);
       
+      // 친구 목록도 함께 업데이트 (채팅방과 분리)
       if (page === 0) {
+        setFriendList(mappedFriends);
         setIsFriendChatRoomsLoaded(true);
       }
 
@@ -100,6 +105,10 @@ export const useChat = (isOpen: boolean) => {
       if (page === 0) {
         setTimeout(() => {
           setFriendChatRooms(current => current.map(friend => ({
+            ...friend,
+            status: friend.id && onlineStatuses[friend.id] === true ? "online" : "offline"
+          })));
+          setFriendList(current => current.map(friend => ({
             ...friend,
             status: friend.id && onlineStatuses[friend.id] === true ? "online" : "offline"
           })));
@@ -399,6 +408,7 @@ export const useChat = (isOpen: boolean) => {
     // 상태
     friendChatRooms,
     studyGroupChatRooms,
+    friendList, // 친구 목록 추가
     selectedChatRoom,
     activeTab,
     isLoadingChatRooms,
