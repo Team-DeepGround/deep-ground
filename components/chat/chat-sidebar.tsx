@@ -11,6 +11,7 @@ interface ChatSidebarProps {
   activeTab: ChatTab;
   onTabChange: (tab: ChatTab) => void;
   friendChatRooms: FriendChatRoom[];
+  friendList: FriendChatRoom[]; // 친구 목록 추가
   studyGroupChatRooms: StudyGroupChatRoom[];
   selectedChatRoom: FriendChatRoom | StudyGroupChatRoom | null;
   onChatRoomSelect: (room: FriendChatRoom | StudyGroupChatRoom) => void;
@@ -28,6 +29,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   activeTab,
   onTabChange,
   friendChatRooms,
+  friendList, // 친구 목록 추가
   studyGroupChatRooms,
   selectedChatRoom,
   onChatRoomSelect,
@@ -38,8 +40,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   onLeaveChatRoom,
   onStartChat
 }) => {
-  // 친구 검색 필터링
-  const filteredFriends = friendChatRooms.filter(
+  // 친구 검색 필터링 (친구목록 탭용)
+  const filteredFriends = friendList.filter(
     (friend) => friend.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
