@@ -59,11 +59,11 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="w-full">
       {/* Hero Section */}
-      <section className="py-16 md:py-24 relative bg-gradient-to-r from-gray-50 to-blue-50 rounded-3xl mx-2 md:mx-8">
+      <section className="py-16 md:py-24 relative bg-gradient-to-r from-gray-50 to-blue-50 w-full">
         {/* 콘텐츠 */}
-        <div className="text-center space-y-8 px-4 md:px-8">
+        <div className="text-center space-y-8 px-4 md:px-8 max-w-6xl mx-auto">
           <div className="space-y-6">
             <h1 className="text-4xl md:text-7xl font-bold tracking-tight text-gray-900 leading-tight">
               개발자들의<br/>
@@ -87,7 +87,7 @@ export default function Home() {
       </section>
 
       {/* Features Section */}
-      <section className="py-12 md:py-16">
+      <section className="py-12 md:py-16 max-w-6xl mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold mb-4 text-gray-900">주요 기능</h2>
           <p className="text-gray-600">Studen에서 제공하는 다양한 기능들을 만나보세요</p>
@@ -128,7 +128,7 @@ export default function Home() {
       </section>
 
       {/* Studies Section */}
-      <section className="py-12 md:py-16">
+      <section className="py-12 md:py-16 max-w-6xl mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold mb-4">스터디</h2>
           <p className="text-muted-foreground">함께 성장할 스터디를 찾아보세요</p>
