@@ -14,7 +14,7 @@ import { ChatProvider } from "@/components/chat/chat-context"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "DeepGround - 개발자 커뮤니티 & 스터디 플랫폼",
+  title: "Studen - 개발자들의 성장 놀이터",
   description: "개발자들이 함께 공부하고, 질문하고, 성장하는 온라인 커뮤니티",
 }
 
