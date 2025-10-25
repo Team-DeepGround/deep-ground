@@ -25,6 +25,14 @@ import Link from "next/link"
 import { toast } from "sonner"
 import { auth } from "@/lib/auth"
 
+type InquiryStatus = "PENDING" | "IN_PROGRESS" | "ANSWERED" | "CLOSED"
+interface MyInquiry {
+  id: number
+  title: string
+  status: InquiryStatus
+  createdAt: string
+}
+
 // StudyCard 컴포넌트에 맞는 타입 정의
 interface StudyGroup {
   id: number;
@@ -52,6 +60,8 @@ export default function ProfilePage() {
   const [joinedStudies, setJoinedStudies] = useState<StudyGroup[]>([])
   const [feeds, setFeeds] = useState<FetchFeedSummaryResponse[]>([])
   const [feedsLoading, setFeedsLoading] = useState(false)
+  const [myInquiries, setMyInquiries] = useState<MyInquiry[]>([])
+  const [myInquiriesLoading, setMyInquiriesLoading] = useState(false)
 
   // 프로필 정보 상태
   const [profile, setProfile] = useState({
@@ -153,6 +163,19 @@ export default function ProfilePage() {
     if (isAuthenticated ) {
       fetchUserData()
       loadFeeds()
+      const loadMyInquiries = async () => {
+        try {
+          setMyInquiriesLoading(true)
+          const res = await api.get("/support/inquiries/me")
+          setMyInquiries(res.result ?? [])
+        } catch (e: any) {
+          // 실패해도 다른 섹션은 보여야 하므로 토스트만
+          console.error("내 문의 목록 로드 실패:", e)
+        } finally {
+          setMyInquiriesLoading(false)
+        }
+      }
+      loadMyInquiries()
     }
   }, [isAuthenticated])
 
@@ -471,6 +494,53 @@ export default function ProfilePage() {
                     </Button>
                   </div>
                 </div>
+                {/* 내 문의 섹션 */}
+                <div>
+                  <h2 className="text-xl font-bold mb-4">내 문의</h2>
+                  {myInquiriesLoading ? (
+                    <div className="flex justify-center items-center min-h-[120px]">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    </div>
+                  ) : myInquiries.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {myInquiries.map((q) => (
+                        <Card key={q.id} className="hover:bg-accent/50 transition-colors cursor-pointer"
+                              onClick={() => router.push(`/inquiries/${q.id}`)}>
+                          <CardContent className="p-4">
+                            <div className="flex justify-between items-start">
+                              <div className="font-medium line-clamp-2">{q.title}</div>
+                              <Badge variant={
+                                q.status === "PENDING" ? "outline"
+                                : q.status === "IN_PROGRESS" ? "secondary"
+                                : q.status === "ANSWERED" ? "default"
+                                : "outline"
+                              }>
+                                {q.status}
+                              </Badge>
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-2">
+                              {new Date(q.createdAt).toLocaleString()}
+                            </div>
+                            <Button size="sm" className="mt-3"
+                              onClick={(e) => { e.stopPropagation(); router.push(`/inquiries/${q.id}`) }}>
+                              상세보기
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <Card>
+                      <CardContent className="p-6 text-center">
+                        <p className="text-muted-foreground">아직 등록한 문의가 없습니다.</p>
+                        <Button className="mt-4" asChild>
+                          <Link href="/inquiries">문의하러 가기</Link>
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+
               </>
             )}
           </TabsContent>
