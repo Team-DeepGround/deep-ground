@@ -18,7 +18,8 @@ import {
   Globe, 
   Linkedin, 
   Twitter,
-  Loader2
+  Loader2,
+  Users
 } from "lucide-react"
 import ProfileForm from "@/components/profile-form"
 import Link from "next/link"
@@ -41,6 +42,11 @@ interface StudyGroup {
   };
   isOnline: boolean;
   location: string;
+  // API 응답 필드 추가
+  currentMemberCount?: number;
+  groupMemberCount?: number;
+  studyStartDate?: string;
+  studyEndDate?: string;
 }
 
 export default function ProfilePage() {
@@ -106,7 +112,12 @@ export default function ProfilePage() {
         // 생성한 스터디
         const createdStudiesResponse = await api.get("/study-group/my")
         if (createdStudiesResponse && createdStudiesResponse.result) {
-          setCreatedStudies(createdStudiesResponse.result)
+          // isOffline 필드를 isOnline으로 변환
+          const formattedCreatedStudies = createdStudiesResponse.result.map((study: any) => ({
+            ...study,
+            isOnline: study.isOffline !== undefined ? !study.isOffline : true
+          }))
+          setCreatedStudies(formattedCreatedStudies)
         }
 
         // 참여중인 스터디
@@ -119,6 +130,8 @@ export default function ProfilePage() {
             console.log("프로필 페이지 - 개별 스터디 데이터:", study)
             const studyId = study.studyGroupId || study.id
             console.log("프로필 페이지 - 스터디 ID:", studyId)
+            // isOffline 기준으로 isOnline 결정
+            const isOnline = study.isOffline !== undefined ? !study.isOffline : true
             return {
               id: studyId,
               title: study.title || "제목 없음",
@@ -132,8 +145,13 @@ export default function ProfilePage() {
                 name: study.organizer?.name || study.createdBy || "작성자 정보 없음",
                 avatar: study.organizer?.avatar || "/placeholder-user.jpg"
               },
-              isOnline: study.isOnline !== undefined ? study.isOnline : !study.offline,
-              location: study.location || "장소 정보 없음"
+              isOnline: isOnline,
+              location: study.location || "장소 정보 없음",
+              // API 응답 필드 추가
+              currentMemberCount: study.currentMemberCount,
+              groupMemberCount: study.groupMemberCount,
+              studyStartDate: study.studyStartDate,
+              studyEndDate: study.studyEndDate,
             }
           }).filter(study => study.id && study.id !== undefined)
           console.log("프로필 페이지 - 최종 변환된 스터디 데이터:", formattedJoinedStudies)
@@ -241,16 +259,18 @@ export default function ProfilePage() {
         {/* 태그 부분 삭제 */}
         <div className="flex items-center justify-between mt-4">
           <div className="flex items-center gap-4">
-            <p className="text-sm text-muted-foreground flex items-center">
-              <CalendarIcon className="h-3.5 w-3.5 mr-1" />
-              {study.studyStartDate && study.studyEndDate
-                ? `${format(parseISO(study.studyStartDate), "yyyy.MM.dd")} ~ ${format(parseISO(study.studyEndDate), "yyyy.MM.dd")}`
-                : ""}
-            </p>
-            <p className="text-sm text-muted-foreground flex items-center">
-              <Users className="h-3.5 w-3.5 mr-1" />
-              {(study.currentMemberCount ?? 0)}/{(study.groupMemberCount ?? 0)}명
-            </p>
+            {study.studyStartDate && study.studyEndDate && (
+              <p className="text-sm text-muted-foreground flex items-center">
+                <CalendarIcon className="h-3.5 w-3.5 mr-1" />
+                {format(parseISO(study.studyStartDate), "yyyy.MM.dd")} ~ {format(parseISO(study.studyEndDate), "yyyy.MM.dd")}
+              </p>
+            )}
+            {(study.currentMemberCount || study.groupMemberCount) && (
+              <p className="text-sm text-muted-foreground flex items-center">
+                <Users className="h-3.5 w-3.5 mr-1" />
+                {(study.currentMemberCount ?? 0)}/{(study.groupMemberCount ?? 0)}명
+              </p>
+            )}
           </div>
           <Button
             size="sm"
