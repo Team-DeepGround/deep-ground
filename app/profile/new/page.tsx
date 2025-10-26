@@ -53,9 +53,12 @@ export default function ProfileCreatePage() {
       <h1 className="text-2xl font-bold mb-6">프로필 생성</h1>
 
       <ProfileForm
-        // ✅ 닉네임/이메일을 초깃값으로 주입
+        mode="create"
+        nicknameVisible={false}
+        nicknameRequired={false}
+        nicknameCheckDup={false}
         initialProfile={{
-          nickname: nickname || "",
+          // nickname 제거
           email: email || "",
           bio: "",
           techStack: [],
@@ -64,11 +67,12 @@ export default function ProfileCreatePage() {
           jobTitle: "",
           company: "",
           education: "",
-          profileImage: "", // 없으면 빈 값
+          profileImage: "",
         }}
         onSubmit={handleCreateProfile}
         loading={loading}
       />
+
     </div>
   )
 }

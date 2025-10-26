@@ -225,7 +225,7 @@ export default function ProfilePage() {
 
     const token = await auth.getToken();
     const response = await fetch("/api/v1/members/profile", {
-      method: "PUT",
+      method: "PATCH",
       headers: { Authorization: `Bearer ${token}` },
       body: formData,
     });
@@ -336,21 +336,27 @@ export default function ProfilePage() {
                 </CardHeader>
                 <CardContent>
                   <ProfileForm
+                    mode="edit"
+                    nicknameVisible={true}
+                    nicknameRequired={true}
+                    nicknameCheckDup={true}
                     initialProfile={{
                       nickname: profile.nickname,
                       email: profile.email,
                       bio: profile.bio,
                       techStack: profile.techStack,
                       links: profile.links,
-                      liveIn: profile.location,          // ✅ location → liveIn으로 맞춤
+                      liveIn: profile.location,       // ✅ location → liveIn 매핑 유지
                       jobTitle: profile.jobTitle,
                       company: profile.company,
                       education: profile.education,
-                      profileImage: profile.profileImage, // ✅ 프로필 이미지 미리보기용 (선택)
+                      profileImage: profile.profileImage, // ✅ 미리보기용
                     }}
                     onSubmit={handleProfileUpdate}
                     onCancel={() => setIsEditing(false)}
+                    // loading={loading} // 로딩 상태가 있다면 같이 넘겨주세요
                   />
+
                 </CardContent>
               </Card>
             ) : (
