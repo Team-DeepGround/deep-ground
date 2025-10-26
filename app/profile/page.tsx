@@ -18,12 +18,21 @@ import {
   Globe, 
   Linkedin, 
   Twitter,
-  Loader2
+  Loader2,
+  Users
 } from "lucide-react"
 import ProfileForm from "@/components/profile-form"
 import Link from "next/link"
 import { toast } from "sonner"
 import { auth } from "@/lib/auth"
+
+type InquiryStatus = "PENDING" | "IN_PROGRESS" | "ANSWERED" | "CLOSED"
+interface MyInquiry {
+  id: number
+  title: string
+  status: InquiryStatus
+  createdAt: string
+}
 
 // StudyCard 컴포넌트에 맞는 타입 정의
 interface StudyGroup {
@@ -41,6 +50,11 @@ interface StudyGroup {
   };
   isOnline: boolean;
   location: string;
+  // API 응답 필드 추가
+  currentMemberCount?: number;
+  groupMemberCount?: number;
+  studyStartDate?: string;
+  studyEndDate?: string;
 }
 
 export default function ProfilePage() {
@@ -52,6 +66,8 @@ export default function ProfilePage() {
   const [joinedStudies, setJoinedStudies] = useState<StudyGroup[]>([])
   const [feeds, setFeeds] = useState<FetchFeedSummaryResponse[]>([])
   const [feedsLoading, setFeedsLoading] = useState(false)
+  const [myInquiries, setMyInquiries] = useState<MyInquiry[]>([])
+  const [myInquiriesLoading, setMyInquiriesLoading] = useState(false)
 
   // 프로필 정보 상태
   const [profile, setProfile] = useState({
@@ -106,7 +122,12 @@ export default function ProfilePage() {
         // 생성한 스터디
         const createdStudiesResponse = await api.get("/study-group/my")
         if (createdStudiesResponse && createdStudiesResponse.result) {
-          setCreatedStudies(createdStudiesResponse.result)
+          // isOffline 필드를 isOnline으로 변환
+          const formattedCreatedStudies = createdStudiesResponse.result.map((study: any) => ({
+            ...study,
+            isOnline: study.isOffline !== undefined ? !study.isOffline : true
+          }))
+          setCreatedStudies(formattedCreatedStudies)
         }
 
         // 참여중인 스터디
@@ -119,6 +140,8 @@ export default function ProfilePage() {
             console.log("프로필 페이지 - 개별 스터디 데이터:", study)
             const studyId = study.studyGroupId || study.id
             console.log("프로필 페이지 - 스터디 ID:", studyId)
+            // isOffline 기준으로 isOnline 결정
+            const isOnline = study.isOffline !== undefined ? !study.isOffline : true
             return {
               id: studyId,
               title: study.title || "제목 없음",
@@ -132,8 +155,13 @@ export default function ProfilePage() {
                 name: study.organizer?.name || study.createdBy || "작성자 정보 없음",
                 avatar: study.organizer?.avatar || "/placeholder-user.jpg"
               },
-              isOnline: study.isOnline !== undefined ? study.isOnline : !study.offline,
-              location: study.location || "장소 정보 없음"
+              isOnline: isOnline,
+              location: study.location || "장소 정보 없음",
+              // API 응답 필드 추가
+              currentMemberCount: study.currentMemberCount,
+              groupMemberCount: study.groupMemberCount,
+              studyStartDate: study.studyStartDate,
+              studyEndDate: study.studyEndDate,
             }
           }).filter(study => study.id && study.id !== undefined)
           console.log("프로필 페이지 - 최종 변환된 스터디 데이터:", formattedJoinedStudies)
@@ -153,6 +181,19 @@ export default function ProfilePage() {
     if (isAuthenticated ) {
       fetchUserData()
       loadFeeds()
+      const loadMyInquiries = async () => {
+        try {
+          setMyInquiriesLoading(true)
+          const res = await api.get("/support/inquiries/me")
+          setMyInquiries(res.result ?? [])
+        } catch (e: any) {
+          // 실패해도 다른 섹션은 보여야 하므로 토스트만
+          console.error("내 문의 목록 로드 실패:", e)
+        } finally {
+          setMyInquiriesLoading(false)
+        }
+      }
+      loadMyInquiries()
     }
   }, [isAuthenticated])
 
@@ -241,16 +282,18 @@ export default function ProfilePage() {
         {/* 태그 부분 삭제 */}
         <div className="flex items-center justify-between mt-4">
           <div className="flex items-center gap-4">
-            <p className="text-sm text-muted-foreground flex items-center">
-              <CalendarIcon className="h-3.5 w-3.5 mr-1" />
-              {study.studyStartDate && study.studyEndDate
-                ? `${format(parseISO(study.studyStartDate), "yyyy.MM.dd")} ~ ${format(parseISO(study.studyEndDate), "yyyy.MM.dd")}`
-                : ""}
-            </p>
-            <p className="text-sm text-muted-foreground flex items-center">
-              <Users className="h-3.5 w-3.5 mr-1" />
-              {(study.currentMemberCount ?? 0)}/{(study.groupMemberCount ?? 0)}명
-            </p>
+            {study.studyStartDate && study.studyEndDate && (
+              <p className="text-sm text-muted-foreground flex items-center">
+                <CalendarIcon className="h-3.5 w-3.5 mr-1" />
+                {format(parseISO(study.studyStartDate), "yyyy.MM.dd")} ~ {format(parseISO(study.studyEndDate), "yyyy.MM.dd")}
+              </p>
+            )}
+            {(study.currentMemberCount || study.groupMemberCount) && (
+              <p className="text-sm text-muted-foreground flex items-center">
+                <Users className="h-3.5 w-3.5 mr-1" />
+                {(study.currentMemberCount ?? 0)}/{(study.groupMemberCount ?? 0)}명
+              </p>
+            )}
           </div>
           <Button
             size="sm"
@@ -471,6 +514,53 @@ export default function ProfilePage() {
                     </Button>
                   </div>
                 </div>
+                {/* 내 문의 섹션 */}
+                <div>
+                  <h2 className="text-xl font-bold mb-4">내 문의</h2>
+                  {myInquiriesLoading ? (
+                    <div className="flex justify-center items-center min-h-[120px]">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    </div>
+                  ) : myInquiries.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {myInquiries.map((q) => (
+                        <Card key={q.id} className="hover:bg-accent/50 transition-colors cursor-pointer"
+                              onClick={() => router.push(`/inquiries/${q.id}`)}>
+                          <CardContent className="p-4">
+                            <div className="flex justify-between items-start">
+                              <div className="font-medium line-clamp-2">{q.title}</div>
+                              <Badge variant={
+                                q.status === "PENDING" ? "outline"
+                                : q.status === "IN_PROGRESS" ? "secondary"
+                                : q.status === "ANSWERED" ? "default"
+                                : "outline"
+                              }>
+                                {q.status}
+                              </Badge>
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-2">
+                              {new Date(q.createdAt).toLocaleString()}
+                            </div>
+                            <Button size="sm" className="mt-3"
+                              onClick={(e) => { e.stopPropagation(); router.push(`/inquiries/${q.id}`) }}>
+                              상세보기
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <Card>
+                      <CardContent className="p-6 text-center">
+                        <p className="text-muted-foreground">아직 등록한 문의가 없습니다.</p>
+                        <Button className="mt-4" asChild>
+                          <Link href="/inquiries">문의하러 가기</Link>
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+
               </>
             )}
           </TabsContent>

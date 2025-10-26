@@ -1,14 +1,15 @@
+// app/admin/reports/page.tsx
 "use client"
 
 import { useEffect, useState } from "react"
-import { api } from "@/lib/api-client"
 import { useRouter } from "next/navigation"
 import { Report } from "@/types/report"
 import { ReportList } from "@/components/admin/report-list"
 import { Skeleton } from "@/components/ui/skeleton"
 import { auth } from "@/lib/auth"
+import { api } from "@/lib/api-client"
 
-export default function AdminAllReportsPage() {
+export default function AdminPendingReportsPage() {
   const [reports, setReports] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
   const [unauthorized, setUnauthorized] = useState(false)
@@ -26,11 +27,12 @@ export default function AdminAllReportsPage() {
       }
 
       try {
-        // ✅ 백엔드 응답 구조 반영
-        const response = await api.get("/admin/report")
-        setReports(response.result?.content ?? [])
+        // ✅ 기존 axios 대신 api-client 사용
+        const response = await api.get("/admin/report/pending")
+        // ✅ 백엔드 구조: { status, message, result }
+        setReports(response.result ?? [])
       } catch (error) {
-        console.error("전체 신고 목록 로딩 실패:", error)
+        console.error("검토할 신고 목록 로딩 실패:", error)
       } finally {
         setLoading(false)
       }
@@ -44,7 +46,7 @@ export default function AdminAllReportsPage() {
   if (loading) {
     return (
       <div className="p-6 space-y-4">
-        <h1 className="text-2xl font-bold">전체 신고 목록</h1>
+        <h1 className="text-2xl font-bold">검토가 필요한 신고 목록</h1>
         {Array.from({ length: 5 }).map((_, idx) => (
           <Skeleton key={idx} className="h-24 w-full rounded-xl" />
         ))}
@@ -54,11 +56,11 @@ export default function AdminAllReportsPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">전체 신고 목록</h1>
+      <h1 className="text-2xl font-bold mb-4">검토가 필요한 신고 목록</h1>
       {reports.length === 0 ? (
-        <p className="text-muted-foreground text-center py-10">신고 내역이 없습니다.</p>
+        <p className="text-muted-foreground text-center py-10">검토할 신고가 없습니다.</p>
       ) : (
-        <ReportList reports={reports} />
+        <ReportList reports={reports.filter((r) => !r.processed)} />
       )}
     </div>
   )

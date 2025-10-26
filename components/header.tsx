@@ -39,6 +39,7 @@ const navigation = [
   { name: "캘린더", href: "/calendar", icon: Calendar },
   { name: "Q&A", href: "/questions", icon: MessageSquare },
   { name: "피드", href: "/feed", icon: Users },
+  { name: "문의하기", href: "/inquiries/new", icon: MessageSquare }, // ✅ 문의 작성 페이지로 이동
 ]
 
 export default function Header() {
@@ -51,13 +52,12 @@ export default function Header() {
   const [profileImage, setProfileImage] = useState<string | null>(null)
   const [nickname, setNickname] = useState<string>("")
 
-  // ✅ 로그인 상태일 때 프로필 이미지 불러오기
+  // ✅ 로그인 상태일 때 프로필 이미지/닉네임 불러오기
   useEffect(() => {
     if (!isAuthenticated) return
     ;(async () => {
       try {
         const res = await api.get("/members/profile/me")
-        console.log("백엔드에서 받은 프로필 이미지:", res?.result?.profileImage)
         setProfileImage(res?.result?.profileImage || null)
         setNickname(res?.result?.nickname || "")
       } catch (e) {
@@ -134,7 +134,7 @@ export default function Header() {
             ))}
             {role === "ROLE_ADMIN" && (
               <Link
-                href="/admin"
+                href="/admin/dashboard"
                 className="flex items-center gap-2 text-sm font-medium text-destructive hover:text-destructive"
               >
                 <Shield className="h-4 w-4" />
@@ -215,6 +215,13 @@ export default function Header() {
                     <Link href="/studies/my" className="cursor-pointer">
                       <BookOpen className="mr-2 h-4 w-4" />
                       <span>내 스터디</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  {/* ✅ 내 문의 목록 */}
+                  <DropdownMenuItem asChild>
+                    <Link href="/inquiries" className="cursor-pointer">
+                      <MessageSquare className="mr-2 h-4 w-4" />
+                      <span>내 문의</span>
                     </Link>
                   </DropdownMenuItem>
                 </DropdownMenuGroup>

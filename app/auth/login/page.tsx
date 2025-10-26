@@ -51,7 +51,7 @@ export default function LoginPage() {
         const role = response.result.role
 
         if (role === "ROLE_ADMIN") {
-          router.push("/admin")
+          router.push("/admin/dashboard")
           return
         }
 
