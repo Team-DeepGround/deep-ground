@@ -47,6 +47,12 @@ interface ProfileFormProps {
   onSubmit: (profileDto: any, profileImage: File | null) => Promise<any>
   onCancel?: () => void
   loading?: boolean
+
+  /** 생성/수정 겸용 옵션들 */
+  mode?: "create" | "edit"
+  nicknameVisible?: boolean
+  nicknameRequired?: boolean
+  nicknameCheckDup?: boolean
 }
 
 export default function ProfileForm({
@@ -54,6 +60,10 @@ export default function ProfileForm({
   onSubmit,
   onCancel,
   loading,
+  mode = "edit",
+  nicknameVisible = true,
+  nicknameRequired = true,
+  nicknameCheckDup = true,
 }: ProfileFormProps) {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [availableTags, setAvailableTags] = useState<TechStack[]>([])
@@ -109,7 +119,6 @@ export default function ProfileForm({
 
   const handleProfileImageUpload = (file: File) => {
     setProfileImage(file)
-    // ✅ 새 파일 미리보기 생성
     const url = URL.createObjectURL(file)
     setPreviewUrl(url)
   }
@@ -118,7 +127,6 @@ export default function ProfileForm({
     const file = e.target.files?.[0]
     if (!file) return
 
-    // 최대 5MB 제한
     if (file.size > 5 * 1024 * 1024) {
       toast({
         title: "파일 용량 초과",
@@ -195,98 +203,96 @@ export default function ProfileForm({
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setErrors({});
+    e.preventDefault();
+    setErrors({});
 
-  // ✅ 프론트 검증
-  const clientErrors = validateClient(formData);
-  if (Object.keys(clientErrors).length > 0) {
-    setErrors(clientErrors);
-    // 첫 에러 메시지로 토스트
-    const firstMsg = Object.values(clientErrors)[0];
-    toast({
-      title: "입력값을 확인해주세요",
-      description: firstMsg,
-      variant: "destructive",
-    });
-    return; // ❗ 서버 호출하지 않음
-  }
+    const clientErrors = validateClient(formData);
+    if (Object.keys(clientErrors).length > 0) {
+      setErrors(clientErrors);
+      const firstMsg = Object.values(clientErrors)[0];
+      toast({
+        title: "입력값을 확인해주세요",
+        description: firstMsg,
+        variant: "destructive",
+      });
+      return;
+    }
 
-  // 서버 DTO로 변환
-  const dto = {
-    nickname: formData.nickname,
-    introduction: formData.bio,
-    job: formData.jobTitle,
-    company: formData.company,
-    liveIn: formData.liveIn,
-    education: formData.education,
-    techStack: formData.techStack,
-    githubUrl: formData.links.github,
-    linkedInUrl: formData.links.linkedin,
-    websiteUrl: formData.links.website,
-    twitterUrl: formData.links.twitter,
+    const dto: any = {
+      introduction: formData.bio,
+      job: formData.jobTitle,
+      company: formData.company,
+      liveIn: formData.liveIn,
+      education: formData.education,
+      techStack: formData.techStack,
+      githubUrl: formData.links.github,
+      linkedInUrl: formData.links.linkedin,
+      websiteUrl: formData.links.website,
+      twitterUrl: formData.links.twitter,
+    };
+
+    // 닉네임을 쓰는 경우에만 DTO에 포함
+    if (nicknameVisible && formData.nickname?.trim()) {
+      dto.nickname = formData.nickname.trim();
+    }
+
+    try {
+      await onSubmit(dto, profileImage);
+    } catch (err: any) {
+      const data = err?.data ?? err;
+      if (Array.isArray(data?.errors)) {
+        const mapped: Record<string, string> = {};
+        for (const fe of data.errors) {
+          const formKey = serverToFormField[fe.field] ?? fe.field;
+          mapped[formKey] = fe.reason || fe.defaultMessage || "유효하지 않은 값입니다.";
+        }
+        setErrors(mapped);
+      }
+    }
   };
 
-  try {
-    // ✅ 서버로 전송 (부모가 Promise를 던지므로 await 필수)
-    await onSubmit(dto, profileImage);
-  } catch (err: any) {
-    // 서버 검증도 병행 표시 (있으면)
-    const data = err?.data ?? err;
-    if (Array.isArray(data?.errors)) {
-      const mapped: Record<string, string> = {};
-      for (const fe of data.errors) {
-        const formKey = serverToFormField[fe.field] ?? fe.field;
-        mapped[formKey] = fe.reason || fe.defaultMessage || "유효하지 않은 값입니다.";
-      }
-      setErrors(mapped);
+  // 간단한 URL 검사 (필드가 비어있으면 통과, 값이 있으면 형식 검사)
+  const isValidUrl = (v?: string) => {
+    if (!v) return true;
+    try { new URL(v); return true; } catch { return false; }
+  };
+
+  // 프론트 단 검증: 필수/길이/URL/스택 개수 등
+  const validateClient = (fd: typeof formData) => {
+    const es: Record<string, string> = {};
+
+    // 닉네임은 옵션으로 검증
+    if (nicknameVisible && nicknameRequired) {
+      if (!fd.nickname?.trim()) es.nickname = "닉네임은 필수입니다.";
+      else if (fd.nickname.trim().length < 2) es.nickname = "닉네임은 2자 이상이어야 합니다.";
     }
-  }
-};
 
+    if (!fd.bio?.trim()) es.bio = "자기소개는 필수입니다.";
+    if (!fd.liveIn?.trim()) es.liveIn = "사는 지역은 필수입니다.";
+    if (!fd.jobTitle?.trim()) es.jobTitle = "직업은 필수입니다.";
+    if (!fd.company?.trim()) es.company = "회사는 필수입니다.";
+    if (!fd.education?.trim()) es.education = "학력은 필수입니다.";
 
-  // ✅ 간단한 URL 검사 (필드가 비어있으면 통과, 값이 있으면 형식 검사)
-const isValidUrl = (v?: string) => {
-  if (!v) return true;
-  try { new URL(v); return true; } catch { return false; }
-};
+    // 선택이지만 형식 체크 (값이 있을 때만)
+    if (!isValidUrl(fd.links.github))  es.github  = "올바른 URL 형식이 아닙니다.";
+    if (!isValidUrl(fd.links.linkedin)) es.linkedin = "올바른 URL 형식이 아닙니다.";
+    if (!isValidUrl(fd.links.website))  es.website  = "올바른 URL 형식이 아닙니다.";
+    if (!isValidUrl(fd.links.twitter))  es.twitter  = "올바른 URL 형식이 아닙니다.";
 
-// ✅ 프론트 단 검증: 필수/길이/URL/스택 개수 등
-const validateClient = (fd: typeof formData) => {
-  const es: Record<string, string> = {};
+    if (!Array.isArray(fd.techStack) || fd.techStack.length < 1) {
+      es.techStack = "한 가지 이상의 기술 스택을 선택해주세요.";
+    }
 
-  // 필수값
-  if (!fd.nickname?.trim()) es.nickname = "닉네임은 필수입니다.";
-  else if (fd.nickname.trim().length < 2) es.nickname = "닉네임은 2자 이상이어야 합니다.";
-  if (!fd.bio?.trim()) es.bio = "자기소개는 필수입니다.";
-  if (!fd.liveIn?.trim()) es.liveIn = "사는 지역은 필수입니다.";
-  if (!fd.jobTitle?.trim()) es.jobTitle = "직업은 필수입니다.";
-  if (!fd.company?.trim()) es.company = "회사는 필수입니다.";
-  if (!fd.education?.trim()) es.education = "학력은 필수입니다.";
-
-  // 선택이지만 형식 체크 (값이 있을 때만)
-  if (!isValidUrl(fd.links.github))  es.github  = "올바른 URL 형식이 아닙니다.";
-  if (!isValidUrl(fd.links.linkedin)) es.linkedin = "올바른 URL 형식이 아닙니다.";
-  if (!isValidUrl(fd.links.website))  es.website  = "올바른 URL 형식이 아닙니다.";
-  if (!isValidUrl(fd.links.twitter))  es.twitter  = "올바른 URL 형식이 아닙니다.";
-
-  // 기술 스택 (백엔드가 @NotNull + 최소 1개라면)
-  if (!Array.isArray(fd.techStack) || fd.techStack.length < 1) {
-    es.techStack = "한 가지 이상의 기술 스택을 선택해주세요.";
-  }
-
-  return es;
-};
-
+    return es;
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* === 프로필 이미지 섹션 (가운데 원 + 버튼) === */}
+      {/* === 프로필 이미지 섹션 === */}
       <div className="space-y-3">
         <Label htmlFor="profileImage">프로필 이미지</Label>
 
         <div className="flex flex-col items-center gap-4">
-          {/* 미리보기 (원형, 가운데) */}
           {previewUrl ? (
             <img
               src={previewUrl}
@@ -299,7 +305,6 @@ const validateClient = (fd: typeof formData) => {
             </div>
           )}
 
-          {/* 숨겨진 파일 입력 */}
           <input
             ref={fileInputRef}
             type="file"
@@ -308,7 +313,6 @@ const validateClient = (fd: typeof formData) => {
             onChange={handleFileInputChange}
           />
 
-          {/* 액션 버튼들 */}
           <div className="flex items-center gap-2">
             <Button type="button" variant="outline" onClick={handlePickImage}>
               사진 올리기
@@ -333,40 +337,49 @@ const validateClient = (fd: typeof formData) => {
         </div>
       </div>
 
-
-      <div className="space-y-2">
-        <Label htmlFor="nickname">닉네임</Label>
-        <div className="flex gap-2">
-          <Input
-            id="nickname"
-            name="nickname"
-            value={formData.nickname}
-            onChange={(e) => {
-              setFormData({ ...formData, nickname: e.target.value })
-              setIsNicknameAvailable(null)
-              setErrors((prev) => ({ ...prev, nickname: "" }))
-            }}
-            required
-            className={
-              (isNicknameAvailable === true ? "border-green-500 focus-visible:ring-green-500 " : "") +
-              (isNicknameAvailable === false ? "border-red-500 focus-visible:ring-red-500 " : "") +
-              (errors.nickname ? "border-red-500 focus-visible:ring-red-500 " : "")
-            }
-          />
+      {/* === 닉네임 (옵션) === */}
+      {nicknameVisible && (
+        <div className="space-y-2">
+          <Label htmlFor="nickname">닉네임</Label>
+          <div className="flex gap-2">
+            <Input
+              id="nickname"
+              name="nickname"
+              value={formData.nickname}
+              onChange={(e) => {
+                setFormData({ ...formData, nickname: e.target.value })
+                setIsNicknameAvailable(null)
+                setErrors((prev) => ({ ...prev, nickname: "" }))
+              }}
+              required={nicknameRequired}
+              className={
+                (isNicknameAvailable === true ? "border-green-500 focus-visible:ring-green-500 " : "") +
+                (isNicknameAvailable === false ? "border-red-500 focus-visible:ring-red-500 " : "") +
+                (errors.nickname ? "border-red-500 focus-visible:ring-red-500 " : "")
+              }
+            />
+            {nicknameCheckDup && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={checkNicknameAvailability}
+                disabled={isCheckingNickname || !formData.nickname}
+              >
+                {isCheckingNickname ? <Loader2 className="h-4 w-4 animate-spin" /> : "중복 확인"}
+              </Button>
+            )}
+          </div>
           {errors.nickname && <p className="text-xs text-red-500 mt-1">{errors.nickname}</p>}
-          <Button
-            type="button"
-            variant="outline"
-            onClick={checkNicknameAvailability}
-            disabled={isCheckingNickname || !formData.nickname}
-          >
-            {isCheckingNickname ? <Loader2 className="h-4 w-4 animate-spin" /> : "중복 확인"}
-          </Button>
+          {nicknameCheckDup && isNicknameAvailable === true && (
+            <p className="text-xs text-green-500">사용 가능한 닉네임입니다.</p>
+          )}
+          {nicknameCheckDup && isNicknameAvailable === false && (
+            <p className="text-xs text-red-500">이미 사용 중인 닉네임입니다.</p>
+          )}
         </div>
-        {isNicknameAvailable === true && <p className="text-xs text-green-500">사용 가능한 닉네임입니다.</p>}
-        {isNicknameAvailable === false && <p className="text-xs text-red-500">이미 사용 중인 닉네임입니다.</p>}
-      </div>
+      )}
 
+      {/* === 자기소개 === */}
       <div className="space-y-2">
         <Label htmlFor="bio">자기소개</Label>
         <Textarea
@@ -383,6 +396,7 @@ const validateClient = (fd: typeof formData) => {
         {errors.bio && <p className="text-xs text-red-500 mt-1">{errors.bio}</p>}
       </div>
 
+      {/* === 기본 정보 === */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="jobTitle">직업</Label>
@@ -445,6 +459,7 @@ const validateClient = (fd: typeof formData) => {
         </div>
       </div>
 
+      {/* === 기술 스택 === */}
       <div className="space-y-2">
         <Label htmlFor="techStack">기술 스택</Label>
         <TechStackSelector
@@ -454,6 +469,7 @@ const validateClient = (fd: typeof formData) => {
         />
       </div>
 
+      {/* === 소셜 링크 === */}
       <div className="space-y-4">
         <Label>소셜 링크</Label>
         <div className="space-y-2">
@@ -469,8 +485,8 @@ const validateClient = (fd: typeof formData) => {
             className={errors.github ? "border-red-500 focus-visible:ring-red-500" : ""}
           />
           {errors.github && <p className="text-xs text-red-500 mt-1">{errors.github}</p>}
-
         </div>
+
         <div className="space-y-2">
           <Label htmlFor="linkedin" className="text-sm">LinkedIn</Label>
           <Input
@@ -485,6 +501,7 @@ const validateClient = (fd: typeof formData) => {
           />
           {errors.linkedin && <p className="text-xs text-red-500 mt-1">{errors.linkedin}</p>}
         </div>
+
         <div className="space-y-2">
           <Label htmlFor="website" className="text-sm">웹사이트</Label>
           <Input
@@ -499,6 +516,7 @@ const validateClient = (fd: typeof formData) => {
           />
           {errors.website && <p className="text-xs text-red-500 mt-1">{errors.website}</p>}
         </div>
+
         <div className="space-y-2">
           <Label htmlFor="twitter" className="text-sm">Twitter</Label>
           <Input
@@ -522,7 +540,7 @@ const validateClient = (fd: typeof formData) => {
           </Button>
         )}
         <Button type="submit" disabled={loading}>
-          {loading ? "저장 중..." : "프로필 저장"}
+          {loading ? "저장 중..." : (mode === "create" ? "프로필 생성" : "프로필 저장")}
         </Button>
       </div>
     </form>
