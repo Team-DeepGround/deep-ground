@@ -3,19 +3,19 @@
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
-import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import {
   LayoutDashboard,
   ShieldAlert,
-  UserX,
   ListOrdered,
+  HelpCircle, // ✅ 문의 관리 아이콘
 } from "lucide-react"
-import { cn } from "@/lib/utils"
 
 const adminNavigation = [
   { name: "대시보드", href: "/admin/dashboard", icon: LayoutDashboard },
   { name: "전체 신고 내역", href: "/admin/reports/all", icon: ListOrdered },
   { name: "검토할 신고 목록", href: "/admin/reports", icon: ShieldAlert },
+  { name: "문의 관리", href: "/admin/inquiries", icon: HelpCircle }, // ✅ 추가
 ]
 
 export default function AdminHeader() {

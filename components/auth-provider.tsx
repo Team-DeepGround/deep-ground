@@ -27,6 +27,7 @@ const publicPaths = [
   "/feed",
   "/studies",
   "/questions",
+  "/oauth2/redirect",
   // 필요하면 "/oauth2/redirect" 등도 허용 경로에 추가
 ]
 
