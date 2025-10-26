@@ -134,7 +134,7 @@ export default function Header() {
             ))}
             {role === "ROLE_ADMIN" && (
               <Link
-                href="/admin"
+                href="/admin/dashboard"
                 className="flex items-center gap-2 text-sm font-medium text-destructive hover:text-destructive"
               >
                 <Shield className="h-4 w-4" />

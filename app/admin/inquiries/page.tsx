@@ -30,14 +30,18 @@ export default function AdminInquiryListPage() {
   const [q, setQ] = useState("")
 
   useEffect(() => {
+    // 아직 role이 결정되지 않았거나 인증 여부 로딩 중이면 대기
+    if (role === undefined) return
+
     if (!isAuthenticated || role !== "ROLE_ADMIN") {
-      toast({ title: "접근 권한이 없습니다.", variant: "destructive" })
-      router.replace("/")
-      return
+        toast({ title: "접근 권한이 없습니다.", variant: "destructive" })
+        router.replace("/")
+        return
     }
+
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, role, status])
+    }, [isAuthenticated, role])
 
   async function load() {
     setLoading(true)

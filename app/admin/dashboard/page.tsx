@@ -55,7 +55,7 @@ export default function AdminDashboardPage() {
 
       try {
         // ✅ 대시보드 기본 통계
-        const response = await api.get<{ result: AdminDashboardStatsResponse }>("/admin")
+        const response = await api.get<{ result: AdminDashboardStatsResponse }>("/admin/dashboard")
         setStats(response.result)
 
         // ✅ 문의 목록(전체) 불러와서 클라에서 개수만 집계
