@@ -19,7 +19,6 @@ import { ChatContent } from './chat/chat-content';
 
 // API 함수들 임포트
 import { sendMessage } from '@/lib/api/websocket';
-import { leaveChatRoom } from '@/lib/api/chat';
 
 interface ChatPopupProps {
   isOpen: boolean;
@@ -281,37 +280,6 @@ export default function ChatPopup({ isOpen, onClose }: ChatPopupProps) {
       setSelectedChatRoom(room);
     };
 
-    // 채팅방 나가기 핸들러
-    const handleLeaveChatRoom = async (chatRoomId: number, chatRoomName: string) => {
-      if (!window.confirm(`'${chatRoomName}' 채팅방을 정말로 나가시겠습니까?`)) {
-        return;
-      }
-
-      try {
-        await leaveChatRoom(chatRoomId);
-
-        // 상태에서 채팅방 제거
-        setFriendChatRooms(prev => prev.filter(room => room.chatRoomId !== chatRoomId));
-        setStudyGroupChatRooms(prev => prev.filter(room => room.chatRoomId !== chatRoomId));
-
-        // 현재 선택된 채팅방이었다면 선택 해제
-        if (selectedChatRoom?.chatRoomId === chatRoomId) {
-          setSelectedChatRoom(null);
-        }
-
-        toast({
-          title: "채팅방 나감",
-          description: `'${chatRoomName}' 채팅방에서 나갔습니다.`,
-        });
-
-      } catch (error: any) {
-        toast({
-          title: "오류",
-          description: error.message || "채팅방을 나가는 중 오류가 발생했습니다.",
-          variant: "destructive",
-        });
-      }
-    };
 
     // 친구와 대화 시작 핸들러
     const handleStartChat = (friend: FriendChatRoom) => {
@@ -355,7 +323,6 @@ export default function ChatPopup({ isOpen, onClose }: ChatPopupProps) {
             friendHasNext={friendHasNext}
             studyGroupHasNext={studyGroupHasNext}
             onLoadMore={handleLoadMoreChatRooms}
-            onLeaveChatRoom={handleLeaveChatRoom} // ✅ ChatSidebar에 나가기 핸들러 전달
             onStartChat={handleStartChat} // ✅ 대화하기 핸들러 전달
           />
           
