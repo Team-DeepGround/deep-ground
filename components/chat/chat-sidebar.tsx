@@ -19,7 +19,6 @@ interface ChatSidebarProps {
   friendHasNext: boolean;
   studyGroupHasNext: boolean;
   onLoadMore: () => void;
-  onLeaveChatRoom: (chatRoomId: number, chatRoomName: string) => void;
   onStartChat?: (friend: FriendChatRoom) => void;
 }
 
@@ -37,7 +36,6 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   friendHasNext,
   studyGroupHasNext,
   onLoadMore,
-  onLeaveChatRoom,
   onStartChat
 }) => {
   // 친구 검색 필터링 (친구목록 탭용)
@@ -94,7 +92,6 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                   onClick={() => onChatRoomSelect(room)}
                   // 'status' 속성 유무로 친구/그룹 채팅방 구분
                   isGroup={!('status' in room)}
-                  onLeaveChatRoom={onLeaveChatRoom}
                   isFriendList={false} // 채팅탭에서는 바로 채팅방으로 이동
                 />
               ))}
@@ -127,7 +124,6 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                     isSelected={selectedChatRoom?.chatRoomId === friend.chatRoomId}
                     onClick={() => onChatRoomSelect(friend)}
                     isGroup={false}
-                    onLeaveChatRoom={onLeaveChatRoom} // 친구 채팅방에서도 나가기 기능 사용
                     onStartChat={onStartChat} // 대화하기 기능 추가
                     isFriendList={true} // 친구목록 탭에서는 대화하기 버튼 표시
                   />
@@ -160,7 +156,6 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                   isSelected={selectedChatRoom?.chatRoomId === group.chatRoomId}
                   onClick={() => onChatRoomSelect(group)}
                   isGroup={true}
-                  onLeaveChatRoom={onLeaveChatRoom}
                 />
               ))}
               {studyGroupHasNext && (
