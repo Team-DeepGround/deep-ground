@@ -5,13 +5,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import FileUpload from "@/components/file-upload"
 import TechStackSelector from "@/components/TechStackSelector"
 import { getTechStacks, TechStack } from "@/lib/api/techStack"
 import { Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/lib/api-client"
-import { set } from "date-fns"
 
 const serverToFormField: Record<string, string> = {
   nickname: "nickname",
@@ -28,11 +26,11 @@ const serverToFormField: Record<string, string> = {
 
 interface ProfileFormProps {
   initialProfile?: {
-    nickname: string
-    email: string
-    bio: string
-    techStack: string[]
-    links: {
+    nickname?: string
+    email?: string
+    bio?: string
+    techStack?: string[]
+    links?: {
       github?: string
       linkedin?: string
       website?: string
@@ -86,7 +84,8 @@ export default function ProfileForm({
     fileInputRef.current?.click()
   }
 
-  const [formData, setFormData] = useState({
+  // ✅ 초기값은 "처음 한 번"만 세팅 (lazy init)
+  const [formData, setFormData] = useState(() => ({
     nickname: initialProfile?.nickname || "",
     email: initialProfile?.email || "",
     bio: initialProfile?.bio || "",
@@ -96,10 +95,13 @@ export default function ProfileForm({
     jobTitle: initialProfile?.jobTitle || "",
     company: initialProfile?.company || "",
     education: initialProfile?.education || "",
-  })
+  }))
 
+  // ✅ props → state 동기화는 최초 1회만 (부모 리렌더 시 입력값 덮어쓰기 방지)
+  const didHydrateFromProps = useRef(false)
   useEffect(() => {
     if (!initialProfile) return
+    if (didHydrateFromProps.current) return
     setFormData({
       nickname: initialProfile.nickname || "",
       email: initialProfile.email || "",
@@ -111,17 +113,13 @@ export default function ProfileForm({
       company: initialProfile.company || "",
       education: initialProfile.education || "",
     })
+    didHydrateFromProps.current = true
   }, [initialProfile])
 
+  // 프로필 이미지 미리보기만 값 변화에 맞춰 동기화
   useEffect(() => {
     setPreviewUrl(initialProfile?.profileImage ?? null)
   }, [initialProfile?.profileImage])
-
-  const handleProfileImageUpload = (file: File) => {
-    setProfileImage(file)
-    const url = URL.createObjectURL(file)
-    setPreviewUrl(url)
-  }
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -144,15 +142,15 @@ export default function ProfileForm({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
-    setFormData({ ...formData, [name]: value })
+    setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
   const handleLinkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
-    setFormData({
-      ...formData,
-      links: { ...formData.links, [name]: value },
-    })
+    setFormData((prev) => ({
+      ...prev,
+      links: { ...(prev.links || {}), [name]: value },
+    }))
   }
 
   const handleToggleTag = (tag: string) => {
@@ -203,19 +201,19 @@ export default function ProfileForm({
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrors({});
+    e.preventDefault()
+    setErrors({})
 
-    const clientErrors = validateClient(formData);
+    const clientErrors = validateClient(formData)
     if (Object.keys(clientErrors).length > 0) {
-      setErrors(clientErrors);
-      const firstMsg = Object.values(clientErrors)[0];
+      setErrors(clientErrors)
+      const firstMsg = Object.values(clientErrors)[0]
       toast({
         title: "입력값을 확인해주세요",
         description: firstMsg,
         variant: "destructive",
-      });
-      return;
+      })
+      return
     }
 
     const dto: any = {
@@ -229,62 +227,62 @@ export default function ProfileForm({
       linkedInUrl: formData.links.linkedin,
       websiteUrl: formData.links.website,
       twitterUrl: formData.links.twitter,
-    };
+    }
 
     // 닉네임을 쓰는 경우에만 DTO에 포함
     if (nicknameVisible && formData.nickname?.trim()) {
-      dto.nickname = formData.nickname.trim();
+      dto.nickname = formData.nickname.trim()
     }
 
     try {
-      await onSubmit(dto, profileImage);
+      await onSubmit(dto, profileImage)
     } catch (err: any) {
-      const data = err?.data ?? err;
+      const data = err?.data ?? err
       if (Array.isArray(data?.errors)) {
-        const mapped: Record<string, string> = {};
+        const mapped: Record<string, string> = {}
         for (const fe of data.errors) {
-          const formKey = serverToFormField[fe.field] ?? fe.field;
-          mapped[formKey] = fe.reason || fe.defaultMessage || "유효하지 않은 값입니다.";
+          const formKey = serverToFormField[fe.field] ?? fe.field
+          mapped[formKey] = fe.reason || fe.defaultMessage || "유효하지 않은 값입니다."
         }
-        setErrors(mapped);
+        setErrors(mapped)
       }
     }
-  };
+  }
 
   // 간단한 URL 검사 (필드가 비어있으면 통과, 값이 있으면 형식 검사)
   const isValidUrl = (v?: string) => {
-    if (!v) return true;
-    try { new URL(v); return true; } catch { return false; }
-  };
+    if (!v) return true
+    try { new URL(v); return true } catch { return false }
+  }
 
   // 프론트 단 검증: 필수/길이/URL/스택 개수 등
   const validateClient = (fd: typeof formData) => {
-    const es: Record<string, string> = {};
+    const es: Record<string, string> = {}
 
     // 닉네임은 옵션으로 검증
     if (nicknameVisible && nicknameRequired) {
-      if (!fd.nickname?.trim()) es.nickname = "닉네임은 필수입니다.";
-      else if (fd.nickname.trim().length < 2) es.nickname = "닉네임은 2자 이상이어야 합니다.";
+      if (!fd.nickname?.trim()) es.nickname = "닉네임은 필수입니다."
+      else if (fd.nickname.trim().length < 2) es.nickname = "닉네임은 2자 이상이어야 합니다."
     }
 
-    if (!fd.bio?.trim()) es.bio = "자기소개는 필수입니다.";
-    if (!fd.liveIn?.trim()) es.liveIn = "사는 지역은 필수입니다.";
-    if (!fd.jobTitle?.trim()) es.jobTitle = "직업은 필수입니다.";
-    if (!fd.company?.trim()) es.company = "회사는 필수입니다.";
-    if (!fd.education?.trim()) es.education = "학력은 필수입니다.";
+    if (!fd.bio?.trim()) es.bio = "자기소개는 필수입니다."
+    if (!fd.liveIn?.trim()) es.liveIn = "사는 지역은 필수입니다."
+    if (!fd.jobTitle?.trim()) es.jobTitle = "직업은 필수입니다."
+    if (!fd.company?.trim()) es.company = "회사는 필수입니다."
+    if (!fd.education?.trim()) es.education = "학력은 필수입니다."
 
     // 선택이지만 형식 체크 (값이 있을 때만)
-    if (!isValidUrl(fd.links.github))  es.github  = "올바른 URL 형식이 아닙니다.";
-    if (!isValidUrl(fd.links.linkedin)) es.linkedin = "올바른 URL 형식이 아닙니다.";
-    if (!isValidUrl(fd.links.website))  es.website  = "올바른 URL 형식이 아닙니다.";
-    if (!isValidUrl(fd.links.twitter))  es.twitter  = "올바른 URL 형식이 아닙니다.";
+    if (!isValidUrl((fd.links as any)?.github))  es.github  = "올바른 URL 형식이 아닙니다."
+    if (!isValidUrl((fd.links as any)?.linkedin)) es.linkedin = "올바른 URL 형식이 아닙니다."
+    if (!isValidUrl((fd.links as any)?.website))  es.website  = "올바른 URL 형식이 아닙니다."
+    if (!isValidUrl((fd.links as any)?.twitter))  es.twitter  = "올바른 URL 형식이 아닙니다."
 
     if (!Array.isArray(fd.techStack) || fd.techStack.length < 1) {
-      es.techStack = "한 가지 이상의 기술 스택을 선택해주세요.";
+      es.techStack = "한 가지 이상의 기술 스택을 선택해주세요."
     }
 
-    return es;
-  };
+    return es
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -477,9 +475,9 @@ export default function ProfileForm({
           <Input
             id="github"
             name="github"
-            value={formData.links.github || ""}
+            value={(formData.links as any)?.github || ""}
             onChange={(e) => {
-              setFormData({ ...formData, links: { ...formData.links, github: e.target.value } })
+              handleLinkChange(e)
               setErrors((prev) => ({ ...prev, github: "" }))
             }}
             className={errors.github ? "border-red-500 focus-visible:ring-red-500" : ""}
@@ -492,9 +490,9 @@ export default function ProfileForm({
           <Input
             id="linkedin"
             name="linkedin"
-            value={formData.links.linkedin || ""}
+            value={(formData.links as any)?.linkedin || ""}
             onChange={(e) => {
-              setFormData({ ...formData, links: { ...formData.links, linkedin: e.target.value } })
+              handleLinkChange(e)
               setErrors((prev) => ({ ...prev, linkedin: "" }))
             }}
             className={errors.linkedin ? "border-red-500 focus-visible:ring-red-500" : ""}
@@ -507,9 +505,9 @@ export default function ProfileForm({
           <Input
             id="website"
             name="website"
-            value={formData.links.website || ""}
+            value={(formData.links as any)?.website || ""}
             onChange={(e) => {
-              setFormData({ ...formData, links: { ...formData.links, website: e.target.value } })
+              handleLinkChange(e)
               setErrors((prev) => ({ ...prev, website: "" }))
             }}
             className={errors.website ? "border-red-500 focus-visible:ring-red-500" : ""}
@@ -522,9 +520,9 @@ export default function ProfileForm({
           <Input
             id="twitter"
             name="twitter"
-            value={formData.links.twitter || ""}
+            value={(formData.links as any)?.twitter || ""}
             onChange={(e) => {
-              setFormData({ ...formData, links: { ...formData.links, twitter: e.target.value } })
+              handleLinkChange(e)
               setErrors((prev) => ({ ...prev, twitter: "" }))
             }}
             className={errors.twitter ? "border-red-500 focus-visible:ring-red-500" : ""}
