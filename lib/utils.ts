@@ -100,3 +100,30 @@ export function formatDateTime(dateString: string | Date): string {
   }
   return `${month}월 ${day}일 ${hours}:${minutes}`;
 }
+
+/**
+ * 내용이 마크다운 형식인지 확인하는 함수
+ * @param content - 확인할 내용
+ * @returns 마크다운이 포함되어 있으면 true
+ */
+export function isMarkdownContent(content: string): boolean {
+  if (!content) return false;
+  
+  // 마크다운 문법 패턴들
+  const markdownPatterns = [
+    /^#{1,6}\s/m,              // 헤딩 (#, ##, ###)
+    /\*\*.*?\*\*/,             // 볼드 (**text**)
+    /\*.*?\*/,                 // 기울임 (*text*)
+    /`.*?`/,                   // 인라인 코드 (`code`)
+    /```[\s\S]*?```/m,         // 코드 블록 (```code```)
+    /\[.*?\]\(.*?\)/,         // 링크 ([text](url))
+    /!\[.*?\]\(.*?\)/,        // 이미지 (![alt](url))
+    /^- /m,                    // 리스트 (- item)
+    /^\d+\. /m,                // 순서 리스트 (1. item)
+    /> /,                      // 인용 (> text)
+    /---/,                     // 수평선 (---)
+    /^\|.*\|$/m,               // 테이블 (| col | col |)
+  ];
+  
+  return markdownPatterns.some(pattern => pattern.test(content));
+}
