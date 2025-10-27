@@ -230,27 +230,17 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
                 <AvatarFallback>{post.memberName[0]}</AvatarFallback>
               </Avatar>
               <div>
-                <Popover open={friendPopoverOpen} onOpenChange={setFriendPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <button className="font-medium hover:underline focus:outline-none" type="button">
-                      {post.memberName}
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className="w-56 p-4">
-                    <div className="mb-2 font-semibold">친구 추가</div>
-                    <div className="mb-2 text-xs text-muted-foreground">{post.memberName}님과 친구를 맺어보세요.</div>
-                    <Button
-                      size="sm"
-                      disabled={friendLoading}
-                      onClick={() => handleAddFriend(post.memberId, post.memberName)}
-                      className="w-full"
-                    >
-                      {friendLoading ? "요청 중..." : "친구 요청 보내기"}
-                    </Button>
-                    {friendSuccess && <div className="text-green-600 text-xs mt-2">{friendSuccess}</div>}
-                    {friendError && <div className="text-destructive text-xs mt-2">{friendError}</div>}
-                  </PopoverContent>
-                </Popover>
+                {/* ✅ 작성자 이름 클릭 시 해당 프로필로 이동 */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    router.push(`/profile/${post.profileId}`)
+                  }}
+                  className="font-medium hover:underline focus:outline-none"
+                  type="button"
+                >
+                  {post.memberName}
+                </button>
                 <p className="text-xs text-muted-foreground">{new Date(post.createdAt).toLocaleDateString()}</p>
                 {post.isShared && post.sharedBy && (
                   <div className="flex items-center gap-1 mt-1">
