@@ -1,6 +1,7 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
+import { isMarkdownContent } from '@/lib/utils';
 
 interface MarkdownRendererProps {
   content: string;
@@ -8,8 +9,14 @@ interface MarkdownRendererProps {
 }
 
 export function MarkdownRenderer({ content, className = "" }: MarkdownRendererProps) {
+  const hasMarkdown = isMarkdownContent(content);
+  
   return (
-    <div className={`prose prose-sm max-w-none bg-white dark:bg-gray-900 p-4 rounded-md ${className}`}>
+    <div className={`prose prose-sm max-w-none p-4 rounded-md ${
+      hasMarkdown 
+        ? 'bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700' 
+        : 'bg-white dark:bg-gray-900'
+    } ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeSanitize]}
