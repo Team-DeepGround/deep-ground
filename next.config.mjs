@@ -30,13 +30,13 @@ const nextConfig = {
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
   },
-  // 프로덕션 빌드 시 console.log/debug/info만 제거하고 warn/error는 유지
-  // compiler: {
-  //   removeConsole:
-  //     process.env.NODE_ENV === 'production'
-  //       ? { exclude: ['error', 'warn'] }
-  //       : false,
-  // },
+  //프로덕션 빌드 시 console.log/debug/info만 제거하고 warn/error는 유지
+  compiler: {
+    removeConsole:
+      process.env.NODE_ENV === 'production'
+        ? { exclude: ['error', 'warn'] }
+        : false,
+  },
 
   async rewrites() {
     return [
