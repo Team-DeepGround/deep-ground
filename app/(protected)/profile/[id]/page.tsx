@@ -19,9 +19,7 @@ import {
   MapPin,
   GraduationCap,
   Loader2,
-  // --- 참고: 첫 번째 이미지의 아이콘들 ---
-  // CalendarDays, // 날짜 아이콘 (lucide-react)
-  // User,       // 유저 아이콘 (lucide-react)
+  // ⭐️ Check 아이콘 임포트 제거
 } from "lucide-react"
 
 type ProfileData = {
@@ -45,14 +43,11 @@ type Study = {
   id: number | string
   title: string
   description?: string
-  coverImage?: string // 이 필드는 더 이상 사용되지 않습니다.
+  coverImage?: string
   status?: "RECRUITING" | "ONGOING" | "DONE" | string
-  // --- 참고 ---
-  // date?: string      // (예: "2025. 10. 19.")
-  // role?: string      // (예: "스터디장")
-  // 위와 같은 데이터가 API 응답에 포함되어야
-  // 첫 번째 이미지와 100% 동일하게 구현 가능합니다.
 }
+
+type FriendStateType = "none" | "pending" | "friends" | "received"
 
 export default function UserProfilePage() {
   const params = useParams()
@@ -63,8 +58,9 @@ export default function UserProfilePage() {
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const [friendState, setFriendState] = useState<"none" | "pending">("none")
+  const [friendState, setFriendState] = useState<FriendStateType>("none")
   const [friendLoading, setFriendLoading] = useState(false)
+  const [statusLoading, setStatusLoading] = useState(true)
 
   const [studies, setStudies] = useState<Study[]>([])
   const [studiesLoading, setStudiesLoading] = useState(true)
@@ -73,7 +69,7 @@ export default function UserProfilePage() {
     return String((user as any)?.profileId ?? "") === String(profileId ?? "")
   }, [user, profileId])
 
-  // 1) 프로필 로드 (profileId 기반)
+  // 1) 프로필 로드
   useEffect(() => {
     let mounted = true
 
@@ -83,7 +79,7 @@ export default function UserProfilePage() {
         const res = await api.get(`/members/profile/${profileId}`)
         if (!mounted) return
 
-        const p = res.result || {}
+        const p = res.result || res || {}
         setProfile({
           memberId: p.memberId ?? p.id ?? "",
           profileImage: p.profileImage,
@@ -100,10 +96,10 @@ export default function UserProfilePage() {
           websiteUrl: p.websiteUrl ?? p.links?.website,
           twitterUrl: p.twitterUrl ?? p.links?.twitter,
         })
-      } catch (err) {
+      } catch (err: any) {
         toast({
           title: "프로필 로드 실패",
-          description: "프로필 정보를 불러오는데 실패했습니다.",
+          description: err?.message ?? "프로필 정보를 불러오는데 실패했습니다.",
           variant: "destructive",
         })
       } finally {
@@ -115,7 +111,7 @@ export default function UserProfilePage() {
     return () => { mounted = false }
   }, [profileId, toast])
 
-  // 2) 멤버 스터디 로드 (memberId 기반)
+  // 2) 멤버 스터디 로드
   useEffect(() => {
     const fetchStudies = async () => {
       if (!profile?.memberId) return
@@ -125,15 +121,17 @@ export default function UserProfilePage() {
 
         const page =
           r?.result?.content ??
+          r?.result ??
           r?.content ??
+          r ??
           []
 
         const mapped: Study[] = page.map((s: any) => ({
           id: s.id,
           title: s.title,
-          description: s.explanation, // (예: "스터디 그룹입니다" 또는 "2025. 10. 19. | 스터디장")
-          coverImage: undefined,      // 커버 이미지는 사용하지 않음
-          status: s.groupStatus,      // (예: "RECRUITING")
+          description: s.explanation,
+          coverImage: undefined,
+          status: s.groupStatus,
         }))
 
         setStudies(mapped)
@@ -147,14 +145,52 @@ export default function UserProfilePage() {
     fetchStudies()
   }, [profile?.memberId])
 
+  // 3) 친구 상태 확인
+  useEffect(() => {
+    if (!profile?.memberId || isMyProfile) {
+      setStatusLoading(false)
+      return
+    }
+
+    const checkFriendStatus = async () => {
+      setStatusLoading(true)
+      try {
+        const res = await api.get(`/friends/status`, {
+          params: { targetMemberId: String(profile.memberId) },
+        }).catch(() => null)
+
+        const status = res?.result?.status || "NONE";
+
+        if (status === "FRIENDS") {
+          setFriendState("friends")
+        } else if (status === "PENDING_SENT") {
+          setFriendState("pending")
+        } else if (status === "PENDING_RECEIVED") {
+          setFriendState("received")
+        } else {
+          setFriendState("none")
+        }
+      } catch (err) {
+        setFriendState("none")
+      } finally {
+        setStatusLoading(false)
+      }
+    }
+
+    checkFriendStatus()
+  }, [profile?.memberId, isMyProfile])
+
+
+  // 4) 친구 요청 핸들러
   const handleSendFriendRequest = async () => {
-    if (!profile?.email) {
-      toast({ title: "요청 불가", description: "이메일 정보가 없습니다.", variant: "destructive" })
+    if (!profile?.memberId) {
+      toast({ title: "요청 불가", description: "프로필 ID가 없습니다.", variant: "destructive" })
       return
     }
     setFriendLoading(true)
     try {
-      await api.post("/friends/request", { receiverEmail: profile.email })
+      await api.post(`/friends/from-profile/${profile.memberId}`)
+      
       setFriendState("pending")
       toast({
         title: "친구 요청 완료",
@@ -197,21 +233,40 @@ export default function UserProfilePage() {
                 </Link>
               </Button>
             ) : (
+              // ===========================================
+              // ▼▼▼▼▼▼▼▼▼▼▼▼▼ 여기가 수정되었습니다 ▼▼▼▼▼▼▼▼▼▼▼▼▼
+              // ===========================================
               <Button
                 size="sm"
                 onClick={handleSendFriendRequest}
-                disabled={friendState === "pending" || friendLoading}
+                disabled={
+                  statusLoading ||
+                  friendLoading ||
+                  friendState === "pending" ||
+                  friendState === "friends" ||
+                  friendState === "received"
+                }
               >
-                {friendLoading
+                {statusLoading
+                  ? "확인 중..."
+                  : friendLoading
                   ? "요청 중..."
+                  : friendState === "friends"
+                  ? "친구" // ⭐️ 아이콘 제거, "친구" 텍스트만 남김
                   : friendState === "pending"
                   ? "요청 완료"
+                  : friendState === "received"
+                  ? "요청 받음"
                   : "친구 요청"}
               </Button>
+              // ===========================================
+              // ▲▲▲▲▲▲▲▲▲▲▲▲▲ 여기가 수정되었습니다 ▲▲▲▲▲▲▲▲▲▲▲▲▲
+              // ===========================================
             )}
           </div>
 
-          {/* 중앙 콘텐츠 */}
+          {/* ... (이하 중앙 콘텐츠 및 스터디 목록 코드는 동일) ... */}
+          
           <div className="flex flex-col items-center text-center mb-10">
             <Avatar className="h-28 w-28 md:h-36 md:w-36">
               <AvatarImage src={profile.profileImage || "/placeholder.svg"} alt={profile.nickname} />
@@ -227,7 +282,6 @@ export default function UserProfilePage() {
               {profile.introduction?.trim() || "자기 소개를 쓰세요 제발"}
             </p>
 
-            {/* 작은 박스 3개: 직업/회사, 지역, 학력 */}
             <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
               {(profile.job || profile.company) && (
                 <div className="px-4 py-1.5 border rounded-md text-sm flex items-center gap-2">
@@ -249,7 +303,6 @@ export default function UserProfilePage() {
               )}
             </div>
 
-            {/* 기술 스택 */}
             {profile.techStack?.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-6 justify-center">
                 {profile.techStack.map((t, i) => (
@@ -260,7 +313,6 @@ export default function UserProfilePage() {
               </div>
             )}
 
-            {/* 소셜 아이콘 */}
             <div className="flex gap-4 mt-6">
               {profile.githubUrl && (
                 <Link href={profile.githubUrl} target="_blank" className="text-muted-foreground hover:text-foreground">
@@ -275,7 +327,7 @@ export default function UserProfilePage() {
               {profile.linkedInUrl && (
                 <Link href={profile.linkedInUrl} target="_blank" className="text-muted-foreground hover:text-foreground">
                   <Linkedin className="h-5 w-5" />
-                </Link>
+                </Link> 
               )}
               {profile.twitterUrl && (
                 <Link href={profile.twitterUrl} target="_blank" className="text-muted-foreground hover:text-foreground">
@@ -301,9 +353,6 @@ export default function UserProfilePage() {
               </CardContent>
             </Card>
           ) : (
-            // ==================================================
-            // 여기가 수정된 부분입니다 (시작)
-            // ==================================================
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {studies.map((s) => (
                 <Card key={s.id} className="overflow-hidden">
@@ -311,23 +360,12 @@ export default function UserProfilePage() {
                     href={`/studies/${s.id}`}
                     className="block hover:bg-muted/50 transition-colors"
                   >
-                    {/* 커버 이미지, CardHeader를 제거하고
-                      하나의 CardContent를 flex 컨테이너로 사용합니다.
-                    */}
                     <CardContent className="p-4 flex items-center justify-between">
                       {/* 왼쪽: 제목 + 설명 (메타데이터) */}
                       <div className="flex-1 overflow-hidden pr-4">
                         <p className="text-lg font-semibold truncate">
                           {s.title}
                         </p>
-                        {/* [참고]
-                          첫 번째 이미지는 여기에 날짜와 역할(스터디장)이 표시됩니다.
-                          현재 코드에서는 s.description (API의 s.explanation)을 
-                          대신 사용합니다.
-                          
-                          만약 날짜/역할 데이터를 따로 받아올 수 있다면,
-                          아이콘과 함께 여기에 표시할 수 있습니다.
-                        */}
                         <p className="text-sm text-muted-foreground mt-1 truncate">
                           {s.description || "설명이 없습니다."}
                         </p>
@@ -344,7 +382,6 @@ export default function UserProfilePage() {
                         {s.status === "DONE" && (
                           <Badge variant="outline">종료</Badge>
                         )}
-                        {/* RECRUITING 외의 상태가 '모집중'으로 표시되어야 하는 경우 대비 */}
                         {s.status && !["RECRUITING", "ONGOING", "DONE"].includes(s.status) && (
                           <Badge variant="default">{s.status}</Badge>
                         )}
@@ -354,9 +391,6 @@ export default function UserProfilePage() {
                 </Card>
               ))}
             </div>
-            // ==================================================
-            // 여기가 수정된 부분입니다 (끝)
-            // ==================================================
           )}
         </section>
       </div>
