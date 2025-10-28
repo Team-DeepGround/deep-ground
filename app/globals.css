@@ -232,6 +232,30 @@ body {
     visibility: hidden;
   }
 
+  /* Navigation buttons with icons */
+  .rdp-button_previous::before,
+  .rdp-button_next::after {
+    content: '';
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+
+  .rdp-button_previous::before {
+    content: '‹';
+    font-size: 1.5rem;
+    line-height: 1;
+  }
+
+  .rdp-button_next::after {
+    content: '›';
+    font-size: 1.5rem;
+    line-height: 1;
+  }
+
   /* 모바일 환경에서의 반응형 스타일 */
   @media (max-width: 640px) {
     .rdp {
