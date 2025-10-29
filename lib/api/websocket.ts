@@ -57,10 +57,10 @@ export const sendMessage = (client: Client, chatRoomId: number, message: string,
 };
 
 // 읽음 확인 전송
-export const sendReadReceipt = (client: Client, chatRoomId: number, lastReadMessageTime: string) => {
+export const sendReadReceipt = (client: Client, chatRoomId: number,myMemberId: number,lastReadMessageTime: string) => {
   client.publish({
     destination: `/app/chatrooms/${chatRoomId}/read`,
-    body: JSON.stringify({ lastReadMessageTime }),
+    body: JSON.stringify({ myMemberId,lastReadMessageTime }),
   });
 };
 

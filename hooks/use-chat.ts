@@ -378,6 +378,7 @@ export const useChat = (isOpen: boolean) => {
             sendReadReceipt(
               stompClientRef.current,
               Number(chatRoomId),
+              currentUserId,
               readTime
             );
           } catch {}
@@ -385,18 +386,20 @@ export const useChat = (isOpen: boolean) => {
       }
       
       // 채팅방 목록의 unreadCount 업데이트
-      setFriendChatRooms(prev => {
-        const updated = prev.map(room => {
-          return room.chatRoomId === Number(chatRoomId)
-            ? {
-                ...room,
-                unreadCount:
-                  // 현재 선택된 방이면 0, 아니면 서버에서 받은 값
-                  (selectedChatRoom && selectedChatRoom.chatRoomId === Number(chatRoomId))
-                    ? 0
-                    : unreadCount
-              }
-            : room;
+      setFriendChatRooms((prev) => {
+        const updated = prev.map((room) => {
+          if (room.chatRoomId === Number(chatRoomId)) {
+            return {
+              ...room,
+              unreadCount:
+                selectedChatRoom &&
+                selectedChatRoom.chatRoomId === Number(chatRoomId)
+                  ? 0
+                  : unreadCount,
+              lastMessageTime: lastestMessageTime || room.lastMessageTime,
+            };
+          }
+          return room;
         });
         return updated;
       });
@@ -451,6 +454,7 @@ export const useChat = (isOpen: boolean) => {
                 sendReadReceipt(
                   stompClientRef.current,
                   selectedChatRoom.chatRoomId,
+                  myMemberId,
                   latestCreatedAt
                 );
               }
@@ -473,7 +477,7 @@ export const useChat = (isOpen: boolean) => {
             const myMemberId = await auth.getMemberId();
             if (myMemberId !== null && stompClientRef.current) {
               sendReadReceipt(
-                stompClientRef.current, selectedChatRoom.chatRoomId, latestMessage.createdAt
+                stompClientRef.current, selectedChatRoom.chatRoomId,myMemberId, latestMessage.createdAt
               );
               initialReadSent.current.add(selectedChatRoom.chatRoomId);
             }
