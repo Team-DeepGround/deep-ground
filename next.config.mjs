@@ -37,6 +37,12 @@ const nextConfig = {
         ? { exclude: ['error', 'warn'] }
         : false,
   },
+  // Vercel 배포 시 API Route의 요청 본문 크기 제한 설정
+  api: {
+    bodyParser: {
+      sizeLimit: '20mb', // 20MB로 제한 설정
+    },
+  },
 
   async rewrites() {
     return [
