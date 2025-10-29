@@ -135,7 +135,6 @@ export default function StudiesPage() {
       setStudyGroups(response.result.content)
       setTotalPages(response.result.totalPages)
     } catch (error) {
-      console.error('스터디 목록 조회 실패:', error)
     } finally {
       setIsLoading(false)
     }

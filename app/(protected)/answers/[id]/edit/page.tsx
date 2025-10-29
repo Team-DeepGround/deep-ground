@@ -73,7 +73,6 @@ export default function EditAnswerPage() {
         }
       }, 0);
     } catch (error) {
-      console.error('마크다운 삽입 중 오류:', error);
       // 에러 발생 시에도 계속 진행할 수 있도록 함
     }
   };
@@ -154,7 +153,6 @@ export default function EditAnswerPage() {
         router.back()
       }
     } catch (error: any) {
-      console.error('답변 수정 에러:', error)
       toast({ title: "답변 수정 실패", description: error?.message || "답변 수정 중 오류가 발생했습니다.", variant: "destructive" })
     }
   }

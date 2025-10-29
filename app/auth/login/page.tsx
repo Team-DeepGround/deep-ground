@@ -84,7 +84,6 @@ export default function LoginPage() {
         })
       }
     } catch (error: any) {
-      console.error("로그인 에러:", error)
       toast({
         title: "로그인 실패",
         description: error?.message || "이메일 또는 비밀번호가 올바르지 않습니다.",

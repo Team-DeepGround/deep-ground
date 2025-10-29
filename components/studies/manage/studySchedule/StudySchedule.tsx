@@ -88,7 +88,6 @@ export function StudySchedule() {
   
         setSchedules(mappedSchedules)
       } catch (error) {
-        console.error("일정 조회 실패:", error)
       }
     }
   
@@ -169,7 +168,6 @@ export function StudySchedule() {
       setIsAddModalOpen(false)
       window.location.reload(); // 새로고침
     } catch (error) {
-      console.error("일정 생성 실패:", error)
     }
   }
 
@@ -177,14 +175,12 @@ export function StudySchedule() {
     if (!editSchedule) return
     const studyGroupId = Number(params.id)
     if (!editSchedule || !editSchedule.studyScheduleId) {
-      console.error("studyScheduleId 값이 비정상입니다.", editSchedule)
       return
     }
     
     const scheduleId = Number(editSchedule.studyScheduleId)
     
     if (isNaN(scheduleId)) {
-      console.error("scheduleId 변환 결과가 NaN입니다.", editSchedule.studyScheduleId)
       return
     }
   
@@ -254,7 +250,6 @@ export function StudySchedule() {
       setIsEditModalOpen(false)
       setEditSchedule(null)
     } catch (error) {
-      console.error("일정 수정 실패:", error)
     }
   }
 
@@ -322,7 +317,6 @@ export function StudySchedule() {
       )
   
     } catch (error) {
-      console.error("❌ 일정 삭제 실패:", error)
       
       // 더 구체적인 에러 메시지 표시
       let errorMessage = "일정 삭제에 실패했습니다."

@@ -130,7 +130,6 @@ export const NotificationDropdown = ({ isOpen, onClose }: NotificationDropdownPr
       await deleteNotification(notificationId)
       toast({ title: "알림 삭제", description: "알림이 삭제되었습니다." })
     } catch (error) {
-      console.error('알림 삭제 실패:', error)
       toast({ title: "오류", description: "알림 삭제에 실패했습니다.", variant: "destructive" })
     }
   }

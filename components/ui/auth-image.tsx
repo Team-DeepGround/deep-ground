@@ -42,7 +42,6 @@ export function AuthImage({ mediaId, type, alt, className, style }: AuthImagePro
           setIsLoading(false)
         }
       } catch (err) {
-        console.error("이미지 로드 실패:", err)
         if (isMounted) {
           setError(true)
           setIsLoading(false)

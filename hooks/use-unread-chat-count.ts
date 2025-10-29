@@ -38,7 +38,6 @@ export function useUnreadChatCount(enabled: boolean = true) {
 
       setUnreadCount(totalUnreadCount);
     } catch (error) {
-      console.error('읽지 않은 메시지 개수 조회 실패:', error);
       setUnreadCount(0);
     } finally {
       setIsLoading(false);

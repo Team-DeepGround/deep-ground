@@ -63,7 +63,6 @@ async function apiClient(endpoint: string, options: RequestOptions = {}) {
             try {
                 data = JSON.parse(text);
             } catch (parseError) {
-                console.error('JSON 파싱 실패:', parseError);
                 throw new ApiError(response.status, '응답을 파싱할 수 없습니다');
             }
         } else {
@@ -84,7 +83,6 @@ async function apiClient(endpoint: string, options: RequestOptions = {}) {
         }
         return data;
     } catch (error) {
-        console.error('API 요청 실패:', error);
         if (error instanceof ApiError) {
             throw error;
         }

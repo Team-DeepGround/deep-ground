@@ -160,7 +160,6 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
                     listener.onNotification(notification)
                 })
             } catch (error) {
-                console.error('알림 데이터 파싱 오류:', error)
             }
         })
 
@@ -182,7 +181,6 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
                     }
                 }
             } catch (error) {
-                console.error('unreadCount 이벤트 파싱 오류:', error)
             }
         })
 
@@ -199,7 +197,6 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
                     }))
                 }
             } catch (error) {
-                console.error('presence 이벤트 파싱 오류:', error)
             }
         })
 
@@ -452,7 +449,6 @@ export const useNotificationSSE = () => {
             const data = await fetchUnreadCountApi()
             setUnreadCount(data.result?.unreadCount || 0)
         } catch (error) {
-            console.error('읽지 않은 알림 개수 조회 오류:', error)
         }
     }, [])
 
@@ -529,7 +525,6 @@ export const useNotificationSSE = () => {
             setUnreadCount(prev => Math.max(0, prev - 1))
             // isFetchedRef.current = false 제거 - SSE 연결에 영향 주지 않도록
         } catch (error) {
-            console.error('알림 읽음 처리 오류:', error)
         }
     }, [])
 
@@ -540,7 +535,6 @@ export const useNotificationSSE = () => {
             setUnreadCount(0)
             // isFetchedRef.current = false 제거 - SSE 연결에 영향 주지 않도록
         } catch (error) {
-            console.error('전체 알림 읽음 처리 오류:', error)
         }
     }, [])
 
@@ -557,7 +551,6 @@ export const useNotificationSSE = () => {
                 setUnreadCount(prev => Math.max(0, prev - 1))
             }
         } catch (error) {
-            console.error('알림 삭제 오류:', error)
             throw error
         }
     }, [notifications])

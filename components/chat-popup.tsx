@@ -188,7 +188,6 @@ export default function ChatPopup({ isOpen, onClose }: ChatPopupProps) {
       sendMessage(stompClientState, currentChatRoomId, messageToSend, mediaIds);
       clearUploadedFiles();
         } catch (error) {
-            console.error("메시지 전송 실패:", error);
             toast({
                 title: "메시지 전송 실패",
                 description: "메시지를 보내는 도중 오류가 발생했습니다.",

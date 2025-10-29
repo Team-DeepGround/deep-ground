@@ -32,7 +32,6 @@ export default function AdminPendingReportsPage() {
         // ✅ 백엔드 구조: { status, message, result }
         setReports(response.result ?? [])
       } catch (error) {
-        console.error("검토할 신고 목록 로딩 실패:", error)
       } finally {
         setLoading(false)
       }

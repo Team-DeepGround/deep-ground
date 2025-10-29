@@ -33,7 +33,6 @@ export default function QuestionCard({ question, onTitleClick }: QuestionCardPro
         await api.get(`/members/profile/${profileId}`);
         router.push(`/profile/${profileId}`);
       } catch (error: any) {
-        console.error('프로필 조회 오류:', error);
         if (error.status === 400) {
           alert('해당 사용자의 프로필이 존재하지 않습니다.');
         } else {

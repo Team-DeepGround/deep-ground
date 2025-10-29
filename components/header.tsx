@@ -61,7 +61,6 @@ export default function Header() {
         setProfileImage(res?.result?.profileImage || null)
         setNickname(res?.result?.nickname || "")
       } catch (e) {
-        console.error("프로필 불러오기 실패:", e)
       }
     })()
   }, [isAuthenticated])

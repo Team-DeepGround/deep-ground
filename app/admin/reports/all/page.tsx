@@ -30,7 +30,6 @@ export default function AdminAllReportsPage() {
         const response = await api.get("/admin/report")
         setReports(response.result?.content ?? [])
       } catch (error) {
-        console.error("전체 신고 목록 로딩 실패:", error)
       } finally {
         setLoading(false)
       }

@@ -84,7 +84,6 @@ export default function EditQuestionPage() {
         }
       }, 0);
     } catch (error) {
-      console.error('마크다운 삽입 중 오류:', error);
       // 에러 발생 시에도 계속 진행할 수 있도록 함
     }
   };

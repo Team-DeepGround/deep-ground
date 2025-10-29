@@ -63,7 +63,6 @@ export default function AdminDashboardPage() {
         const inqRes = await api.get<{ result: AdminInquirySummary[] }>("/admin/inquiries")
         setInquiryList(inqRes.result ?? [])
       } catch (error) {
-        console.error("대시보드 통계 로딩 실패:", error)
         toast({
           title: "대시보드 로딩 실패",
           description: "통계를 불러오는 중 문제가 발생했습니다.",

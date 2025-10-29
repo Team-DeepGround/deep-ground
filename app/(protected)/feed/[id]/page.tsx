@@ -43,7 +43,6 @@ export default function FeedDetailPage() {
         router.back()
       }
     } catch (error) {
-      console.error('피드 로딩 오류:', error)
       toast({ 
         title: "피드 로딩 실패", 
         description: "피드를 불러오는데 실패했습니다.", 
