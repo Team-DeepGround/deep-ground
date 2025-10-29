@@ -349,8 +349,12 @@ export const useChat = (isOpen: boolean) => {
 
   // SSE/WebSocket unreadCount 이벤트 수신 시 채팅방 목록 unreadCount 갱신
   useEffect(() => {
-    function handleUnreadCountEvent(e: any) {
-      const { chatRoomId, unreadCount } = e.detail || {};
+    async function handleUnreadCountEvent(e: any) {
+      const { chatRoomId, unreadCount, lastestMessageTime } = e.detail || {};
+      
+      // 현재 사용자 ID 가져오기
+      const currentUserId = await auth.getMemberId();
+      
       // 선택된 방에 대한 서버 unread 이벤트가 오면 클라이언트 즉시 읽음 처리도 보냄
       if (
         selectedChatRoom &&
@@ -358,16 +362,34 @@ export const useChat = (isOpen: boolean) => {
         stompClientRef.current &&
         stompClientRef.current.connected
       ) {
-        const roomState = allChatRoomMessagesRef.current[Number(chatRoomId)];
-        const latestCreatedAt = roomState?.messages?.length
-          ? roomState.messages[roomState.messages.length - 1].createdAt
-          : undefined;
-        if (latestCreatedAt) {
+        // SSE에서 온 lastestMessageTime을 우선 사용, 없으면 로컬 메시지에서 찾기
+        const readTime = lastestMessageTime || 
+          (allChatRoomMessagesRef.current[Number(chatRoomId)]?.messages?.length
+            ? allChatRoomMessagesRef.current[Number(chatRoomId)].messages[
+                allChatRoomMessagesRef.current[Number(chatRoomId)].messages.length - 1
+              ].createdAt
+            : undefined);
+        
+        if (readTime) {
           try {
-            sendReadReceipt(stompClientRef.current, Number(chatRoomId), latestCreatedAt);
+            sendReadReceipt(stompClientRef.current, Number(chatRoomId), readTime);
           } catch {}
         }
       }
+      
+      // 내가 보낸 메시지가 포함된 unreadCount인지 확인하고 필터링
+      const roomState = allChatRoomMessagesRef.current[Number(chatRoomId)];
+      let filteredUnreadCount = unreadCount;
+      
+      if (roomState?.messages?.length && currentUserId) {
+        // 최신 메시지가 내가 보낸 것인지 확인
+        const latestMessage = roomState.messages[roomState.messages.length - 1];
+        if (latestMessage.senderId === currentUserId) {
+          // 내가 보낸 메시지면 unreadCount를 0으로 설정
+          filteredUnreadCount = 0;
+        }
+      }
+      
       setFriendChatRooms(prev => {
         const updated = prev.map(room => {
           return room.chatRoomId === Number(chatRoomId)
@@ -376,7 +398,7 @@ export const useChat = (isOpen: boolean) => {
                 unreadCount:
                   selectedChatRoom && selectedChatRoom.chatRoomId === Number(chatRoomId)
                     ? 0
-                    : unreadCount
+                    : filteredUnreadCount
               }
             : room;
         });
@@ -390,7 +412,7 @@ export const useChat = (isOpen: boolean) => {
                 unreadCount:
                   selectedChatRoom && selectedChatRoom.chatRoomId === Number(chatRoomId)
                     ? 0
-                    : unreadCount
+                    : filteredUnreadCount
               }
             : room;
         });
@@ -404,6 +426,7 @@ export const useChat = (isOpen: boolean) => {
   // selectedChatRoom이 바뀔 때마다 해당 방의 unreadCount를 0으로 강제 세팅
   useEffect(() => {
     if (selectedChatRoom) {
+      // 즉시 UI에서 unreadCount를 0으로 설정
       setFriendChatRooms(prev =>
         prev.map(room =>
           room.chatRoomId === selectedChatRoom.chatRoomId
@@ -426,10 +449,12 @@ export const useChat = (isOpen: boolean) => {
           ? roomState.messages[roomState.messages.length - 1].createdAt
           : undefined;
         if (latestCreatedAt) {
+          const myMemberId = auth.getMemberId(); // 동기적으로 memberId 가져오기
           try {
             sendReadReceipt(
               stompClientRef.current,
               selectedChatRoom.chatRoomId,
+              myMemberId,
               latestCreatedAt
             );
           } catch {}
@@ -437,6 +462,24 @@ export const useChat = (isOpen: boolean) => {
       }
     }
   }, [selectedChatRoom]);
+
+  // 채팅방 메시지가 로드된 후 읽음 처리 강화
+  useEffect(() => {
+    if (selectedChatRoom && stompClientRef.current && stompClientRef.current.connected) {
+      const roomState = allChatRoomMessagesRef.current[selectedChatRoom.chatRoomId];
+      if (roomState?.messages?.length && !initialReadSent.current.has(selectedChatRoom.chatRoomId)) {
+        const sendRead = async () => {
+          try {
+            const latestMessage = roomState.messages[roomState.messages.length - 1];
+            const myMemberId = await auth.getMemberId();
+            sendReadReceipt(stompClientRef.current!, selectedChatRoom.chatRoomId, myMemberId, latestMessage.createdAt);
+            initialReadSent.current.add(selectedChatRoom.chatRoomId);
+          } catch {}
+        };
+        sendRead();
+      }
+    }
+  }, [selectedChatRoom, allChatRoomMessages]);
 
   return {
     // 상태
