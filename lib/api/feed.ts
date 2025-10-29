@@ -174,6 +174,10 @@ export async function deleteFeed(feedId: number): Promise<any> {
   return await api.delete(`/feed/${feedId}`);
 }
 
+export async function updateFeed(feedId: number, formData: FormData): Promise<any> {
+  return await api.put(`/feed/${feedId}`, formData);
+}
+
 export function getFeedMediaUrl(mediaId: number): string {
   return `${API_BASE_URL}/api/v1/feed/media/${mediaId}`;
 }
@@ -196,7 +200,7 @@ export function getFeedCommentMediaUrl(mediaId: number): string {
 }
 
 export async function updateFeedComment(feedCommentId: number, formData: FormData): Promise<any> {
-  return await api.put(`/feed/comment/${feedCommentId}`, formData, { method: 'PUT' });
+  return await api.put(`/feed/comment/${feedCommentId}`, formData);
 }
 
 export async function deleteFeedComment(feedCommentId: number): Promise<any> {

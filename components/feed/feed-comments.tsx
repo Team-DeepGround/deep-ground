@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ThumbsUp, ImageIcon, Send, X } from "lucide-react"
+import { ThumbsUp, ImageIcon, Send, X, Pencil, Trash2, MoreHorizontal } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 import {
@@ -26,6 +27,7 @@ import {
 import { FeedReplies } from "./feed-replies"
 import ReactMarkdown from "react-markdown"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { api } from "@/lib/api-client"
 
 interface FeedCommentsProps {
@@ -36,6 +38,7 @@ interface FeedCommentsProps {
 export function FeedComments({ feedId, onShow }: FeedCommentsProps) {
   const { toast } = useToast()
   const { user } = useAuth()
+  const router = useRouter()
   const [commentInputs, setCommentInputs] = useState<Record<number, string>>({})
   const [commentImages, setCommentImages] = useState<Record<number, File[]>>({})
   const [commentLoading, setCommentLoading] = useState<Record<number, boolean>>({})
@@ -190,7 +193,7 @@ export function FeedComments({ feedId, onShow }: FeedCommentsProps) {
   }
 
   return (
-    <div className="px-4 pb-4">
+    <div className="px-4 pt-4 pb-4">
       {/* 댓글 목록 */}
       {commentLoading[feedId] ? (
         <div className="text-muted-foreground text-sm py-2">댓글 로딩 중...</div>
@@ -198,59 +201,73 @@ export function FeedComments({ feedId, onShow }: FeedCommentsProps) {
         <div className="space-y-3 mb-2">
           {comments[feedId].map((comment) => (
             <div key={comment.feedCommentId} className="flex gap-2 items-start">
-              <Avatar className="h-8 w-8">
-                <AvatarImage 
-                  src={comment.profileImageUrl || "/placeholder.svg"} 
-                  alt={comment.memberName} 
-                />
-                <AvatarFallback>{comment.memberName[0]}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1 bg-muted rounded-md px-3 py-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Popover open={friendPopoverOpen === comment.feedCommentId} onOpenChange={open => setFriendPopoverOpen(open ? comment.feedCommentId : null)}>
-                      <PopoverTrigger asChild>
-                        <button className="font-medium text-sm hover:underline focus:outline-none" type="button">
-                          {comment.memberName}
-                        </button>
-                      </PopoverTrigger>
-                      <PopoverContent align="start" className="w-56 p-4">
-                        <div className="mb-2 font-semibold">친구 추가</div>
-                        <div className="mb-2 text-xs text-muted-foreground">{comment.memberName}님과 친구를 맺어보세요.</div>
-                        <Button
-                          size="sm"
-                          disabled={friendLoading}
-                          onClick={() => handleAddFriend(comment.memberId, comment.memberName)}
-                          className="w-full"
-                        >
-                          {friendLoading ? "요청 중..." : "친구 요청 보내기"}
-                        </Button>
-                        {friendSuccess && <div className="text-green-600 text-xs mt-2">{friendSuccess}</div>}
-                        {friendError && <div className="text-destructive text-xs mt-2">{friendError}</div>}
-                      </PopoverContent>
-                    </Popover>
-                    <span className="text-xs text-muted-foreground">{new Date(comment.createdAt).toLocaleDateString()}</span>
-                  </div>
-                  <div className="flex items-center">
-                    {/* 좋아요 버튼 */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={`h-auto px-2 py-1 ${comment.liked ? "text-primary" : ""}`}
-                      onClick={() => handleLikeComment(feedId, comment)}
-                    >
-                      <ThumbsUp className={`h-4 w-4 ${comment.liked ? "fill-primary" : ""}`} />
-                      <span className="text-xs ml-1">{comment.likeCount}</span>
-                    </Button>
-                    {/* 수정/삭제 버튼 (본인만 노출) */}
-                    {(user?.id as number) === comment.memberId && (
-                      <>
-                        <Button variant="ghost" size="icon" className="h-auto px-1 py-1" onClick={() => handleEditComment(comment)}><span className="sr-only">수정</span>✏️</Button>
-                        <Button variant="ghost" size="icon" className="h-auto px-1 py-1" onClick={() => handleDeleteComment(feedId, comment.feedCommentId)}><span className="sr-only">삭제</span>🗑️</Button>
-                      </>
+              {user?.memberId === comment.memberId ?
+                ( // 내 댓글인 경우: 클릭 불가
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={comment.profileImageUrl || "/placeholder.svg"} alt={comment.memberName} />
+                    <AvatarFallback>{comment.memberName[0]}</AvatarFallback>
+                  </Avatar>
+                ) :
+                ( // 다른 사람 댓글인 경우: 클릭 가능
+                  <button onClick={() => router.push(`/profile/${comment.profileId}`)} className="flex-shrink-0">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={comment.profileImageUrl || "/placeholder.svg"} alt={comment.memberName} />
+                      <AvatarFallback>{comment.memberName[0]}</AvatarFallback>
+                    </Avatar>
+                  </button>
+              )}
+              <div className="flex-1">
+                <div className="bg-muted rounded-md px-3 py-2 relative">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {user?.memberId === comment.memberId ? (
+                      <span className="font-medium text-sm">{comment.memberName}</span>
+                    ) : (
+                      <Popover open={friendPopoverOpen === comment.feedCommentId} onOpenChange={open => setFriendPopoverOpen(open ? comment.feedCommentId : null)}>
+                        <PopoverTrigger asChild>
+                          <button onClick={() => router.push(`/profile/${comment.profileId}`)} className="font-medium text-sm hover:underline focus:outline-none" type="button">
+                            {comment.memberName}
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent align="start" className="w-56 p-4">
+                          <div className="mb-2 font-semibold">친구 추가</div>
+                          <div className="mb-2 text-xs text-muted-foreground">{comment.memberName}님과 친구를 맺어보세요.</div>
+                          <Button
+                            size="sm"
+                            disabled={friendLoading}
+                            onClick={() => handleAddFriend(comment.memberId, comment.memberName)}
+                            className="w-full"
+                          >
+                            {friendLoading ? "요청 중..." : "친구 요청 보내기"}
+                          </Button>
+                          {friendSuccess && <div className="text-green-600 text-xs mt-2">{friendSuccess}</div>}
+                          {friendError && <div className="text-destructive text-xs mt-2">{friendError}</div>}
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                    </div>
+                    {/* 더보기 버튼 (수정/삭제) */}
+                    {(user?.memberId as number) === comment.memberId && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-6 w-6">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEditComment(comment)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            <span>수정</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDeleteComment(feedId, comment.feedCommentId)} className="text-destructive focus:text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>삭제</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     )}
                   </div>
-                </div>
+
                 {/* 댓글 수정 모드 */}
                 {editingCommentId === comment.feedCommentId ? (
                   <div className="mt-2">
@@ -267,7 +284,7 @@ export function FeedComments({ feedId, onShow }: FeedCommentsProps) {
                   </div>
                 ) : (
                   <>
-                    <div className="prose max-w-none text-sm">
+                    <div className="prose max-w-none text-sm mt-1">
                       <ReactMarkdown>{comment.content}</ReactMarkdown>
                     </div>
                     {/* 답글 n개 불러오기 버튼 */}
@@ -286,6 +303,21 @@ export function FeedComments({ feedId, onShow }: FeedCommentsProps) {
                     )}
                   </>
                 )}
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-xs text-muted-foreground">{new Date(comment.createdAt).toLocaleDateString()}</span>
+                  <div className="flex items-center">
+                    {/* 좋아요 버튼 */}
+                    <Button
+                      variant="ghost"
+                      className={`h-auto p-1 text-xs ${comment.liked ? "text-primary" : "text-muted-foreground"}`}
+                      onClick={() => handleLikeComment(feedId, comment)}
+                    >
+                      <ThumbsUp className={`h-3.5 w-3.5 mr-1 ${comment.liked ? "fill-primary" : ""}`} />
+                      <span>{comment.likeCount}</span>
+                    </Button>
+                  </div>
+                </div>
+                </div>
               </div>
             </div>
           ))}

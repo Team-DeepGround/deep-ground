@@ -114,19 +114,39 @@ export const api = {
         });
     },
 
-    put: (endpoint: string, data?: any, options?: RequestOptions) =>
-        apiClient(endpoint, {
+    put: (endpoint: string, data?: any, options?: RequestOptions) => {
+        // FormData인 경우 JSON.stringify 하지 않음
+        if (data instanceof FormData) {
+            return apiClient(endpoint, {
+                ...options,
+                method: 'PUT',
+                body: data,
+                headers: { ...options?.headers }
+            });
+        }
+        return apiClient(endpoint, {
             ...options,
             method: 'PUT',
             body: data ? JSON.stringify(data) : undefined,
-        }),
+        });
+    },
 
-    patch: (endpoint: string, data?: any, options?: RequestOptions) =>
-        apiClient(endpoint, {
+    patch: (endpoint: string, data?: any, options?: RequestOptions) => {
+        // FormData인 경우 JSON.stringify 하지 않음
+        if (data instanceof FormData) {
+            return apiClient(endpoint, {
+                ...options,
+                method: 'PATCH',
+                body: data,
+                headers: { ...options?.headers }
+            });
+        }
+        return apiClient(endpoint, {
             ...options,
             method: 'PATCH',
             body: data ? JSON.stringify(data) : undefined,
-        }),
+        });
+    },
 
     delete: (endpoint: string, options?: RequestOptions) =>
         apiClient(endpoint, { ...options, method: 'DELETE' }),
