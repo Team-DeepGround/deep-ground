@@ -1,3 +1,6 @@
+import { formatInTimeZone } from 'date-fns-tz';
+import { ko } from 'date-fns/locale';
+
 // 날짜 비교 헬퍼 함수
 export const isSameDay = (d1: Date, d2: Date): boolean => {
   return d1.getFullYear() === d2.getFullYear() &&
@@ -23,10 +26,11 @@ export const formatDateForSeparator = (dateString: string): string => {
 
 // 메시지 시간 포맷팅
 export const formatMessageTime = (dateString: string): string => {
-  return new Date(dateString).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const date = new Date(dateString);
+  const timeZone = 'Asia/Seoul';
+  // 'p'는 '오후 3:04'와 같은 로케일 기반 시간 형식을 제공합니다.
+  // 'ko' 로케일을 전달하여 한국어(오전/오후)로 표시되도록 합니다.
+  return formatInTimeZone(date, timeZone, 'p', { locale: ko });
 };
 
 // 파일 크기 포맷팅
