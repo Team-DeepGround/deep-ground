@@ -432,9 +432,4 @@ export const useChatMessages = (
     mediaInfos,
     
     // 액션
-    loadChatRoomMessages,
-    loadOlderMessages,
-    setShowNewMessageToast,
-    setIsChatContentVisible,
-  };
-}; 
+    loadChatRo
