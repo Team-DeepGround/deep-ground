@@ -34,44 +34,26 @@ export default function QuestionsPage() {
   const [loading, setLoading] = useState(true)
 
   const fetchQuestions = async () => {
-    console.log('fetchQuestions 함수 시작');
     setLoading(true)
     try {
-      console.log('API 호출 시작');
       const res = await api.get("/questions", { params: { size: "100" } })
-      console.log('API 응답:', res);
       
       const questions = res.result?.questions || []
-      console.log('질문 리스트 데이터:', questions)
-      console.log('질문 개수:', questions.length);
       
       // 각 질문의 상태 정보 상세 로깅
       questions.forEach((q: any, idx: number) => {
-        console.log(`질문 ${idx + 1}:`, {
-          id: q.questionId,
-          title: q.title,
-          questionStatus: q.questionStatus,
-          status: q.status,
-          isResolved: q.isResolved,
-          imageUrl: q.imageUrl,
-          nickname: q.nickname,
-          author: q.author
-        });
       });
       
       setAllQuestions(questions)
-      console.log('allQuestions 상태 업데이트 완료');
     } catch (e) {
       console.error('fetchQuestions 오류:', e);
       setAllQuestions([])
     } finally {
       setLoading(false)
-      console.log('fetchQuestions 함수 완료');
     }
   }
 
   useEffect(() => {
-    console.log('useEffect 실행됨 - fetchQuestions 호출');
     fetchQuestions()
   }, [])
 
@@ -93,7 +75,6 @@ export default function QuestionsPage() {
 
   // statusFilter 상태 변경 감지
   useEffect(() => {
-    console.log('statusFilter 변경됨:', statusFilter);
   }, [statusFilter])
 
   // 페이지네이션 관련 상태
@@ -126,15 +107,6 @@ export default function QuestionsPage() {
     
     // 디버깅 로그 (모든 질문에 대해)
     if (statusFilter !== "all") {
-      console.log('필터링:', {
-        questionId: question.questionId,
-        title: question.title,
-        status: question.status,
-        statusFilter,
-        matchesStatus,
-        searchMatch: matchesSearch,
-        tagsMatch: matchesTags
-      });
     }
 
     return matchesSearch && matchesTags && matchesStatus;
@@ -154,13 +126,6 @@ export default function QuestionsPage() {
 
   // 필터링 결과 로깅 (브라우저에서만)
   if (typeof window !== 'undefined') {
-    console.log('필터링 결과:', {
-      totalQuestions: allQuestions.length,
-      filteredQuestions: filteredQuestions.length,
-      statusFilter,
-      searchTerm,
-      selectedTags
-    });
   }
 
   // 페이지네이션 적용
@@ -283,7 +248,6 @@ export default function QuestionsPage() {
                       : "bg-white text-gray-700 border-gray-300"
                   }`}
                   onClick={() => {
-                    console.log('전체 버튼 클릭됨!');
                     setStatusFilter("all")
                     setCurrentPage(1)
                   }}
@@ -297,7 +261,6 @@ export default function QuestionsPage() {
                       : "bg-white text-gray-700 border-gray-300"
                   }`}
                   onClick={() => {
-                    console.log('미해결 버튼 클릭됨!');
                     setStatusFilter("OPEN")
                     setCurrentPage(1)
                   }}
@@ -311,7 +274,6 @@ export default function QuestionsPage() {
                       : "bg-white text-gray-700 border-gray-300"
                   }`}
                   onClick={() => {
-                    console.log('해결중 버튼 클릭됨!');
                     setStatusFilter("RESOLVED")
                     setCurrentPage(1)
                   }}
@@ -325,10 +287,7 @@ export default function QuestionsPage() {
                       : "bg-white text-gray-700 border-gray-300"
                   }`}
                   onClick={() => {
-                    console.log('해결완료 버튼 클릭됨!');
-                    console.log('이전 statusFilter:', statusFilter);
                     setStatusFilter("CLOSED")
-                    console.log('새로운 statusFilter 설정: CLOSED');
                     setCurrentPage(1)
                   }}
                 >
@@ -346,7 +305,6 @@ export default function QuestionsPage() {
               <TabsTrigger 
                 value="all"
                 onClick={() => {
-                  console.log('전체 탭 클릭됨!');
                   setStatusFilter("all");
                   setCurrentPage(1);
                 }}
@@ -356,7 +314,6 @@ export default function QuestionsPage() {
               <TabsTrigger 
                 value="OPEN"
                 onClick={() => {
-                  console.log('미해결 탭 클릭됨!');
                   setStatusFilter("OPEN");
                   setCurrentPage(1);
                 }}
@@ -366,7 +323,6 @@ export default function QuestionsPage() {
               <TabsTrigger 
                 value="RESOLVED"
                 onClick={() => {
-                  console.log('해결중 탭 클릭됨!');
                   setStatusFilter("RESOLVED");
                   setCurrentPage(1);
                 }}
@@ -376,7 +332,6 @@ export default function QuestionsPage() {
               <TabsTrigger 
                 value="CLOSED"
                 onClick={() => {
-                  console.log('해결됨 탭 클릭됨!');
                   setStatusFilter("CLOSED");
                   setCurrentPage(1);
                 }}

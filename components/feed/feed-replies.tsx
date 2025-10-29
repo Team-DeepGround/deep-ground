@@ -47,25 +47,20 @@ export function FeedReplies({ feedCommentId, onShow }: FeedRepliesProps) {
   // 컴포넌트가 마운트되거나 onShow가 true일 때 답글 로드
   useEffect(() => {
     if (onShow) {
-      console.log('FeedReplies 컴포넌트 마운트 - 자동 답글 로드 시작')
       loadReplies(feedCommentId)
     }
   }, [onShow, feedCommentId])
 
   // 답글 불러오기
   const loadReplies = async (feedCommentId: number) => {
-    console.log('답글 로딩 시작 - feedCommentId:', feedCommentId)
     setReplyStates((prev) => ({
       ...prev,
       [feedCommentId]: { ...(prev[feedCommentId] || {}), loading: true }
     }))
     try {
       const res = await fetchFeedReplies(feedCommentId)
-      console.log('답글 API 응답:', res)
       
       if (res.result?.feedReplies) {
-        console.log('답글 데이터:', res.result.feedReplies)
-        console.log('답글 개수:', res.result.feedReplies.length)
         setReplyStates((prev) => ({
           ...prev,
           [feedCommentId]: {
@@ -75,7 +70,6 @@ export function FeedReplies({ feedCommentId, onShow }: FeedRepliesProps) {
           },
         }))
       } else {
-        console.log('답글 데이터가 없음')
         setReplyStates((prev) => ({
           ...prev,
           [feedCommentId]: {

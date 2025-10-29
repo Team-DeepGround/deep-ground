@@ -30,7 +30,7 @@ export const createStompClient = async (onConnect: () => void, onError: (error: 
     reconnectDelay: 5000,
     heartbeatIncoming: 4000,
     heartbeatOutgoing: 4000,
-    debug: (str) => console.log(`[STOMP DEBUG] ${str}`),
+    debug: (str) => {},
     connectHeaders: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
@@ -139,5 +139,4 @@ export const unsubscribeFromAllChatRooms = (client: Client) => {
   // STOMP 클라이언트의 구독 목록에 직접 접근할 수 없으므로, 
   // 구독 시 저장한 ID를 기반으로 해제하는 방식으로 변경
   // 실제 구현에서는 구독 ID를 별도로 관리해야 함
-  console.log('[WebSocket] Attempting to unsubscribe from all chat rooms');
 }; 

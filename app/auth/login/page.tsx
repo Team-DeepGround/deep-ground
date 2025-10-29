@@ -34,9 +34,6 @@ export default function LoginPage() {
         { requireAuth: false }
       )
 
-      console.log("👉 로그인 응답 데이터:", response?.result)
-      console.log("👉 role:", response?.result?.role)
-      console.log("👉 email:", response?.result?.email)
 
       if (response.result?.accessToken) {
         // ✅ role, email, memberId 추가 저장

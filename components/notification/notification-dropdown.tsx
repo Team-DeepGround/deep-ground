@@ -125,7 +125,7 @@ export const NotificationDropdown = ({ isOpen, onClose }: NotificationDropdownPr
 
   const handleDeleteNotification = async (notificationId: string, event: React.MouseEvent) => {
     event.stopPropagation() // 알림 클릭 이벤트 방지
-    console.log('알림 삭제 버튼 클릭 - ID:', notificationId)
+    
     try {
       await deleteNotification(notificationId)
       toast({ title: "알림 삭제", description: "알림이 삭제되었습니다." })

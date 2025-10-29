@@ -30,9 +30,7 @@ export default function FeedDetailPage() {
 
     try {
       setLoading(true)
-      console.log(`피드 상세 조회 시작 (feedId: ${feedId})`)
       const response = await fetchFeedById(feedId)
-      console.log('피드 상세 응답:', response)
       
       if (response.result) {
         setFeed(response.result)

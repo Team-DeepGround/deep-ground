@@ -116,7 +116,6 @@ export default function ProfilePage() {
             profileImage: r.profileImage ?? "",
           })
         }
-        console.log(profileResponse.result)
 
 
         // 생성한 스터디
@@ -132,14 +131,10 @@ export default function ProfilePage() {
 
         // 참여중인 스터디
         const joinedStudiesResponse = await api.get("/study-group/joined")
-        console.log("프로필 페이지 - 참여한 스터디 API 응답:", joinedStudiesResponse)
         if (joinedStudiesResponse && joinedStudiesResponse.result) {
-          console.log("프로필 페이지 - 참여한 스터디 원본 데이터:", joinedStudiesResponse.result)
           // StudyCard 컴포넌트에 맞게 데이터 변환
           const formattedJoinedStudies = joinedStudiesResponse.result.map((study: any) => {
-            console.log("프로필 페이지 - 개별 스터디 데이터:", study)
             const studyId = study.studyGroupId || study.id
-            console.log("프로필 페이지 - 스터디 ID:", studyId)
             // isOffline 기준으로 isOnline 결정
             const isOnline = study.isOffline !== undefined ? !study.isOffline : true
             return {
@@ -164,7 +159,6 @@ export default function ProfilePage() {
               studyEndDate: study.studyEndDate,
             }
           }).filter(study => study.id && study.id !== undefined)
-          console.log("프로필 페이지 - 최종 변환된 스터디 데이터:", formattedJoinedStudies)
           setJoinedStudies(formattedJoinedStudies)
         }
       } catch (error) {

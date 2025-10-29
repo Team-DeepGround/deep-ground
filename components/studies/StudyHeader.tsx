@@ -39,13 +39,6 @@ export function StudyHeader({
   // writeMemberId 필드로 스터디장 확인
   const isStudyLeader = currentMemberId && study.writeMemberId && Number(currentMemberId) === Number(study.writeMemberId)
   
-  // 디버깅 로그
-  console.log("StudyHeader - 스터디장 확인:", {
-    currentMemberId,
-    writeMemberId: study.writeMemberId,
-    isStudyLeader,
-    memberStatus
-  })
 
   return (
     <div>

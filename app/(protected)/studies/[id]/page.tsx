@@ -85,9 +85,7 @@ export default function StudyDetailPage() {
       }
 
       try {
-        console.log("스터디 상세 조회 API 호출, ID:", params.id)
         const response = await api.get(`/study-group/${params.id}`)
-        console.log("스터디 상세 조회 응답:", response)
         setStudy({
           ...response.result,
           sessions: dummySessions,

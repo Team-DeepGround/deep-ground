@@ -46,13 +46,9 @@ export default function CreateStudyPage() {
   // 로그인 상태 확인
   useEffect(() => {
     const checkAuth = async () => {
-      console.log('스터디 생성 페이지 - 인증 상태 확인 시작')
       const token = await auth.getToken()
-      console.log('스터디 생성 페이지 - 현재 토큰:', token)
-      console.log('스터디 생성 페이지 - isAuthenticated 상태:', isAuthenticated)
       
       if (!token) {
-        console.log('스터디 생성 페이지 - 토큰 없음, 로그인 페이지로 리다이렉트')
         toast({
           title: "로그인이 필요합니다",
           description: "스터디를 생성하려면 로그인이 필요합니다.",
@@ -60,7 +56,6 @@ export default function CreateStudyPage() {
         })
         router.push('/auth/login')
       } else {
-        console.log('스터디 생성 페이지 - 토큰 있음, 정상 진행')
       }
     }
     checkAuth()

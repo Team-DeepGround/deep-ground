@@ -73,7 +73,6 @@ export default function RegisterPage() {
       // api-client가 성공 응답(data)을 바로 반환
       const res = await api.get(`/auth/check-email`, { params: { email: normalized } })
       const available = parseAvailability(res)
-      console.log("서버가 보낸 실제 응답:", res);
 
       if (available === null) {
         setIsEmailAvailable(null)
