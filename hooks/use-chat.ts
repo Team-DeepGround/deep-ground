@@ -370,9 +370,14 @@ export const useChat = (isOpen: boolean) => {
               ].createdAt
             : undefined);
         
-        if (readTime) {
+        if (readTime && currentUserId !== null) {
           try {
-            sendReadReceipt(stompClientRef.current, Number(chatRoomId), readTime);
+            sendReadReceipt(
+              stompClientRef.current,
+              Number(chatRoomId),
+              currentUserId,
+              readTime
+            );
           } catch {}
         }
       }
@@ -448,16 +453,21 @@ export const useChat = (isOpen: boolean) => {
         const latestCreatedAt = roomState?.messages?.length
           ? roomState.messages[roomState.messages.length - 1].createdAt
           : undefined;
-        if (latestCreatedAt) {
-          const myMemberId = auth.getMemberId(); // 동기적으로 memberId 가져오기
-          try {
-            sendReadReceipt(
-              stompClientRef.current,
-              selectedChatRoom.chatRoomId,
-              myMemberId,
-              latestCreatedAt
-            );
-          } catch {}
+        if (latestCreatedAt && stompClientRef.current) {
+          const sendRead = async () => {
+            try {
+              const myMemberId = await auth.getMemberId();
+              if (myMemberId !== null && stompClientRef.current) {
+                sendReadReceipt(
+                  stompClientRef.current,
+                  selectedChatRoom.chatRoomId,
+                  myMemberId,
+                  latestCreatedAt
+                );
+              }
+            } catch {}
+          };
+          sendRead();
         }
       }
     }
@@ -468,15 +478,19 @@ export const useChat = (isOpen: boolean) => {
     if (selectedChatRoom && stompClientRef.current && stompClientRef.current.connected) {
       const roomState = allChatRoomMessagesRef.current[selectedChatRoom.chatRoomId];
       if (roomState?.messages?.length && !initialReadSent.current.has(selectedChatRoom.chatRoomId)) {
-        const sendRead = async () => {
+        const sendRead = async () => { // async 함수 선언
           try {
             const latestMessage = roomState.messages[roomState.messages.length - 1];
             const myMemberId = await auth.getMemberId();
-            sendReadReceipt(stompClientRef.current!, selectedChatRoom.chatRoomId, myMemberId, latestMessage.createdAt);
-            initialReadSent.current.add(selectedChatRoom.chatRoomId);
+            if (myMemberId !== null && stompClientRef.current) {
+              sendReadReceipt(
+                stompClientRef.current, selectedChatRoom.chatRoomId, myMemberId, latestMessage.createdAt
+              );
+              initialReadSent.current.add(selectedChatRoom.chatRoomId);
+            }
           } catch {}
         };
-        sendRead();
+        sendRead(); // async 함수 호출
       }
     }
   }, [selectedChatRoom, allChatRoomMessages]);
