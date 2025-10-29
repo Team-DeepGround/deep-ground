@@ -13,7 +13,7 @@ import { ParticipantList } from "@/components/studies/ParticipantList"
 import { CommentSection } from "@/components/studies/CommentSection"
 import { StudySchedule } from "@/components/studies/StudySchedule"
 import { Separator } from "@/components/ui/separator"
-import { fetchStudySchedulesByGroup } from "@/lib/api/studySchedule" 
+import { fetchStudySchedulesByGroup } from "@/lib/api/studySchedule"
 import { Card } from "@/components/ui/card"
 import { Calendar, Clock } from "lucide-react"
 import { formatDate } from "@/lib/utils"
@@ -63,7 +63,8 @@ export default function StudyDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
-  const { isAuthenticated, memberId } = useAuth()
+  const { isAuthenticated, user } = useAuth() // This was already correct
+  const memberId = user?.memberId
   const [study, setStudy] = useState<StudyGroupDetail | null>(null)
   const [participants, setParticipants] = useState<Participant[]>([])
   const [isLoading, setIsLoading] = useState(true)

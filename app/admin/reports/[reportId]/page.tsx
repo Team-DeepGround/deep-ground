@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { auth } from "@/lib/auth"
+import { useAuth } from "@/components/auth-provider"
 
 export default function ReportDetailPage() {
   const { reportId } = useParams()
@@ -18,12 +18,12 @@ export default function ReportDetailPage() {
   const [loading, setLoading] = useState(true)
   const [unauthorized, setUnauthorized] = useState(false)
   const [banDays, setBanDays] = useState(7)
+  const { user } = useAuth()
 
   useEffect(() => {
     const fetchDetail = async () => {
-      const token = await auth.getToken()
-      const role = await auth.getRole()
-      if (!token || role !== "ROLE_ADMIN") {
+      const role = user?.role
+      if (!user || role !== "ROLE_ADMIN") {
         setUnauthorized(true)
         router.replace("/")
         return
@@ -38,8 +38,8 @@ export default function ReportDetailPage() {
       }
     }
 
-    fetchDetail()
-  }, [reportId, router])
+    if (user !== undefined) fetchDetail()
+  }, [reportId, router, user])
 
   if (unauthorized) return null
   if (loading) return <p className="p-6">로딩 중...</p>

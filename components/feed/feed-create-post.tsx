@@ -17,7 +17,8 @@ interface FeedCreatePostProps {
 
 export function FeedCreatePost({ onPostCreated }: FeedCreatePostProps) {
   const { toast } = useToast()
-  const { email, memberId } = useAuth()
+  const { user: authUser } = useAuth()
+  const { email, memberId } = authUser || {}
   const [user, setUser] = useState<{
     nickname: string
     email: string
