@@ -32,7 +32,6 @@ export default function MyInquiriesPage() {
         const res = await api.get("/support/inquiries/me")
         setItems(res?.result ?? [])
       } catch (e) {
-        console.error(e)
         toast({
           title: "불러오기 실패",
           description: "내 문의 목록을 가져오지 못했어요. 잠시 후 다시 시도해주세요.",

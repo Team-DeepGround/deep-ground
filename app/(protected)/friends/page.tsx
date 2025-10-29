@@ -51,7 +51,6 @@ export default function FriendsPage() {
           setFriends(friendsRes.result as Friend[])
         }
       } catch (error) {
-        console.error('친구 목록 로드 실패:', error)
       }
       try {
         const receivedRes = await api.get('/friends/receive')
@@ -59,7 +58,6 @@ export default function FriendsPage() {
           setFriendRequests(receivedRes.result as Friend[])
         }
       } catch (error) {
-        console.error('받은 요청 로드 실패:', error)
       }
       try {
         const sentRes = await api.get('/friends/sent')
@@ -67,10 +65,8 @@ export default function FriendsPage() {
           setSentRequests(sentRes.result as Friend[])
         }
       } catch (error) {
-        console.error('보낸 요청 로드 실패:', error)
       }
     } catch (error) {
-      console.error('전체 데이터 로드 실패:', error)
       if (error instanceof ApiError && error.status !== 401) {
         toast({
           title: "데이터 로드 실패",

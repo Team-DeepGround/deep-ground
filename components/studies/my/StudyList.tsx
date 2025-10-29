@@ -203,7 +203,7 @@ export function StudyList({
                 const url = isCreated ? `/studies/manage/${study.id}` : `/studies/${study.id}`
                 router.push(url)
               } else {
-                console.error("스터디 ID가 없습니다:", study)
+                
               }
             }}
           >

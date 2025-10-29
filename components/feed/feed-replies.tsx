@@ -80,7 +80,6 @@ export function FeedReplies({ feedCommentId, onShow }: FeedRepliesProps) {
         }))
       }
     } catch (e) {
-      console.error('답글 로딩 오류:', e)
       setReplyStates((prev) => ({
         ...prev,
         [feedCommentId]: { ...(prev[feedCommentId] || {}), loading: false }

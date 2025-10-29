@@ -42,7 +42,6 @@ export default function StudyManagementPage() {
           setStudy(response.result)
         }
       } catch (error) {
-        console.error("Failed to fetch study detail:", error)
       }
     }
 
@@ -53,7 +52,6 @@ export default function StudyManagementPage() {
           setMembers(response.result)
         }
       } catch (error) {
-        console.error("Failed to fetch members:", error)
       }
     }
 

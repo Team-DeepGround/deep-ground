@@ -33,7 +33,6 @@ export default function ReportDetailPage() {
         const res = await api.get(`/admin/report/${reportId}`)
         setReport(res.result)
       } catch (error) {
-        console.error("신고 상세 조회 실패:", error)
       } finally {
         setLoading(false)
       }

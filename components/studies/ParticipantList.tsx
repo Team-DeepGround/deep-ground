@@ -24,7 +24,6 @@ export function ParticipantList({ studyId, writerId, groupLimit, currentMemberId
         const res = await api.get(`/study-group/${studyId}/participants`)
         setParticipants(res.result)
       } catch (e) {
-        console.error("Failed to fetch participants", e)
       }
     }
     fetchParticipants()

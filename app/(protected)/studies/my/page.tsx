@@ -80,7 +80,6 @@ export default function MyStudiesPage() {
           return
         }
       } catch (error) {
-        console.error("Failed to fetch studies:", error)
         setError("스터디 목록을 불러오는데 실패했습니다")
         toast({
           title: "스터디 목록을 불러오는데 실패했습니다",

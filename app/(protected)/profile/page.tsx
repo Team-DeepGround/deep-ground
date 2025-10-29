@@ -162,7 +162,6 @@ export default function ProfilePage() {
           setJoinedStudies(formattedJoinedStudies)
         }
       } catch (error) {
-        console.error("사용자 데이터 로딩 실패:", error)
         toast({
           title: "데이터 로딩 실패",
           description: "사용자 정보를 불러오는데 실패했습니다.",
@@ -182,7 +181,6 @@ export default function ProfilePage() {
           setMyInquiries(res.result ?? [])
         } catch (e: any) {
           // 실패해도 다른 섹션은 보여야 하므로 토스트만
-          console.error("내 문의 목록 로드 실패:", e)
         } finally {
           setMyInquiriesLoading(false)
         }
@@ -202,7 +200,6 @@ export default function ProfilePage() {
         setFeeds([])
       }
     } catch (error) {
-      console.error('피드 목록 로드 실패:', error)
       toast({
         title: "피드 목록 로드 실패",
         description: "피드 목록을 불러오는데 실패했습니다.",

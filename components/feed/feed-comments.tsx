@@ -69,7 +69,6 @@ export function FeedComments({ feedId, onShow }: FeedCommentsProps) {
         setComments((prev) => ({ ...prev, [feedId]: [] }))
       }
     } catch (error) {
-      console.error('댓글 로딩 오류:', error)
     } finally {
       setCommentLoading((prev) => ({ ...prev, [feedId]: false }))
     }

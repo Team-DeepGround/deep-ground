@@ -74,7 +74,6 @@ export default function StudyDetailPage() {
     const fetchStudy = async () => {
       // params.id가 없거나 유효하지 않은 경우 처리
       if (!params.id || params.id === 'undefined') {
-        console.error("유효하지 않은 스터디 ID:", params.id)
         toast({
           title: "스터디를 찾을 수 없습니다",
           description: "잘못된 스터디 링크입니다",
@@ -94,7 +93,6 @@ export default function StudyDetailPage() {
         const participantResponse = await api.get(`/study-group/${params.id}/participants`)
         setParticipants(participantResponse.result)
       } catch (error) {
-        console.error("스터디 상세 조회 실패:", error)
         toast({
           title: "스터디 정보를 불러오는데 실패했습니다",
           description: "잠시 후 다시 시도해주세요",

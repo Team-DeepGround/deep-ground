@@ -90,7 +90,6 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
       
       const email = res?.result?.email
       if (!email) {
-        console.error('이메일 정보 없음:', res?.result)
         throw new Error("이메일 정보를 찾을 수 없습니다.")
       }
       
@@ -104,7 +103,6 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
         setFriendError(response?.message || "친구 요청에 실패했습니다.")
       }
     } catch (e: any) {
-      console.error('친구 요청 오류:', e)
       setFriendError(e?.message || "친구 요청에 실패했습니다.")
     } finally {
       setFriendLoading(false)
@@ -120,7 +118,6 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
       toast({ title: "피드 삭제", description: "피드가 성공적으로 삭제되었습니다." })
       onRefresh() // 피드 목록 새로고침
     } catch (error) {
-      console.error("피드 삭제 오류:", error)
       toast({ title: "삭제 실패", description: "피드 삭제 중 오류가 발생했습니다.", variant: "destructive" })
     } finally {
       setIsDeleting(false)

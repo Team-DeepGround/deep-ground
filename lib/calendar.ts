@@ -157,7 +157,6 @@ export const useCalendar = () => {
 
       setEvents(mapped)
     } catch (e) {
-      console.error("일정 불러오기 실패", e)
     }
   }
 
