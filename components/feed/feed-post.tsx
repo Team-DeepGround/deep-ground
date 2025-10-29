@@ -2,16 +2,16 @@
 
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { MessageSquare, ThumbsUp, Share2, MoreHorizontal, ImageIcon, Send, X, Repeat, Trash2 } from "lucide-react"
+import { MessageSquare, ThumbsUp, Share2, MoreHorizontal, ImageIcon, Send, X, Repeat, Trash2, Pencil } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/hooks/use-toast"
 import {
   likeFeed,
   unlikeFeed,
   deleteFeed,
+  updateFeed,
   FetchFeedResponse
 } from "@/lib/api/feed"
 import { FeedComments } from "./feed-comments"
@@ -20,7 +20,8 @@ import { AuthImage } from "@/components/ui/auth-image"
 import { ReportModal } from "@/components/report/report-modal"
 import ReactMarkdown from "react-markdown"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
-import { useState } from "react"
+import { useState, useRef } from "react"
+import { Textarea } from "@/components/ui/textarea"
 import { api } from "@/lib/api-client"
 import { useAuth } from "@/components/auth-provider"
 
@@ -32,7 +33,7 @@ interface FeedPostProps {
 export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
   const { toast } = useToast()
   const router = useRouter()
-  const { memberId } = useAuth()
+  const { user } = useAuth()
   const [post, setPost] = useState(initialPost)
   const [showComments, setShowComments] = useState(false)
   const [showShareDialog, setShowShareDialog] = useState(false)
@@ -42,6 +43,13 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [friendError, setFriendError] = useState<string | null>(null)
   const [friendSuccess, setFriendSuccess] = useState<string | null>(null)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editedContent, setEditedContent] = useState("")
+  const [editedImages, setEditedImages] = useState<File[]>([])
+  const [existingImageUrls, setExistingImageUrls] = useState<string[]>([])
+  const [isUpdating, setIsUpdating] = useState(false)
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // 좋아요/좋아요 취소
   const handleLike = async (feedId: number, liked: boolean) => {
@@ -124,7 +132,64 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
     }
   }
 
-  const isOwner = memberId === post.memberId
+  // 수정 모드 진입
+  const handleEdit = () => {
+    setIsEditing(true)
+    setEditedContent(post.content)
+    setEditedImages([])
+    setExistingImageUrls(post.mediaUrls || [])
+  }
+
+  // 수정 취소
+  const handleCancelEdit = () => {
+    setIsEditing(false)
+  }
+
+  // 수정 저장
+  const handleUpdate = async () => {
+    if (!editedContent.trim() && editedImages.length === 0 && existingImageUrls.length === 0) {
+      toast({ title: "내용 필요", description: "게시물 내용을 입력하거나 이미지를 첨부해주세요.", variant: "destructive" })
+      return
+    }
+
+    setIsUpdating(true)
+    const formData = new FormData()
+    formData.append("content", editedContent)
+    editedImages.forEach(file => formData.append("images", file))
+    // 기존 이미지 URL 목록도 전송 (백엔드에서 처리)
+    existingImageUrls.forEach(url => formData.append("existingMediaUrls", url))
+
+    try {
+      const updatedPost = await updateFeed(post.feedId, formData)
+      setIsEditing(false)
+      onRefresh() // 수정 후 목록 전체를 새로고침하여 데이터 정합성을 보장합니다.
+      toast({ title: "피드 수정", description: "피드가 성공적으로 수정되었습니다." })
+    } catch (error) {
+      toast({ title: "수정 실패", description: "피드 수정 중 오류가 발생했습니다.", variant: "destructive" })
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  // 수정 시 이미지 선택
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files)
+      setEditedImages(prev => [...prev, ...files])
+    }
+  }
+
+  // 새로 추가한 이미지 제거
+  const removeNewImage = (index: number) => {
+    setEditedImages(prev => prev.filter((_, i) => i !== index))
+  }
+
+  // 기존 이미지 제거
+  const removeExistingImage = (url: string) => {
+    setExistingImageUrls(prev => prev.filter(u => u !== url))
+  }
+
+  const isOwner = user?.memberId === post.memberId
 
   // 공유된 피드 렌더링
   const renderSharedFeed = (sharedFeed: FetchFeedResponse) => (
@@ -253,10 +318,15 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {isOwner && (
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDelete(); }} className="text-destructive focus:text-destructive" disabled={isDeleting}>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    {isDeleting ? "삭제 중..." : "삭제하기"}
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(); }}>
+                      <Pencil className="h-4 w-4 mr-2" /> 수정하기
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDelete(); }} className="text-destructive focus:text-destructive" disabled={isDeleting}>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      {isDeleting ? "삭제 중..." : "삭제하기"}
+                    </DropdownMenuItem>
+                  </>
                 )}
                 {!isOwner && <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setShowReportModal(true); }}>신고하기</DropdownMenuItem>}
               </DropdownMenuContent>
@@ -264,23 +334,72 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
           </div>
         </CardHeader>
         <CardContent 
-          className="p-4 cursor-pointer hover:bg-gray-50/50 transition-colors" 
-          onClick={() => router.push(`/feed/${post.feedId}`)}
+          className={`p-4 ${!isEditing && "cursor-pointer hover:bg-gray-50/50 transition-colors"}`}
+          onClick={() => !isEditing && router.push(`/feed/${post.feedId}`)}
         >
-          <div className="prose max-w-none text-sm">
-            <ReactMarkdown>{post.content}</ReactMarkdown>
-          </div>
-          {post.mediaUrls && post.mediaUrls.length > 0 && (
-            <div className="mt-3 rounded-md overflow-hidden">
-              {post.mediaUrls.map((url: string, index: number) => (
-                <img 
-                  key={index}
-                  src={url} 
-                  alt="피드 이미지" 
-                  className="w-full h-auto mb-2" 
-                />
-              ))}
+          {isEditing ? (
+            // 수정 모드 UI
+            <div className="space-y-4">
+              <Textarea
+                value={editedContent}
+                onChange={(e) => setEditedContent(e.target.value)}
+                rows={4}
+                className="resize-none"
+              />
+              {/* 이미지 미리보기 */}
+              <div className="flex flex-wrap gap-2">
+                {existingImageUrls.map((url) => (
+                  <div key={url} className="relative">
+                    <img src={url} alt="기존 이미지" className="h-20 w-20 object-cover rounded" />
+                    <button
+                      type="button"
+                      className="absolute -top-1 -right-1 bg-white/80 rounded-full p-0.5"
+                      onClick={() => removeExistingImage(url)}
+                    >
+                      <X className="h-3 w-3 text-muted-foreground" />
+                    </button>
+                  </div>
+                ))}
+                {editedImages.map((file, idx) => (
+                  <div key={idx} className="relative">
+                    <img src={URL.createObjectURL(file)} alt="새 이미지" className="h-20 w-20 object-cover rounded" />
+                    <button
+                      type="button"
+                      className="absolute -top-1 -right-1 bg-white/80 rounded-full p-0.5"
+                      onClick={() => removeNewImage(idx)}
+                    >
+                      <X className="h-3 w-3 text-muted-foreground" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-between items-center">
+                <div>
+                  <input type="file" ref={fileInputRef} onChange={handleImageChange} multiple accept="image/*" className="hidden" />
+                  <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                    <ImageIcon className="h-4 w-4 mr-2" /> 이미지 추가
+                  </Button>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="secondary" size="sm" onClick={handleCancelEdit}>취소</Button>
+                  <Button size="sm" onClick={handleUpdate} disabled={isUpdating}>{isUpdating ? "저장 중..." : "저장"}</Button>
+                </div>
+              </div>
             </div>
+          ) : (
+            // 일반 모드 UI
+            <>
+              <div className="prose max-w-none text-sm">
+                <ReactMarkdown>{post.content}</ReactMarkdown>
+              </div>
+              {post.mediaUrls && post.mediaUrls.length > 0 && (
+                <div className="mt-3 rounded-md overflow-hidden grid grid-cols-2 gap-1">
+                  {post.mediaUrls.map((url: string, index: number) => (
+                    <img key={index} src={url} alt="피드 이미지" className="w-full h-auto object-cover" />
+                  ))}
+                </div>
+              )}
+            </>
           )}
           {/* 공유된 피드가 있으면 표시 */}
           {post.sharedFeed && renderSharedFeed(post.sharedFeed)}

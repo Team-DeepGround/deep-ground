@@ -6,11 +6,14 @@ import { auth, getTokenExp } from "@/lib/auth"
 
 interface AuthContextType {
   isAuthenticated: boolean
-  role: string | null
-  email: string | null
-  memberId: number | null
-  nickname: string | null
-  // 닉네임까지 받도록 시그니처 확장
+  user: {
+    role: string | null
+    email: string | null
+    memberId: number | null
+    nickname: string | null
+    profileId?: number | null // 프로필 ID 추가
+    profileImageUrl?: string | null // 프로필 이미지 URL 추가
+  } | null
   login: (token: string, role?: string, email?: string, memberId?: number, nickname?: string) => void
   logout: () => void
 }
@@ -41,10 +44,7 @@ export function useAuth() {
 
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [role, setRole] = useState<string | null>(null)
-  const [email, setEmail] = useState<string | null>(null)
-  const [memberId, setMemberId] = useState<number | null>(null)
-  const [nickname, setNickname] = useState<string | null>(null) // ✅ 닉네임 상태
+  const [user, setUser] = useState<AuthContextType['user']>(null)
   const router = useRouter()
   const pathname = usePathname()
 
@@ -52,10 +52,6 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     const checkAuth = async () => {
       const token = await auth.getToken()
       const exp = token ? getTokenExp(token) : null
-      const savedRole = await auth.getRole()
-      const savedEmail = await auth.getEmail()
-      const savedMemberId = await auth.getMemberId()
-      const savedNickname = await auth.getNickname?.() // ✅ 닉네임 복구
 
       // 만료 처리
       if (exp && Date.now() / 1000 > exp) {
@@ -63,28 +59,36 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         auth.removeRole()
         auth.removeEmail()
         auth.removeMemberId()
-        auth.removeNickname?.()
+        auth.removeNickname()
         localStorage.removeItem("token_exp")
         setIsAuthenticated(false)
-        setRole(null)
-        setEmail(null)
-        setMemberId(null)
-        setNickname(null)
+        setUser(null)
         router.push("/auth/login")
         return
       }
 
       // 상태 복구
-      setIsAuthenticated(!!token)
-      setRole(savedRole)
-      setEmail(savedEmail)
-      setMemberId(savedMemberId)
-      setNickname(savedNickname || null)
+      if (token) {
+        setIsAuthenticated(true)
+        const savedRole = await auth.getRole()
+        const savedEmail = await auth.getEmail()
+        const savedMemberId = await auth.getMemberId()
+        const savedNickname = await auth.getNickname()
+        setUser({
+          role: savedRole,
+          email: savedEmail,
+          memberId: savedMemberId,
+          nickname: savedNickname,
+        })
 
-      // ROLE_GUEST 접근 차단
-      if ((savedRole === "ROLE_GUEST") && !publicPaths.includes(pathname)) {
-        const emailQuery = savedEmail ? `?email=${encodeURIComponent(savedEmail)}` : ""
-        router.push(`/auth/verify-email${emailQuery}`)
+        // ROLE_GUEST 접근 차단
+        if ((savedRole === "ROLE_GUEST") && !publicPaths.includes(pathname)) {
+          const emailQuery = savedEmail ? `?email=${encodeURIComponent(savedEmail)}` : ""
+          router.push(`/auth/verify-email${emailQuery}`)
+        }
+      } else {
+        setIsAuthenticated(false)
+        setUser(null)
       }
     }
 
@@ -103,7 +107,6 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
     if (roleArg) {
       auth.setRole(roleArg)
-      setRole(roleArg)
     }
 
     const exp = getTokenExp(token)
@@ -111,17 +114,14 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
     if (emailArg) {
       auth.setEmail(emailArg)
-      setEmail(emailArg)
     }
 
     if (memberIdArg !== undefined) {
       auth.setMemberId(memberIdArg)
-      setMemberId(memberIdArg)
     }
 
     if (nicknameArg) {
       auth.setNickname?.(nicknameArg)
-      setNickname(nicknameArg)
     }
 
     setIsAuthenticated(true)
@@ -133,13 +133,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     auth.removeRole()
     auth.removeEmail()
     auth.removeMemberId()
-    auth.removeNickname?.()
+    auth.removeNickname()
     localStorage.removeItem("token_exp")
     setIsAuthenticated(false)
-    setRole(null)
-    setEmail(null)
-    setMemberId(null)
-    setNickname(null)
+    setUser(null)
     router.push("/auth/login")
   }
 
@@ -147,10 +144,12 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     <AuthContext.Provider
       value={{
         isAuthenticated,
-        role,
-        email,
-        memberId,
-        nickname, // ✅ 컨텍스트로 노출
+        user: isAuthenticated ? {
+          role: user?.role ?? null,
+          email: user?.email ?? null,
+          memberId: user?.memberId ?? null,
+          nickname: user?.nickname ?? null,
+        } : null,
         login,
         logout,
       }}
