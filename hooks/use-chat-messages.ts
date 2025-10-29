@@ -269,6 +269,7 @@ export const useChatMessages = (
           const newState = {
             ...prev,
             [chatRoomId]: {
+              // ISO 8601 문자열은 그대로 비교해도 정렬이 잘 되지만, new Date()로 명시적으로 변환하는 것이 더 안전합니다.
               messages: [...res.chatMessage.messages].sort(
                 (a, b) =>
                   new Date(a.createdAt).getTime() -
@@ -280,7 +281,6 @@ export const useChatMessages = (
               isLoadingMessages: false,
             },
           };
-
           // 최신 메시지 계산
           const sortedMessages = [...res.chatMessage.messages].sort(
             (a, b) =>
@@ -290,13 +290,13 @@ export const useChatMessages = (
             sortedMessages.length > 0
               ? sortedMessages[sortedMessages.length - 1]
               : null;
-
           // 최초 1회만 /read 전송 (내 memberId가 있을 때만)
           if (
             latestMessage &&
             myInfoRef.current &&
             !initialReadSent.current.has(chatRoomId)
           ) {
+            console.log(`[useChatMessages] Sending read receipt on init for chatRoomId: ${chatRoomId}, time: ${latestMessage.createdAt}`);
             try {
               sendReadReceipt(
                 stompClientState,
@@ -412,6 +412,7 @@ export const useChatMessages = (
               newMessage.senderId !== myInfoRef.current.memberId &&
               isLatest
             ) {
+              console.log(`[useChatMessages] Sending read receipt on live message for chatRoomId: ${chatRoomId}, time: ${newMessage.createdAt}`);
               sendReadReceipt(
                 stompClientState,
                 chatRoomId,
