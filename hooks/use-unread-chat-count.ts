@@ -8,7 +8,7 @@ export function useUnreadChatCount(enabled: boolean = true) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchUnreadCount = async () => {
+  const fetchUnreadCount = useCallback(async () => {
     if (!enabled) return;
     try {
       setIsLoading(true);
@@ -43,7 +43,7 @@ export function useUnreadChatCount(enabled: boolean = true) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [enabled]);
 
   const handleUnreadCountEvent = useCallback(async (e: any) => {
     if (!enabled) return;
@@ -67,7 +67,7 @@ export function useUnreadChatCount(enabled: boolean = true) {
     // 여기서는 기존 로직대로 전체 fetch를 호출
     fetchUnreadCount();
 
-  }, [enabled]);
+  }, [enabled, fetchUnreadCount]);
 
   // 페이지 포커스 시 업데이트 (사용자가 다른 탭에서 돌아왔을 때)
   const handleFocus = useCallback(() => {
