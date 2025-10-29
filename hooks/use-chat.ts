@@ -351,6 +351,23 @@ export const useChat = (isOpen: boolean) => {
   useEffect(() => {
     function handleUnreadCountEvent(e: any) {
       const { chatRoomId, unreadCount } = e.detail || {};
+      // 선택된 방에 대한 서버 unread 이벤트가 오면 클라이언트 즉시 읽음 처리도 보냄
+      if (
+        selectedChatRoom &&
+        Number(chatRoomId) === selectedChatRoom.chatRoomId &&
+        stompClientRef.current &&
+        stompClientRef.current.connected
+      ) {
+        const roomState = allChatRoomMessagesRef.current[Number(chatRoomId)];
+        const latestCreatedAt = roomState?.messages?.length
+          ? roomState.messages[roomState.messages.length - 1].createdAt
+          : undefined;
+        if (latestCreatedAt) {
+          try {
+            sendReadReceipt(stompClientRef.current, Number(chatRoomId), latestCreatedAt);
+          } catch {}
+        }
+      }
       setFriendChatRooms(prev => {
         const updated = prev.map(room => {
           return room.chatRoomId === Number(chatRoomId)
@@ -401,6 +418,23 @@ export const useChat = (isOpen: boolean) => {
             : room
         )
       );
+
+      // 방 전환 시 최신 메시지 기준으로 즉시 읽음 전송
+      if (stompClientRef.current && stompClientRef.current.connected) {
+        const roomState = allChatRoomMessagesRef.current[selectedChatRoom.chatRoomId];
+        const latestCreatedAt = roomState?.messages?.length
+          ? roomState.messages[roomState.messages.length - 1].createdAt
+          : undefined;
+        if (latestCreatedAt) {
+          try {
+            sendReadReceipt(
+              stompClientRef.current,
+              selectedChatRoom.chatRoomId,
+              latestCreatedAt
+            );
+          } catch {}
+        }
+      }
     }
   }, [selectedChatRoom]);
 
