@@ -1,8 +1,10 @@
 import { formatInTimeZone } from 'date-fns-tz';
 import { ko } from 'date-fns/locale';
+import { isToday, isYesterday } from 'date-fns';
 
 // 날짜 비교 헬퍼 함수
 export const isSameDay = (d1: Date, d2: Date): boolean => {
+  // 이 함수는 이제 타임존 변환 후의 Date 객체를 비교하는 데 사용될 수 있습니다.
   return d1.getFullYear() === d2.getFullYear() &&
     d1.getMonth() === d2.getMonth() &&
     d1.getDate() === d2.getDate();
@@ -10,17 +12,21 @@ export const isSameDay = (d1: Date, d2: Date): boolean => {
 
 // 날짜 포맷 헬퍼 함수
 export const formatDateForSeparator = (dateString: string): string => {
-  const date = new Date(dateString);
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
+  // 서버에서 받은 UTC 문자열을 기준으로 Date 객체 생성
+  const utcDate = new Date(dateString);
 
-  if (isSameDay(date, today)) {
+  // isToday, isYesterday는 시스템 로컬 시간을 기준으로 하므로,
+  // 타임존 변환된 날짜와 비교하기 전에 먼저 KST 기준으로 날짜를 확인해야 합니다.
+  // 하지만 date-fns-tz로 포맷팅하면 더 간단하고 정확합니다.
+  const timeZone = 'Asia/Seoul';
+  const kstDate = new Date(formatInTimeZone(utcDate, timeZone, "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"));
+
+  if (isToday(kstDate)) {
     return "오늘";
-  } else if (isSameDay(date, yesterday)) {
+  } else if (isYesterday(kstDate)) {
     return "어제";
   } else {
-    return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
+    return formatInTimeZone(utcDate, timeZone, 'yyyy년 M월 d일', { locale: ko });
   }
 };
 
