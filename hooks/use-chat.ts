@@ -382,19 +382,6 @@ export const useChat = (isOpen: boolean) => {
         }
       }
       
-      // 내가 보낸 메시지가 포함된 unreadCount인지 확인하고 필터링
-      const roomState = allChatRoomMessagesRef.current[Number(chatRoomId)];
-      let filteredUnreadCount = unreadCount;
-      
-      if (roomState?.messages?.length && currentUserId) {
-        // 최신 메시지가 내가 보낸 것인지 확인
-        const latestMessage = roomState.messages[roomState.messages.length - 1];
-        if (latestMessage.senderId === currentUserId) {
-          // 내가 보낸 메시지면 unreadCount를 0으로 설정
-          filteredUnreadCount = 0;
-        }
-      }
-      
       setFriendChatRooms(prev => {
         const updated = prev.map(room => {
           return room.chatRoomId === Number(chatRoomId)
@@ -403,7 +390,7 @@ export const useChat = (isOpen: boolean) => {
                 unreadCount:
                   selectedChatRoom && selectedChatRoom.chatRoomId === Number(chatRoomId)
                     ? 0
-                    : filteredUnreadCount
+                    : unreadCount
               }
             : room;
         });
@@ -417,7 +404,7 @@ export const useChat = (isOpen: boolean) => {
                 unreadCount:
                   selectedChatRoom && selectedChatRoom.chatRoomId === Number(chatRoomId)
                     ? 0
-                    : filteredUnreadCount
+                    : unreadCount
               }
             : room;
         });
