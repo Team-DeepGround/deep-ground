@@ -14,14 +14,26 @@ import { Checkbox } from "@/components/ui/checkbox"
 const normalizeEmail = (s: string) => s.trim().toLowerCase()
 const normalizeNickname = (s: string) => s.trim()
 
-// 서버가 성공 시 어떤 형태를 주는지 모를 때를 대비한 유연 처리
+// 서버 응답을 해석하여 사용 가능 여부를 판단
 const parseAvailability = (res: any): boolean | null => {
-  // 'api-client.ts'는 이미 JSON을 파싱해서 'data'를 반환하므로
-  // res.data 대신 res를 바로 사용
+  // 서버가 {"status": 200, "message": "..."} 형태로 응답하는 경우
+  if (res && typeof res === "object") {
+    // status가 200이면 성공 (사용 가능)
+    if (res.status === 200) {
+      return true
+    }
+    // status가 400이면 중복 (사용 불가)
+    if (res.status === 400) {
+      return false
+    }
+  }
+  
+  // 기존 방식들도 지원 (하위 호환성)
   if (typeof res === "boolean") return res
   if (typeof res?.available === "boolean") return res.available
   if (typeof res?.exists === "boolean") return !res.exists
   if (typeof res?.duplicate === "boolean") return !res.duplicate
+  
   return null
 }
 
@@ -61,6 +73,7 @@ export default function RegisterPage() {
       // api-client가 성공 응답(data)을 바로 반환
       const res = await api.get(`/auth/check-email`, { params: { email: normalized } })
       const available = parseAvailability(res)
+      console.log("서버가 보낸 실제 응답:", res);
 
       if (available === null) {
         setIsEmailAvailable(null)
