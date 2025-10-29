@@ -115,7 +115,8 @@ export default function QuestionDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
-  const { memberId, email } = useAuth()
+  const { user } = useAuth()
+  const memberId = user?.memberId
   const [answerContent, setAnswerContent] = useState("")
   const [uploadedImages, setUploadedImages] = useState<File[]>([])
 
