@@ -1,13 +1,14 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button" // Keep Button for general use
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { MessageSquare, ThumbsUp, Share2, MoreHorizontal, ImageIcon, Send, X, Repeat, Trash2, Pencil } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/hooks/use-toast"
 import {
+  // Removed internal share dialog related imports
   likeFeed,
   unlikeFeed,
   deleteFeed,
@@ -15,7 +16,7 @@ import {
   FetchFeedResponse
 } from "@/lib/api/feed"
 import { FeedComments } from "./feed-comments"
-import { ShareFeedDialog } from "./share-feed-dialog"
+import HybridShareButton from "@/components/share/shareButton" // Import HybridShareButton
 import { AuthImage } from "@/components/ui/auth-image"
 import { ReportModal } from "@/components/report/report-modal"
 import ReactMarkdown from "react-markdown"
@@ -35,8 +36,6 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
   const router = useRouter()
   const { user } = useAuth()
   const [post, setPost] = useState(initialPost)
-  const [showComments, setShowComments] = useState(false)
-  const [showShareDialog, setShowShareDialog] = useState(false)
   const [showReportModal, setShowReportModal] = useState(false)
   const [friendPopoverOpen, setFriendPopoverOpen] = useState(false)
   const [friendLoading, setFriendLoading] = useState(false)
@@ -48,7 +47,11 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
   const [editedImages, setEditedImages] = useState<File[]>([])
   const [existingImageUrls, setExistingImageUrls] = useState<string[]>([])
   const [isUpdating, setIsUpdating] = useState(false)
+  const [showComments, setShowComments] = useState(false)
 
+  const feedShareUrl = `${window.location.origin}/feed/${post.feedId}`
+  const shareTitle = `${post.memberName}님의 피드`
+  const shareText = post.content
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // 좋아요/좋아요 취소
@@ -70,17 +73,6 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
         likeCount: prev.likeCount + 1
       }))
     }
-  }
-
-  // 공유 다이얼로그 열기
-  const handleShareClick = () => {
-    setShowShareDialog(true)
-  }
-
-  // 공유 성공 시 전체 피드 리프레시
-  const handleShareSuccess = () => {
-    setShowShareDialog(false)
-    onRefresh()
   }
 
   // 댓글 토글
@@ -432,31 +424,19 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
             </Button>
             {/* 공유된 피드가 아닌 경우에만 공유 버튼 표시 */}
             {!post.isShared && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex items-center gap-1"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleShareClick()
-                }}
-              >
-                <Share2 className="h-4 w-4" />
-                <span>{post.shareCount}</span>
-              </Button>
+              <div onClick={(e) => e.stopPropagation()}>
+                <HybridShareButton
+                  shareUrl={feedShareUrl}
+                  shareTitle={shareTitle}
+                  shareText={shareText}
+                  shareImageUrl={post.mediaUrls?.[0]}
+                />
+              </div>
             )}
           </div>
         </CardFooter>
         {showComments && <FeedComments feedId={post.feedId} onShow={true} />}
       </Card>
-
-      {/* 공유 다이얼로그 */}
-      <ShareFeedDialog
-        isOpen={showShareDialog}
-        onClose={() => setShowShareDialog(false)}
-        originalFeed={post}
-        onSuccess={handleShareSuccess}
-      />
       {/* 신고 모달 */}
       <ReportModal
         targetId={post.feedId}
