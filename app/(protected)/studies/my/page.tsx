@@ -56,14 +56,10 @@ export default function MyStudiesPage() {
         }
 
         const joinedResponse = await api.get("/study-group/joined")
-        console.log("참여한 스터디 전체 응답:", joinedResponse)
         if (joinedResponse.status === 200 && joinedResponse.result) {
-          console.log("참여한 스터디 API 응답:", joinedResponse.result)
           // 참여한 스터디 데이터 형식 변환
           const formattedJoinedStudies: MyStudy[] = joinedResponse.result.map((study: any, index: number) => {
-            console.log(`스터디 ${index + 1} 원본 데이터:`, study)
             const studyId = study.studyGroupId || study.id
-            console.log(`스터디 ${index + 1} ID:`, studyId, "studyGroupId:", study.studyGroupId, "id:", study.id)
             return {
               id: studyId, // studyGroupId가 없으면 id 사용
               title: study.title,
@@ -71,10 +67,8 @@ export default function MyStudiesPage() {
               groupStatus: "IN_PROGRESS" as const // 참여한 스터디는 진행중 상태로 표시
             }
           }).filter((study: MyStudy) => {
-            console.log("필터링 전 스터디:", study)
             return study.id && study.id !== undefined
           }) // id가 있는 스터디만 필터링
-          console.log("최종 포맷된 스터디 목록:", formattedJoinedStudies)
           setJoinedStudies(formattedJoinedStudies)
         } else if (joinedResponse.status === 401) {
           toast({

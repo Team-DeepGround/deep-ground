@@ -199,11 +199,8 @@ export function StudyList({
             key={study.id} 
             className="cursor-pointer hover:shadow-lg transition-all duration-200 border-2 hover:border-primary/50 hover:scale-[1.02] group" 
             onClick={() => {
-              console.log("스터디 카드 클릭:", study)
-              console.log("스터디 ID:", study.id, "타입:", typeof study.id)
               if (study.id) {
                 const url = isCreated ? `/studies/manage/${study.id}` : `/studies/${study.id}`
-                console.log("이동할 URL:", url)
                 router.push(url)
               } else {
                 console.error("스터디 ID가 없습니다:", study)

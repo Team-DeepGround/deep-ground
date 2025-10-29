@@ -34,9 +34,6 @@ export default function LoginPage() {
         { requireAuth: false }
       )
 
-      console.log("👉 로그인 응답 데이터:", response?.result)
-      console.log("👉 role:", response?.result?.role)
-      console.log("👉 email:", response?.result?.email)
 
       if (response.result?.accessToken) {
         // ✅ role, email, memberId 추가 저장
@@ -90,7 +87,7 @@ export default function LoginPage() {
       console.error("로그인 에러:", error)
       toast({
         title: "로그인 실패",
-        description: error?.message || "이메일 또는 비밀번호가 올바르지 않습니다.",
+        description: "이메일 또는 비밀번호가 올바르지 않습니다.",
         variant: "destructive",
       })
     } finally {

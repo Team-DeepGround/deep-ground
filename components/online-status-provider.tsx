@@ -60,20 +60,16 @@ export default function OnlineStatusProvider({ children }: OnlineStatusProviderP
       setIsLoading(true)
       const token = await auth.getToken()
       if (!token) {
-        console.log('[OnlineStatusProvider] No token available, skipping initial fetch')
         return
       }
 
-      console.log('[OnlineStatusProvider] Fetching initial online statuses...')
       const response: OnlineStatusResponse = await api.get('/members/online')
       const statusMap: Record<number, boolean> = {}
       response.result.forEach(status => {
         statusMap[status.memberId] = status.isOnline
       })
       setOnlineStatuses(statusMap)
-      console.log('[OnlineStatusProvider] Initial online statuses loaded:', statusMap)
     } catch (error) {
-      console.error('[OnlineStatusProvider] Failed to fetch initial online statuses:', error)
     } finally {
       setIsLoading(false)
     }
@@ -91,7 +87,6 @@ export default function OnlineStatusProvider({ children }: OnlineStatusProviderP
     const handlePresenceUpdate = (event: Event) => {
       const customEvent = event as CustomEvent;
       const presenceData = customEvent.detail;
-      console.log('[OnlineStatusProvider] Presence Update:', presenceData);
       
       setOnlineStatus(presenceData.memberId, presenceData.isOnline);
     };

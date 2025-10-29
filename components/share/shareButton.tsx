@@ -37,7 +37,6 @@ export default function HybridShareButton({
           text: shareText,
         });
       } catch (error) {
-        console.log('사용자가 공유를 취소했습니다.');
       }
     } else {
       // 지원되지 않으면 데스크톱용 아이콘 목록을 보여줍니다. (토글 방식)

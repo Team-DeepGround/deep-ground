@@ -48,7 +48,6 @@ export default function FriendsPage() {
       try {
         const friendsRes = await api.get('/friends')
         if (friendsRes?.result) {
-          console.log("✅ 친구 목록 응답:", friendsRes.result) // ← 여기에 로그 찍기
           setFriends(friendsRes.result as Friend[])
         }
       } catch (error) {

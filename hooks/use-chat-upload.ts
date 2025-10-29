@@ -65,7 +65,6 @@ export const useChatUpload = (selectedChatRoom: any) => {
         setUploadedFiles(prev => [...prev, uploadingFile]);
         
         try {
-          console.log(`[UPLOAD] ${file.name} 업로드 시작`);
           const formData = new FormData();
           formData.append('files', file);
           
@@ -78,7 +77,6 @@ export const useChatUpload = (selectedChatRoom: any) => {
                   ? { ...f, progress: progress[`${file.name}-0`] || 0 } 
                   : f
               ));
-              console.log(`[UPLOAD] ${file.name} 진행률: ${progress[`${file.name}-0`] || 0}%`);
             }
           );
           
@@ -88,14 +86,12 @@ export const useChatUpload = (selectedChatRoom: any) => {
               ? { ...f, progress: 100, status: 'done', mediaId } 
               : f
           ));
-          console.log(`[UPLOAD] ${file.name} 업로드 완료, mediaId: ${mediaId}`);
         } catch (error) {
           setUploadedFiles(prev => prev.map(f =>
             (f.file.name === file.name && f.file.size === file.size) 
               ? { ...f, status: 'error' } 
               : f
           ));
-          console.log(`[UPLOAD] ${file.name} 업로드 실패`, error);
           toast({
             title: '파일 업로드 실패',
             description: `${file.name} 업로드에 실패했습니다.`,

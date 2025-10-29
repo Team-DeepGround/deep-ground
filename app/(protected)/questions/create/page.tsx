@@ -133,9 +133,6 @@ export default function CreateQuestionPage() {
     uploadedImages.forEach(file => formData.append("images", file))
 
     // 실제 FormData 내용 콘솔 출력 (디버깅용)
-    for (let pair of formData.entries()) {
-      console.log(pair[0], pair[1]);
-    }
 
     const accessToken = localStorage.getItem("auth_token")
 

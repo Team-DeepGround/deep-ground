@@ -27,12 +27,9 @@ export default function FeedPage() {
     }
 
     try {
-      console.log(`피드 목록 조회 시작 (페이지: ${pageNum}, 공유 피드 포함)`)
       const res = (await fetchFeeds({ page: pageNum, size: 10, sort: "createdAt,desc" })) as FetchFeedsResponse
-      console.log('피드 목록 응답:', res)
       
       if (res.result?.feeds) {
-        console.log('피드 아이템들:', res.result.feeds);
 
         // 공유된 피드와 일반 피드를 모두 표시
         const processedFeeds = res.result.feeds.map((feed) => {
@@ -58,16 +55,10 @@ export default function FeedPage() {
         // 더 로드할 피드가 있는지 확인 (수정된 로직)
         const hasMoreData =
           res.result.total > (pageNum + 1) * res.result.pageSize;
-        console.log('더 로드할 피드가 있는지:', hasMoreData, {
-          total: res.result.total,
-          currentItems: (pageNum + 1) * res.result.pageSize,
-          remaining: res.result.total - (pageNum + 1) * res.result.pageSize,
-        });
 
         setHasMore(hasMoreData);
         setPage(pageNum + 1);
       } else {
-        console.log('피드 아이템이 없음')
         if (!append) {
           setFeeds([])
         }

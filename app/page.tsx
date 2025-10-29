@@ -46,7 +46,6 @@ export default function Home() {
             sort: 'createdAt,desc'
           }
         });
-        console.log('스터디 API 응답:', response);
         setStudies(response.result?.content || []);
       } catch (error) {
         console.error('스터디 목록 조회 실패:', error);

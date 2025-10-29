@@ -44,7 +44,6 @@ function useAuthImageUrls(urls: string[] | undefined) {
           const pathVar = url.startsWith("/") ? url.substring(1) : url;
           const fileName = pathVar.replace("media/", "");
           const fetchUrl = `/question/media/${fileName}`;
-          console.log("fetch 요청:", fetchUrl);
           try {
             const res = await fetch(fetchUrl, {
               headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},

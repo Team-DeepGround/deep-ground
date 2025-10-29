@@ -53,25 +53,19 @@ export function FeedComments({ feedId, onShow }: FeedCommentsProps) {
   // 컴포넌트가 마운트되거나 onShow가 true일 때 댓글 로드
   useEffect(() => {
     if (onShow) {
-      console.log('FeedComments 컴포넌트 마운트 - 자동 댓글 로드 시작')
       loadComments(feedId)
     }
   }, [onShow, feedId])
 
   // 댓글 불러오기
   const loadComments = async (feedId: number) => {
-    console.log('댓글 로딩 시작 - feedId:', feedId)
     setCommentLoading((prev) => ({ ...prev, [feedId]: true }))
     try {
       const res = await fetchFeedComments(feedId)
-      console.log('댓글 API 응답:', res)
       
       if (res.result?.feedComments) {
-        console.log('댓글 데이터:', res.result.feedComments)
-        console.log('댓글 개수:', res.result.feedComments.length)
         setComments((prev) => ({ ...prev, [feedId]: res.result!.feedComments }))
       } else {
-        console.log('댓글 데이터가 없음')
         setComments((prev) => ({ ...prev, [feedId]: [] }))
       }
     } catch (error) {
@@ -112,13 +106,9 @@ export function FeedComments({ feedId, onShow }: FeedCommentsProps) {
 
   // 답글 토글
   const handleToggleReplies = async (feedCommentId: number) => {
-    console.log('답글 토글 클릭 - feedCommentId:', feedCommentId)
-    console.log('현재 showComments 상태:', showComments)
-    console.log('현재 feedCommentId의 상태:', showComments[feedCommentId])
     
     setShowComments((prev) => {
       const newState = { ...prev, [feedCommentId]: !prev[feedCommentId] }
-      console.log('새로운 showComments 상태:', newState)
       return newState
     })
   }

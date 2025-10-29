@@ -211,7 +211,6 @@ export default function ChatPopup({ isOpen, onClose }: ChatPopupProps) {
         const currentChatRoomId = selectedChatRoom?.chatRoomId;
 
     if (stompClientState && isConnected && currentChatRoomId) {
-      console.log(`[STOMP Subscribe Effect] Attempting to subscribe to chat room ${currentChatRoomId}`);
       loadChatRoomMessages(currentChatRoomId);
     }
   }, [stompClientState, isConnected, selectedChatRoom, loadChatRoomMessages]);

@@ -86,9 +86,7 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
     setFriendSuccess(null)
     try {
       // 1. memberId로 이메일 조회
-      console.log('이메일 조회 시도:', memberId)
       const res = await api.get(`/members/${memberId}`)
-      console.log('멤버 정보 응답:', res)
       
       const email = res?.result?.email
       if (!email) {
@@ -96,11 +94,9 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
         throw new Error("이메일 정보를 찾을 수 없습니다.")
       }
       
-      console.log('조회된 이메일:', email)
       
       // 2. 친구 추가 요청
       const response = await api.post('/friends/request', { receiverEmail: email })
-      console.log('친구 요청 응답:', response)
       
       if (response?.status === 200) {
         setFriendSuccess(`${memberName}님에게 친구 요청을 보냈습니다.`)

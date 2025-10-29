@@ -103,20 +103,15 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
     let hasReceivedMessage = false
 
     try {
-        console.log('🔌 SSE 연결 시도 시작')
         const token = await auth.getToken()
         if (!token) {
-            console.log('❌ 토큰이 없어서 SSE 연결 실패')
             return false
         }
 
         if (!token.startsWith('eyJ')) {
-            console.error('❌ 토큰이 JWT 형식이 아닙니다')
             return false
         }
 
-        console.log('🔌 SSE URL:', SSE_CONFIG.URL)
-        console.log('🔌 토큰 확인됨, EventSourcePolyfill 생성 중...')
         
         const eventSource = new EventSourcePolyfill(SSE_CONFIG.URL, {
             headers: {
@@ -130,13 +125,10 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
             reconnectInterval: SSE_CONFIG.RECONNECT_INTERVAL,
         })
         
-        console.log('🔌 EventSourcePolyfill 생성 완료, 이벤트 리스너 등록 중...')
 
         globalEventSource = eventSource
 
         eventSource.onopen = () => {
-            console.log('✅ SSE 연결 성공 - readyState:', eventSource.readyState)
-            console.log('✅ 현재 등록된 리스너 수:', globalListeners.length)
             lastHeartbeatTime = Date.now() // 하트비트 시간 초기화
             lastSuccessfulConnection = Date.now() // 성공적인 연결 시간 기록
             reconnectAttempts = 0 // 재연결 시도 횟수 리셋
@@ -146,7 +138,6 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
             
             // 연결 성공 시 모든 리스너에게 알림
             globalListeners.forEach((listener, index) => {
-                console.log(`✅ 리스너 ${index}에게 연결 성공 알림 전달`)
                 listener.onConnected(true)
             })
         }
@@ -160,15 +151,12 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
 
         eventSource.addEventListener('notification', (event: MessageEvent) => {
             try {
-                console.log('🔔 SSE에서 알림 수신:', event.data)
                 hasReceivedMessage = true
                 lastHeartbeatTime = Date.now() // 하트비트 시간 업데이트
                 lastSuccessfulConnection = Date.now() // 성공적인 연결 시간 업데이트
                 connectionQuality = 'good' // 연결 품질 개선
                 const notification = JSON.parse(event.data)
-                console.log('🔔 파싱된 알림 데이터:', notification)
                 globalListeners.forEach(listener => {
-                    console.log('🔔 리스너에게 알림 전달:', listener)
                     listener.onNotification(notification)
                 })
             } catch (error) {
@@ -222,10 +210,8 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
         });
 
         eventSource.onerror = async (error: Event) => {
-            console.log('SSE 에러 발생:', error)
             
             if (isTokenExpiredError(error)) {
-                console.log('토큰 만료 감지 - 내장 재연결 중단 후 수동 재연결')
                 // 내장 재연결 중단
                 eventSource.close()
                 // 수동 재연결 (새 토큰으로)
@@ -235,7 +221,6 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
             
             // 빈 에러는 무시 (일반적인 연결 끊김)
             if (isTrulyEmptyError(error)) {
-                console.log('빈 에러 무시 - 내장 재연결 기능 사용')
                 return
             }
             
@@ -244,7 +229,6 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
             
             // 최대 재연결 시도 횟수 초과 시 로그 출력
             if (reconnectAttempts > SSE_CONFIG.MAX_RECONNECT_ATTEMPTS) {
-                console.warn(`SSE 재연결 시도 횟수 초과 (${reconnectAttempts}/${SSE_CONFIG.MAX_RECONNECT_ATTEMPTS}). 재연결을 중단합니다.`)
                 globalListeners.forEach(listener => listener.onError(error))
                 return
             }
@@ -253,12 +237,9 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
             globalListeners.forEach(listener => listener.onError(error))
             globalListeners.forEach(listener => listener.onConnected(false))
             
-            // 일반 에러는 내장 재연결 기능 사용
-            console.log('내장 재연결 기능 사용 중...')
         }
 
         eventSource.onclose = () => {
-            console.log('SSE 연결 종료')
             globalListeners.forEach(listener => listener.onConnected(false))
             // 내장 재연결 기능 사용하므로 수동 재연결 제거
         }
@@ -266,7 +247,6 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
         return true
 
     } catch (error) {
-        console.error('SSE 연결 실패:', error)
         return false
     }
 }
@@ -280,7 +260,6 @@ const closeGlobalSSEConnection = (): void => {
         try {
             globalEventSource.close()
         } catch (error) {
-            console.error('SSE 연결 해제 중 오류:', error)
         }
 
         globalEventSource = null
@@ -291,13 +270,11 @@ const closeGlobalSSEConnection = (): void => {
 // 연결 상태 검증 함수 (운영 환경 강화)
 const validateConnection = (): boolean => {
     if (!globalEventSource) {
-        console.log('연결 상태 검증: EventSource가 null')
         return false
     }
     
     // EventSource의 readyState 확인
     if (globalEventSource.readyState === EventSource.CLOSED) {
-        console.log('연결 상태 검증: EventSource가 CLOSED 상태')
         return false
     }
     
@@ -316,13 +293,11 @@ const validateConnection = (): boolean => {
     
     // 하트비트 타임아웃 체크
     if (timeSinceLastHeartbeat > SSE_CONFIG.HEARTBEAT_TIMEOUT) {
-        console.log(`하트비트 타임아웃 - 연결이 끊어진 것으로 간주 (${Math.round(timeSinceLastHeartbeat / 1000)}초 경과)`)
         return false
     }
     
     // 연결 품질이 critical이면 강제 재연결
     if (connectionQuality === 'critical' && timeSinceLastConnection > 300000) { // 5분 이상
-        console.log('연결 품질이 critical - 강제 재연결 시도')
         return false
     }
     
@@ -341,7 +316,6 @@ const startHeartbeatMonitoring = (): void => {
     // 하트비트 모니터링 (30초마다)
     heartbeatIntervalId = setInterval(() => {
         if (globalConnectionCount > 0 && !validateConnection()) {
-            console.log('하트비트 모니터링에서 연결 끊김 감지 - 강화된 재연결 시도')
             if (globalEventSource) {
                 globalEventSource.close();
                 // 지수 백오프로 재연결 시도
@@ -376,14 +350,12 @@ const scheduleReconnection = (): void => {
         delay = 10000; // 10번째 이후는 10초 후
     }
     
-    console.log(`재연결 시도 ${reconnectAttempts + 1}/${SSE_CONFIG.MAX_RECONNECT_ATTEMPTS} - ${delay}ms 후 시도`);
     
     setTimeout(async () => {
         try {
             await createGlobalSSEConnection();
             isReconnecting = false;
         } catch (error) {
-            console.error('재연결 실패:', error);
             isReconnecting = false;
             if (reconnectAttempts < SSE_CONFIG.MAX_RECONNECT_ATTEMPTS) {
                 scheduleReconnection();
@@ -401,12 +373,10 @@ const performHealthCheck = (): void => {
     
     // 연결 상태가 좋지 않으면 경고
     if (timeSinceLastHeartbeat > 30000) { // 30초 이상
-        console.warn(`연결 상태 불안정 - 마지막 하트비트로부터 ${Math.round(timeSinceLastHeartbeat / 1000)}초 경과`);
     }
     
     // 연결 품질에 따른 조치
     if (connectionQuality === 'critical') {
-        console.log('연결 품질이 critical - 즉시 재연결 시도');
         if (globalEventSource) {
             globalEventSource.close();
             scheduleReconnection();
@@ -449,7 +419,6 @@ export const useNotificationSSE = () => {
         try {
             setIsLoading(true)
             const data = await fetchNotificationsApi(cursor, limit)
-            console.log('알림 목록 조회 응답:', data.result.notifications.map(n => ({ id: n.id, type: n.data?.type })))
             
             if (cursor) {
                 setNotifications(prev => [...prev, ...data.result.notifications])
@@ -460,7 +429,6 @@ export const useNotificationSSE = () => {
             setNextCursor(data.result.nextCursor)
             setHasNext(data.result.hasNext)
         } catch (error) {
-            console.error('알림 목록 조회 오류:', error)
         } finally {
             setIsLoading(false)
         }
@@ -472,7 +440,6 @@ export const useNotificationSSE = () => {
         try {
             await fetchNotifications(nextCursor, 10)
         } catch (error) {
-            console.error('더 많은 알림 로드 오류:', error)
         } finally {
             setIsLoading(false)
         }
@@ -494,18 +461,19 @@ export const useNotificationSSE = () => {
 
         const listener = {
             onConnected: (connected: boolean) => {
-                console.log('알림 리스너 연결 상태 변경:', connected)
+                
                 setIsConnected(connected)
             },
             onNotification: (notification: Notification) => {
-                console.log('🔔 onNotification 핸들러 호출됨:', notification)
+                
                 if (!notification || !notification.data) {
-                    console.log('🔔 알림 데이터가 유효하지 않음:', notification)
+                    
                     return
                 }
-                console.log('🔔 알림 상태 업데이트 시작')
+                
+                
                 updateNotificationState(setNotifications, setUnreadCount, notification)
-                console.log('🔔 토스트 알림 표시')
+                
                 toast({
                     title: "🔔 새로운 알림",
                     description: getNotificationMessage(notification),
@@ -513,7 +481,7 @@ export const useNotificationSSE = () => {
                 })
             },
             onError: (error: Event) => {
-                console.log('알림 리스너에서 에러 발생:', error)
+                
                 // 에러가 발생해도 즉시 연결 상태를 false로 설정하지 않음
                 // SSE 연결 자체는 유지되고 있을 수 있음
             }
@@ -524,7 +492,7 @@ export const useNotificationSSE = () => {
         
         // 연결 성공 시 즉시 상태 업데이트
         if (success && globalEventSource && globalEventSource.readyState === EventSource.OPEN) {
-            console.log('초기 연결 상태 확인: 연결됨')
+            
             setIsConnected(true)
         }
 
@@ -578,8 +546,8 @@ export const useNotificationSSE = () => {
 
     const deleteNotification = useCallback(async (notificationId: string) => {
         try {
-            console.log('삭제할 알림 ID:', notificationId)
-            console.log('현재 알림 목록:', notifications.map(n => ({ id: n.id, title: n.data?.type })))
+            
+            
             
             await deleteNotificationApi(notificationId)
             setNotifications(prev => prev.filter(notification => notification.id !== notificationId))
@@ -602,7 +570,7 @@ export const useNotificationSSE = () => {
 
         reconnectDebounceRef.current = setTimeout(() => {
             if (isAuthenticated && !isConnected) {
-                console.log('디바운스된 SSE 재연결 시도')
+                
                 connectSSE()
             }
         }, 1000) // 1초 디바운스 (더 안정적으로)
@@ -612,13 +580,13 @@ export const useNotificationSSE = () => {
     useEffect(() => {
         const handleOnline = () => {
             if (isAuthenticated && !isConnected) {
-                console.log('네트워크 연결 복구 - SSE 재연결 시도')
+                
                 debouncedConnectSSE()
             }
         }
 
         const handleOffline = () => {
-            console.log('네트워크 연결 끊김')
+            
             setIsConnected(false)
             connectionQuality = 'critical'
         }
@@ -626,41 +594,41 @@ export const useNotificationSSE = () => {
         // 페이지 가시성 변화 감지 (절전 모드, 탭 전환 등)
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
-                console.log('페이지 가시성 복구 - SSE 연결 상태 확인')
+                
                 if (isAuthenticated && !isConnected) {
-                    console.log('SSE 연결이 끊어진 상태 - 재연결 시도')
+                    
                     debouncedConnectSSE()
                 } else if (isAuthenticated && isConnected) {
                     // 연결이 유지되고 있다면 하트비트 확인
-                    console.log('SSE 연결 상태 확인 중...')
+                    
                     // 연결 품질 체크
                     if (connectionQuality === 'poor' || connectionQuality === 'critical') {
-                        console.log('연결 품질이 좋지 않음 - 재연결 시도')
+                        
                         debouncedConnectSSE()
                     }
                 }
             } else {
-                console.log('페이지 가시성 손실')
+                
             }
         }
 
         // 페이지 포커스/블러 감지
         const handleFocus = () => {
-            console.log('페이지 포커스 획득 - SSE 연결 상태 확인')
+            
             if (isAuthenticated && !isConnected) {
-                console.log('포커스 시 SSE 재연결 시도')
+                
                 debouncedConnectSSE()
             } else if (isAuthenticated && isConnected) {
                 // 연결 품질 체크
                 if (connectionQuality === 'poor' || connectionQuality === 'critical') {
-                    console.log('포커스 시 연결 품질 개선을 위한 재연결 시도')
+                    
                     debouncedConnectSSE()
                 }
             }
         }
 
         const handleBlur = () => {
-            console.log('페이지 포커스 손실')
+            
         }
 
         // 주기적인 연결 상태 체크 (운영 환경용)
@@ -671,7 +639,7 @@ export const useNotificationSSE = () => {
                 
                 // 3분 이상 응답이 없으면 재연결 시도 (더 관대하게)
                 if (timeSinceLastHeartbeat > 180000) {
-                    console.log('주기적 체크에서 연결 불안정 감지 - 재연결 시도')
+                    
                     debouncedConnectSSE()
                 }
             }
