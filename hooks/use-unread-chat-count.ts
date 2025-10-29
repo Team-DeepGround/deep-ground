@@ -69,6 +69,11 @@ export function useUnreadChatCount(enabled: boolean = true) {
 
   }, [enabled]);
 
+  // 페이지 포커스 시 업데이트 (사용자가 다른 탭에서 돌아왔을 때)
+  const handleFocus = useCallback(() => {
+    fetchUnreadCount();
+  }, [fetchUnreadCount]);
+
   useEffect(() => {
     if (!enabled) {
       setUnreadCount(0);
@@ -85,7 +90,7 @@ export function useUnreadChatCount(enabled: boolean = true) {
       window.removeEventListener('chat-unread-count', handleUnreadCountEvent);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [enabled, handleUnreadCountEvent]);
+  }, [enabled, handleUnreadCountEvent, handleFocus]);
 
   return { unreadCount, isLoading, refetch: fetchUnreadCount };
 }
