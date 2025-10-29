@@ -248,9 +248,14 @@ export const useChatMessages = (
           
           // 최초 1회만 /read 전송 (내 memberId가 있을 때만)
           if (latestMessage && myInfoRef.current && !initialReadSent.current.has(chatRoomId)) {
-            sendReadReceipt(stompClientState, chatRoomId, latestMessage.createdAt);
-            initialReadSent.current.add(chatRoomId);
-            // 목록에서 unreadCount를 0으로
+            try {
+              sendReadReceipt(stompClientState, chatRoomId, latestMessage.createdAt);
+              initialReadSent.current.add(chatRoomId);
+            } catch (error) {
+              toast({ title: "읽음 처리 실패", description: "메시지 읽음 상태를 서버에 전송하는데 실패했습니다.", variant: "destructive" });
+            }
+
+            // 클라이언트 UI 즉시 업데이트: 목록에서 unreadCount를 0으로
             setFriendChatRooms((prev: any[]) => prev.map((room: any) =>
               room.chatRoomId === chatRoomId ? { ...room, unreadCount: selectedChatRoomRef.current?.chatRoomId === chatRoomId ? 0 : 0 } : room
             ));
