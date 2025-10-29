@@ -44,7 +44,8 @@ const navigation = [
 
 export default function Header() {
   const pathname = usePathname()
-  const { isAuthenticated, logout, role } = useAuth()
+  const { isAuthenticated, logout, user } = useAuth()
+  const role = user?.role
   const { unreadCount, isConnected } = useNotificationContext()
   const { unreadCount: chatUnreadCount } = useUnreadChatCount()
 

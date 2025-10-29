@@ -253,7 +253,7 @@ export function FeedReplies({ feedCommentId, onShow }: FeedRepliesProps) {
                           <span className="text-xs ml-1">{reply.likeCount}</span>
                         </Button>
                         {/* 수정/삭제 버튼 (본인만 노출) */}
-                        {(user?.id as number) === reply.memberId && (
+                        {user?.memberId === reply.memberId && (
                           <>
                             {editingReplyId === reply.feedReplyId ? (
                               <Button size="icon" variant="ghost" className="h-auto px-1 py-1" onClick={handleCancelEditReply}><span className="sr-only">취소</span>❌</Button>

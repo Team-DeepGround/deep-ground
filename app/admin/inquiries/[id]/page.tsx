@@ -23,7 +23,8 @@ export default function AdminInquiryDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
-  const { role, isAuthenticated } = useAuth()
+  const { user, isAuthenticated } = useAuth()
+  const role = user?.role
 
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<AdminInquiryDetail | null>(null)

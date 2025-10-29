@@ -6,20 +6,19 @@ import { useRouter } from "next/navigation"
 import { Report } from "@/types/report"
 import { ReportList } from "@/components/admin/report-list"
 import { Skeleton } from "@/components/ui/skeleton"
-import { auth } from "@/lib/auth"
+import { useAuth } from "@/components/auth-provider"
 
 export default function AdminAllReportsPage() {
   const [reports, setReports] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
   const [unauthorized, setUnauthorized] = useState(false)
   const router = useRouter()
+  const { user } = useAuth()
 
   useEffect(() => {
     const fetchReports = async () => {
-      const token = await auth.getToken()
-      const role = await auth.getRole()
-
-      if (!token || role !== "ROLE_ADMIN") {
+      const role = user?.role
+      if (!user || role !== "ROLE_ADMIN") {
         setUnauthorized(true)
         router.replace("/")
         return
@@ -35,8 +34,8 @@ export default function AdminAllReportsPage() {
       }
     }
 
-    fetchReports()
-  }, [router])
+    if (user !== undefined) fetchReports()
+  }, [router, user])
 
   if (unauthorized) return null
 

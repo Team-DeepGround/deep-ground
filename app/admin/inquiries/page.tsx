@@ -20,7 +20,8 @@ import InquiryStatusBadge from "@/components/admin/InquiryStatusBadge"
 const ALL: InquiryStatus | "ALL" = "ALL"
 
 export default function AdminInquiryListPage() {
-  const { role, isAuthenticated } = useAuth()
+  const { user, isAuthenticated } = useAuth()
+  const role = user?.role
   const router = useRouter()
   const { toast } = useToast()
 
@@ -46,7 +47,7 @@ export default function AdminInquiryListPage() {
   async function load() {
     setLoading(true)
     try {
-      const data = await fetchAdminInquiryList(status === ALL ? undefined : status)
+      const data = await fetchAdminInquiryList(status === "ALL" ? undefined : status)
       // 간단 키워드 필터(제목)
       const filtered = q ? data.filter(d => d.title.toLowerCase().includes(q.toLowerCase())) : data
       setItems(filtered)
