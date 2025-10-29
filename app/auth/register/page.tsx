@@ -92,27 +92,21 @@ export default function RegisterPage() {
       }
     } catch (err: any) {
       // ===========================================
-      // ▼▼▼▼▼▼▼▼▼▼▼▼▼ 1. 첫 번째 수정 지점 ▼▼▼▼▼▼▼▼▼▼▼▼▼
-      // ===========================================
-      // err.response.status -> err.status
       const status = err?.status
-      // err.response.data.message -> err.message
-      const backendMessage: string | undefined = err?.message
-      // ===========================================
 
       // ✅ 백엔드 포맷: {"status":400,"message":"[AUTH ERROR] 이미 존재하는 이메일입니다."}
       if (status === 400) {
         setIsEmailAvailable(false)
         toast({
           title: "중복된 이메일",
-          description: backendMessage ?? "이미 사용 중인 이메일입니다.",
+          description: "이미 사용 중인 이메일입니다.",
           variant: "destructive",
         })
       } else {
         setIsEmailAvailable(null)
         toast({
           title: `오류${status ? ` (${status})` : ""}`,
-          description: backendMessage ?? "이메일 중복 확인 중 오류가 발생했습니다.",
+          description: "이메일 중복 확인 중 오류가 발생했습니다.",
           variant: "destructive",
         })
       }
@@ -156,27 +150,21 @@ export default function RegisterPage() {
       }
     } catch (err: any) {
       // ===========================================
-      // ▼▼▼▼▼▼▼▼▼▼▼▼▼ 2. 두 번째 수정 지점 ▼▼▼▼▼▼▼▼▼▼▼▼▼
-      // ===========================================
-      // err.response.status -> err.status
       const status = err?.status
-      // err.response.data.message -> err.message
-      const backendMessage: string | undefined = err?.message
-      // ===========================================
 
       // 닉네임도 동일 정책: 400이면 중복으로 간주하고 메시지 그대로 노출
       if (status === 400) {
         setIsNicknameAvailable(false)
         toast({
           title: "중복된 닉네임",
-          description: backendMessage ?? "이미 사용 중인 닉네임입니다.",
+          description: "이미 사용 중인 닉네임입니다.",
           variant: "destructive",
         })
       } else {
         setIsNicknameAvailable(null)
         toast({
           title: `오류${status ? ` (${status})` : ""}`,
-          description: backendMessage ?? "닉네임 중복 확인 중 오류가 발생했습니다.",
+          description: "닉네임 중복 확인 중 오류가 발생했습니다.",
           variant: "destructive",
         })
       }
@@ -237,24 +225,15 @@ export default function RegisterPage() {
         router.push(`/auth/verify-email?email=${encodeURIComponent(normEmail)}`)
       } else {
         const backendMessage: string | undefined = (res as any)?.message
-        toast({
-          title: "회원가입 실패",
-          description: backendMessage ?? "회원가입 중 오류가 발생했습니다.",
-          variant: "destructive",
-        })
+        // 회원가입 실패 시에도 프론트엔드 메시지 사용
+        toast({ title: "회원가입 실패", description: "회원가입 중 오류가 발생했습니다.", variant: "destructive" })
       }
     } catch (err: any) {
       // ===========================================
-      // ▼▼▼▼▼▼▼▼▼▼▼▼▼ 3. 세 번째 수정 지점 ▼▼▼▼▼▼▼▼▼▼▼▼▼
-      // ===========================================
-      // err.response.status -> err.status
       const status = err?.status
-      // err.response.data.message -> err.message
-      const backendMessage: string | undefined = err?.message
-      // ===========================================
       toast({
         title: `회원가입 실패${status ? ` (${status})` : ""}`,
-        description: backendMessage ?? "회원가입 중 오류가 발생했습니다. 다시 시도해주세요.",
+        description: "회원가입 중 오류가 발생했습니다. 다시 시도해주세요.",
         variant: "destructive",
       })
     } finally {
