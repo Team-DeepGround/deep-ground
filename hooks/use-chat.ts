@@ -350,12 +350,15 @@ export const useChat = (isOpen: boolean) => {
   // SSE/WebSocket unreadCount 이벤트 수신 시 채팅방 목록 unreadCount 갱신
   useEffect(() => {
     async function handleUnreadCountEvent(e: any) {
-      const { chatRoomId, unreadCount, lastestMessageTime } = e.detail || {};
+      const { chatRoomId, unreadCount, lastestMessageTime, senderId } = e.detail || {};
       
       // 현재 사용자 ID 가져오기
       const currentUserId = await auth.getMemberId();
       
-      // 선택된 방에 대한 서버 unread 이벤트가 오면 클라이언트 즉시 읽음 처리도 보냄
+      // 내가 보낸 메시지로 인한 unreadCount 업데이트는 무시
+      if (senderId === currentUserId) return;
+
+      // 현재 보고 있는 채팅방에 대한 unread 이벤트가 오면, 즉시 읽음 처리를 다시 보냄
       if (
         selectedChatRoom &&
         Number(chatRoomId) === selectedChatRoom.chatRoomId &&
@@ -375,20 +378,21 @@ export const useChat = (isOpen: boolean) => {
             sendReadReceipt(
               stompClientRef.current,
               Number(chatRoomId),
-              currentUserId,
               readTime
             );
           } catch {}
         }
       }
       
+      // 채팅방 목록의 unreadCount 업데이트
       setFriendChatRooms(prev => {
         const updated = prev.map(room => {
           return room.chatRoomId === Number(chatRoomId)
             ? {
                 ...room,
                 unreadCount:
-                  selectedChatRoom && selectedChatRoom.chatRoomId === Number(chatRoomId)
+                  // 현재 선택된 방이면 0, 아니면 서버에서 받은 값
+                  (selectedChatRoom && selectedChatRoom.chatRoomId === Number(chatRoomId))
                     ? 0
                     : unreadCount
               }
@@ -402,7 +406,7 @@ export const useChat = (isOpen: boolean) => {
             ? {
                 ...room,
                 unreadCount:
-                  selectedChatRoom && selectedChatRoom.chatRoomId === Number(chatRoomId)
+                  (selectedChatRoom && selectedChatRoom.chatRoomId === Number(chatRoomId))
                     ? 0
                     : unreadCount
               }
@@ -437,10 +441,9 @@ export const useChat = (isOpen: boolean) => {
       // 방 전환 시 최신 메시지 기준으로 즉시 읽음 전송
       if (stompClientRef.current && stompClientRef.current.connected) {
         const roomState = allChatRoomMessagesRef.current[selectedChatRoom.chatRoomId];
-        const latestCreatedAt = roomState?.messages?.length
-          ? roomState.messages[roomState.messages.length - 1].createdAt
-          : undefined;
-        if (latestCreatedAt && stompClientRef.current) {
+        // 메시지가 이미 로드된 경우에만 읽음 처리 전송
+        if (roomState?.messages?.length) {
+          const latestCreatedAt = roomState.messages[roomState.messages.length - 1].createdAt;
           const sendRead = async () => {
             try {
               const myMemberId = await auth.getMemberId();
@@ -448,7 +451,6 @@ export const useChat = (isOpen: boolean) => {
                 sendReadReceipt(
                   stompClientRef.current,
                   selectedChatRoom.chatRoomId,
-                  myMemberId,
                   latestCreatedAt
                 );
               }
@@ -471,7 +473,7 @@ export const useChat = (isOpen: boolean) => {
             const myMemberId = await auth.getMemberId();
             if (myMemberId !== null && stompClientRef.current) {
               sendReadReceipt(
-                stompClientRef.current, selectedChatRoom.chatRoomId, myMemberId, latestMessage.createdAt
+                stompClientRef.current, selectedChatRoom.chatRoomId, latestMessage.createdAt
               );
               initialReadSent.current.add(selectedChatRoom.chatRoomId);
             }

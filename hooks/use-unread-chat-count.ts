@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { api } from '@/lib/api-client';
 import { auth } from '@/lib/auth';
 
 export function useUnreadChatCount(enabled: boolean = true) {
@@ -8,6 +9,7 @@ export function useUnreadChatCount(enabled: boolean = true) {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchUnreadCount = async () => {
+    if (!enabled) return;
     try {
       setIsLoading(true);
       
@@ -26,7 +28,6 @@ export function useUnreadChatCount(enabled: boolean = true) {
       }
       
       // 전체 채팅방 API를 사용해서 읽지 않은 메시지 개수 가져오기
-      const { api } = await import('@/lib/api-client');
       const allRoomsResponse = await api.get('/chatrooms');
       
       // 모든 채팅방의 unreadCount를 합산
@@ -35,7 +36,7 @@ export function useUnreadChatCount(enabled: boolean = true) {
         (sum: number, room: { unreadCount?: number }) => sum + (room.unreadCount || 0), 
         0
       );
-
+      
       setUnreadCount(totalUnreadCount);
     } catch (error) {
       setUnreadCount(0);
@@ -43,6 +44,30 @@ export function useUnreadChatCount(enabled: boolean = true) {
       setIsLoading(false);
     }
   };
+
+  const handleUnreadCountEvent = useCallback(async (e: any) => {
+    if (!enabled) return;
+    
+    const { chatRoomId, unreadCount, senderId } = e.detail || {};
+    const currentUserId = await auth.getMemberId();
+
+    // 내가 보낸 메시지로 인한 이벤트는 무시
+    if (senderId === currentUserId) {
+      return;
+    }
+
+    // 현재 보고 있는 채팅방에 대한 이벤트는 무시 (useChat 훅에서 처리)
+    const currentChatRoomId = window.globalCurrentChatRoomId;
+    if (currentChatRoomId === chatRoomId) {
+      return;
+    }
+
+    // 전체 unreadCount를 다시 fetch하는 대신, 증감분을 계산하여 상태 업데이트
+    // 이 방식은 정확하지 않을 수 있으므로, 전체를 다시 fetch하는 것이 더 안정적일 수 있음
+    // 여기서는 기존 로직대로 전체 fetch를 호출
+    fetchUnreadCount();
+
+  }, [enabled]);
 
   useEffect(() => {
     if (!enabled) {
@@ -52,34 +77,15 @@ export function useUnreadChatCount(enabled: boolean = true) {
     }
 
     fetchUnreadCount();
-    
-    // 5초마다 읽지 않은 메시지 개수 업데이트 (더 빠른 반영)
-    const interval = setInterval(fetchUnreadCount, 5000);
-    
-    // SSE 이벤트 리스너 - 새 메시지가 올 때마다 즉시 업데이트
-    const handleChatMessage = () => {
-      fetchUnreadCount();
-    };
-    
-    // 채팅 관련 이벤트들 리스닝
-    window.addEventListener('chat-message-received', handleChatMessage);
-    window.addEventListener('chat-unread-updated', handleChatMessage);
-    window.addEventListener('chat-unread-count', handleChatMessage); // SSE에서 발생하는 이벤트
-    
-    // 페이지 포커스 시 업데이트 (사용자가 다른 탭에서 돌아왔을 때)
-    const handleFocus = () => {
-      fetchUnreadCount();
-    };
+
+    window.addEventListener('chat-unread-count', handleUnreadCountEvent);
     window.addEventListener('focus', handleFocus);
     
     return () => {
-      clearInterval(interval);
-      window.removeEventListener('chat-message-received', handleChatMessage);
-      window.removeEventListener('chat-unread-updated', handleChatMessage);
-      window.removeEventListener('chat-unread-count', handleChatMessage);
+      window.removeEventListener('chat-unread-count', handleUnreadCountEvent);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [enabled]);
+  }, [enabled, handleUnreadCountEvent]);
 
   return { unreadCount, isLoading, refetch: fetchUnreadCount };
 }

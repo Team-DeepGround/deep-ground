@@ -169,14 +169,14 @@ const createGlobalSSEConnection = async (): Promise<boolean> => {
                 lastHeartbeatTime = Date.now() // 하트비트 시간 업데이트
                 lastSuccessfulConnection = Date.now() // 성공적인 연결 시간 업데이트
                 connectionQuality = 'good' // 연결 품질 개선
-                const {chatRoomId, unreadCount, lastestMessageTime} = JSON.parse(event.data)
+                const {chatRoomId, unreadCount, lastestMessageTime, senderId} = JSON.parse(event.data)
                 if (typeof window !== 'undefined') {
                     if (!globalCurrentChatRoomId || globalCurrentChatRoomId !== chatRoomId) {
                         window.dispatchEvent(new CustomEvent('chat-unread-toast', {
-                            detail: {chatRoomId, unreadCount, lastestMessageTime}
+                            detail: {chatRoomId, unreadCount, lastestMessageTime, senderId}
                         }))
                         window.dispatchEvent(new CustomEvent('chat-unread-count', {
-                            detail: {chatRoomId, unreadCount, lastestMessageTime}
+                            detail: {chatRoomId, unreadCount, lastestMessageTime, senderId}
                         }))
                     }
                 }
