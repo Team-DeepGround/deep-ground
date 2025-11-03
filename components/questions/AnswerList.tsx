@@ -30,7 +30,7 @@ interface AnswerListProps {
   setEditingCommentId: (commentId: number | null) => void;
   question: any;
   toast: any;
-  memberId: number | null;
+  publicId: string | null;
 }
 
 // 인증 헤더가 필요한 이미지 렌더링용 컴포넌트
@@ -88,7 +88,7 @@ export default function AnswerList({
   setEditingCommentId, 
   question, 
   toast,
-  memberId
+  publicId
 }: AnswerListProps) {
   const router = useRouter();
 
@@ -200,7 +200,7 @@ export default function AnswerList({
                   </Badge>
                 )}
                 {/* 답변 수정/삭제 버튼은 작성자에게만 표시 */}
-                {memberId && answer.memberId && Number(memberId) === Number(answer.memberId) && (
+                {publicId && answer.publicId && publicId === answer.publicId && (
                   <>
                     <Button
                       variant="ghost"
@@ -310,7 +310,7 @@ export default function AnswerList({
                             </span>
                           )}
                           {/* 댓글 수정/삭제 버튼은 작성자에게만 표시 */}
-                          {memberId && comment.memberId && Number(memberId) === Number(comment.memberId) && (
+                          {publicId && comment.publicId && publicId === comment.publicId && (
                             <>
                               <Button size="icon" variant="ghost" aria-label="댓글 수정" onClick={() => {
                                 setEditingCommentId(comment.commentId);
