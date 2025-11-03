@@ -617,7 +617,7 @@ function QuestionCard({ question, onTitleClick }: QuestionCardProps) {
                   onClick={() => {
                     const qid = question.questionId ?? question.id;
                     if (qid) {
-                      window.location.href = `/questions/${qid}`;
+                      window.location.href = `/questions/${question.nickname}/${question.id}`;
                     } else {
                       alert('질문 ID가 없습니다!');
                     }
