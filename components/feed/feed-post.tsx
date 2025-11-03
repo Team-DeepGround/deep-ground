@@ -49,7 +49,7 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
   const [isUpdating, setIsUpdating] = useState(false)
   const [showComments, setShowComments] = useState(false)
 
-  const feedShareUrl = `${window.location.origin}/feed/${post.feedId}`
+  const feedShareUrl = `${window.location.origin}/feed/${post.memberName}/${post.feedId}`
   const shareTitle = `${post.memberName}님의 피드`
   const shareText = post.content
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -327,7 +327,7 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
         </CardHeader>
         <CardContent 
           className={`p-4 ${!isEditing && "cursor-pointer hover:bg-gray-50/50 transition-colors"}`}
-          onClick={() => !isEditing && router.push(`/feed/${post.feedId}`)}
+          onClick={() => !isEditing && router.push(`/feed/${post.memberName}/${post.feedId}`)}
         >
           {isEditing ? (
             // 수정 모드 UI
