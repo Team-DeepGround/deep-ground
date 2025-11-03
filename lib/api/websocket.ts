@@ -20,11 +20,6 @@ export const createStompClient = async (onConnect: () => void, onError: (error: 
     }
   }
 
-  if (token) {
-    wsUrl +=
-      (wsUrl.includes('?') ? '&' : '?') + `token=${encodeURIComponent(token)}`;
-  }
-
   const client = new Client({
     brokerURL: wsUrl,
     reconnectDelay: 5000,
