@@ -30,7 +30,7 @@ export const StudyCard = memo(function StudyCard({ study }: StudyCardProps) {
   const router = useRouter()
   
   const handleClick = useCallback(() => {
-    router.push(`/studies/${study.id}`)
+    router.push(`/studies/${study.organizer.name}/${study.id}`)
   }, [study.id])
   
   return (

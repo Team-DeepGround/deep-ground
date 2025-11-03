@@ -577,7 +577,7 @@ export default function QuestionDetailPage() {
           memberId={memberId ?? null}
           statusUpdating={statusUpdating}
           handleStatusChange={handleStatusChange}
-          onEdit={() => router.push(`/questions/${params.id}/edit`)}
+          onEdit={() => router.push(`/questions/${params.nickname}/${params.id}/edit`)}
           onDelete={async () => {
             if (window.confirm("정말로 이 질문을 삭제하시겠습니까?")) {
               try {

@@ -14,10 +14,7 @@ import { CommentSection } from "@/components/studies/CommentSection"
 import { StudySchedule } from "@/components/studies/StudySchedule"
 import { Separator } from "@/components/ui/separator"
 import { fetchStudySchedulesByGroup } from "@/lib/api/studySchedule"
-import { Card } from "@/components/ui/card"
-import { Calendar, Clock } from "lucide-react"
-import { formatDate } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+
 import {
   AlertDialog,
   AlertDialogAction,
