@@ -14,7 +14,7 @@ export interface FeedUpdateRequest {
 }
 
 export interface FetchFeedResponse {
-  memberId: number;
+  publicId: string;
   feedId: number;
   memberName: string;
   content: string;
@@ -22,16 +22,16 @@ export interface FetchFeedResponse {
   liked: boolean;
   commentCount: number;
   shareCount: number;
-  profileId: number;
+  profilePublicId: string;
   profileImageUrl?: string;
   profileImageId?: number;
   createdAt: string;
   mediaUrls: string[];
   mediaIds?: number[];
-  isShared: boolean;
+  shared: boolean;
   sharedFeed?: FetchFeedResponse;
   sharedBy?: {
-    memberId: number;
+    publicId: string;
     memberName: string;
     profileImageUrl?: string;
   };
@@ -75,17 +75,17 @@ export interface FeedMediaResponse {
 
 // ====== Feed Comment DTO ======
 export interface FetchFeedCommentResponse {
-  memberId: number;
+  publicId: string;
   feedCommentId: number;
   memberName: string;
   content: string;
   replyCount: number;
   likeCount: number;
   liked: boolean;
-  profileId: number;
+  profileId?: number; // profilePublicId가 있을 경우를 대비해 optional로 유지
   profileImageUrl?: string;
   createdAt: string;
-  mediaUrls: string[];
+  mediaIds?: number[];
 }
 
 export interface FetchFeedCommentsResponse {
@@ -102,16 +102,16 @@ export interface FetchFeedCommentsResponse {
 
 // ====== Feed Reply DTO ======
 export interface FetchFeedReplyResponse {
-  memberId: number;
+  publicId: string;
   feedReplyId: number;
   memberName: string;
   content: string;
   likeCount: number;
   liked: boolean;
-  profileId: number;
+  profileId?: number; // profilePublicId가 있을 경우를 대비해 optional로 유지
   profileImageUrl?: string;
   createdAt: string;
-  mediaUrls: string[];
+  mediaIds?: number[];
 }
 
 export interface FetchFeedRepliesResponse {

@@ -83,12 +83,16 @@ export default function StudyDetailPage() {
 
       try {
         const response = await api.get(`/study-group/${params.id}`)
+        const result = response.result;
         setStudy({
-          ...response.result,
+          ...result,
+          writerNickname: result.writer,
+          writeMemberPublicId: result.writeMemberPublicId,
+          explanation: result.explanation,
           sessions: dummySessions,
         })
 
-        const participantResponse = await api.get(`/study-group/${params.id}/participants`)
+        const participantResponse = await api.get(`/study-group/${params.id}/participants`);
         setParticipants(participantResponse.result)
       } catch (error) {
         toast({
@@ -293,7 +297,7 @@ export default function StudyDetailPage() {
       <div className="space-y-6">
         <StudyHeader
           study={study}
-          memberStatus={study.memberStatus}
+          memberStatus={study.memberStatus} // API 응답에 따라 'memberStatus' 사용
           onJoinStudy={handleJoinStudy}
           onShare={handleShare}
           onLeaveStudy={() => setShowLeaveDialog(true)}
@@ -352,10 +356,9 @@ export default function StudyDetailPage() {
         <TabsContent value="participants" className="mt-6">
           {study?.id && study.id && (
           <ParticipantList
-            studyId={Number(study.id)}
-            writerId={Number(study.writer)}
+            studyId={study.id}
+            writerPublicId={study.writeMemberPublicId}
             groupLimit={study.groupLimit}
-            currentMemberId={memberId ?? undefined}
           />
         )}
         </TabsContent>

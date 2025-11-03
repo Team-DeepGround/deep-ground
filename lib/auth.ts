@@ -4,6 +4,7 @@ const MEMBER_ID_KEY = 'member_id';
 const ROLE_KEY = "auth_role";
 const EMAIL_KEY = "auth_email";
 const NICKNAME_KEY = "auth_nickname"; // ✅ 추가
+const PUBLIC_Id_KEY = "public_id"
 
 export function getTokenExp(token: string): number | null {
   try {
@@ -111,5 +112,20 @@ export const auth = {
   removeNickname() {
     if (typeof window === 'undefined') return;
     localStorage.removeItem(NICKNAME_KEY);
+  },
+
+  setPublicId(id: string) {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(PUBLIC_Id_KEY, id);
+  },
+
+  getPublicId(): string | null {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem(PUBLIC_Id_KEY);
+  },
+
+  removePublicId() {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(PUBLIC_Id_KEY);
   },
 };

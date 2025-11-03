@@ -26,17 +26,17 @@ export default function QuestionCard({ question, onTitleClick }: QuestionCardPro
   };
 
   const handleProfileClick = async () => {
-    const profileId = question.memberProfileId || question.profileId || question.memberId;
+    const profileId = question.profilePublicId;
     if (profileId) {
       try {
         // API 클라이언트를 사용하여 프로필 존재 여부 확인
         await api.get(`/members/profile/${profileId}`);
         router.push(`/profile/${profileId}`);
       } catch (error: any) {
-        if (error.status === 400) {
+        if (error.response?.status === 400 || error.status === 400) {
           alert('해당 사용자의 프로필이 존재하지 않습니다.');
         } else {
-          alert('프로필을 조회하는 중 오류가 발생했습니다.');
+          alert(`프로필을 조회하는 중 오류가 발생했습니다: ${error.message}`);
         }
       }
     }
@@ -71,7 +71,7 @@ export default function QuestionCard({ question, onTitleClick }: QuestionCardPro
                 >
                   {question.title}
                 </button>
-                {question.isResolved && <span className="ml-2 text-green-500">해결됨</span>}
+                {question.status === 'CLOSED' && <span className="ml-2 text-green-500">해결됨</span>}
               </h3>
               {/* 기술 스택 표시 */}
               <div className="flex flex-wrap gap-1.5 mt-2">
@@ -113,12 +113,7 @@ export default function QuestionCard({ question, onTitleClick }: QuestionCardPro
         </div>
         <Button
           size="sm"
-          onClick={() => {
-            const qid = question?.questionId ?? question?.id;
-            if (qid) {
-              window.location.href = `/questions/${qid}`;
-            }
-          }}
+          onClick={onTitleClick}
           disabled={!question?.questionId && !question?.id}
         >
           답변하기

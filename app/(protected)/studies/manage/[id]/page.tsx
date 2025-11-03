@@ -12,17 +12,17 @@ import { StudyMembers } from "@/components/studies/manage/StudyMembers"
 import { StudyApplicants } from "@/components/studies/manage/StudyApplicants"
 
 interface StudyMember {
-  memberId: number
+  memberPublicId: string
   nickname: string
   joinedAt: string
   owner: boolean
 }
 
 interface Applicant {
-  memberId: number
-  nickname: string
-  joinedAt: null
-  owner: false
+  memberPublicId: string; // 백엔드 응답에 맞춰 memberPublicId로 변경
+  nickname: string;
+  joinedAt: null;
+  owner: false;
 }
 
 export default function StudyManagementPage() {
@@ -91,12 +91,12 @@ export default function StudyManagementPage() {
     })
   }
 
-  const handleKickMember = async (memberId: number): Promise<void> => {
+  const handleKickMember = async (memberPublicId: string): Promise<void> => {
     try {
       // 먼저 UI에서 해당 멤버를 제거 (즉시 반영)
-      setMembers(prevMembers => prevMembers.filter(member => member.memberId !== memberId))
+      setMembers(prevMembers => prevMembers.filter(member => member.memberPublicId !== memberPublicId))
       
-      await api.delete(`/study-group/${params.id}/kick/${memberId}`)
+      await api.delete(`/study-group/${params.id}/kick/${memberPublicId}`)
 
       // API 호출 성공 후 서버에서 최신 목록을 가져와서 동기화
       const response = await api.get(`/study-group/${params.id}/members`)
@@ -119,43 +119,43 @@ export default function StudyManagementPage() {
     }
   }
 
-  const handleApprove = async (memberId: number) => {
+  const handleApprove = async (memberPublicId: string) => { // 파라미터 이름은 API URL에 맞춰 유지
     try {
-      await api.post(`/study-group/${params.id}/accept/${memberId}`)
+      await api.post(`/study-group/${params.id}/accept/${memberPublicId}`);
       // 승인 후 목록 새로고침
-      const response = await api.get(`/study-group/${params.id}/applicants`)
-      setApplicants(response.result)
+      const response = await api.get(`/study-group/${params.id}/applicants`);
+      setApplicants(response.result);
       toast({
-        title: "승인 완료",
-        description: "참여 신청이 승인되었습니다.",
-      })
+        title: '승인 완료',
+        description: '참여 신청이 승인되었습니다.',
+      });
     } catch (error) {
       toast({
-        title: "오류 발생",
-        description: "참여 신청 승인에 실패했습니다.",
-        variant: "destructive",
-      })
+        title: '오류 발생',
+        description: '참여 신청 승인에 실패했습니다.',
+        variant: 'destructive',
+      });
     }
-  }
+  };
 
-  const handleReject = async (memberId: number) => {
+  const handleReject = async (memberPublicId: string) => { // 파라미터 이름은 API URL에 맞춰 유지
     try {
-      await api.delete(`/study-group/${params.id}/kick/${memberId}`)
+      await api.delete(`/study-group/${params.id}/kick/${memberPublicId}`);
       // 거절 후 목록 새로고침
-      const response = await api.get(`/study-group/${params.id}/applicants`)
-      setApplicants(response.result)
+      const response = await api.get(`/study-group/${params.id}/applicants`);
+      setApplicants(response.result);
       toast({
-        title: "거절 완료",
-        description: "참여 신청이 거절되었습니다.",
-      })
+        title: '거절 완료',
+        description: '참여 신청이 거절되었습니다.',
+      });
     } catch (error) {
       toast({
-        title: "오류 발생",
-        description: "참여 신청 거절에 실패했습니다.",
-        variant: "destructive",
-      })
+        title: '오류 발생',
+        description: '참여 신청 거절에 실패했습니다.',
+        variant: 'destructive',
+      });
     }
-  }
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">

@@ -171,12 +171,12 @@ export function FeedComments({ feedId, onShow }: FeedCommentsProps) {
     await loadComments(feedId)
   }
 
-  const handleAddFriend = async (memberId: number, memberName: string) => {
+  const handleAddFriend = async (publicId: string, memberName: string) => {
     setFriendLoading(true)
     setFriendError(null)
     setFriendSuccess(null)
     try {
-      const res = await api.get(`/members/${memberId}`)
+      const res = await api.get(`/members/profile/${publicId}`)
       const email = res?.result?.email
       if (!email) throw new Error("이메일 정보를 찾을 수 없습니다.")
       const response = await api.post('/friends/request', { receiverEmail: email })
@@ -201,53 +201,53 @@ export function FeedComments({ feedId, onShow }: FeedCommentsProps) {
         <div className="space-y-3 mb-2">
           {comments[feedId].map((comment) => (
             <div key={comment.feedCommentId} className="flex gap-2 items-start">
-              {user?.memberId === comment.memberId ?
-                ( // 내 댓글인 경우: 클릭 불가
+              {user?.publicId === comment.publicId ? (
+                // 내 댓글인 경우: 클릭 불가
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={comment.profileImageUrl || "/placeholder.svg"} alt={comment.memberName} />
+                  <AvatarFallback>{comment.memberName[0]}</AvatarFallback>
+                </Avatar>
+              ) : (
+                // 다른 사람 댓글인 경우: 클릭 가능
+                <button onClick={() => router.push(`/profile/${comment.publicId}`)} className="flex-shrink-0">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={comment.profileImageUrl || "/placeholder.svg"} alt={comment.memberName} />
                     <AvatarFallback>{comment.memberName[0]}</AvatarFallback>
                   </Avatar>
-                ) :
-                ( // 다른 사람 댓글인 경우: 클릭 가능
-                  <button onClick={() => router.push(`/profile/${comment.profileId}`)} className="flex-shrink-0">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={comment.profileImageUrl || "/placeholder.svg"} alt={comment.memberName} />
-                      <AvatarFallback>{comment.memberName[0]}</AvatarFallback>
-                    </Avatar>
-                  </button>
+                </button>
               )}
               <div className="flex-1">
                 <div className="bg-muted rounded-md px-3 py-2 relative">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      {user?.memberId === comment.memberId ? (
-                      <span className="font-medium text-sm">{comment.memberName}</span>
-                    ) : (
-                      <Popover open={friendPopoverOpen === comment.feedCommentId} onOpenChange={open => setFriendPopoverOpen(open ? comment.feedCommentId : null)}>
-                        <PopoverTrigger asChild>
-                          <button onClick={() => router.push(`/profile/${comment.profileId}`)} className="font-medium text-sm hover:underline focus:outline-none" type="button">
-                            {comment.memberName}
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent align="start" className="w-56 p-4">
-                          <div className="mb-2 font-semibold">친구 추가</div>
-                          <div className="mb-2 text-xs text-muted-foreground">{comment.memberName}님과 친구를 맺어보세요.</div>
-                          <Button
-                            size="sm"
-                            disabled={friendLoading}
-                            onClick={() => handleAddFriend(comment.memberId, comment.memberName)}
-                            className="w-full"
-                          >
-                            {friendLoading ? "요청 중..." : "친구 요청 보내기"}
-                          </Button>
-                          {friendSuccess && <div className="text-green-600 text-xs mt-2">{friendSuccess}</div>}
-                          {friendError && <div className="text-destructive text-xs mt-2">{friendError}</div>}
-                        </PopoverContent>
-                      </Popover>
-                    )}
+                      {user?.publicId === comment.publicId ? (
+                        <span className="font-medium text-sm">{comment.memberName}</span>
+                      ) : (
+                        <Popover open={friendPopoverOpen === comment.feedCommentId} onOpenChange={open => setFriendPopoverOpen(open ? comment.feedCommentId : null)}>
+                          <PopoverTrigger asChild>
+                            <button onClick={() => router.push(`/profile/${comment.publicId}`)} className="font-medium text-sm hover:underline focus:outline-none" type="button">
+                              {comment.memberName}
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent align="start" className="w-56 p-4">
+                            <div className="mb-2 font-semibold">친구 추가</div>
+                            <div className="mb-2 text-xs text-muted-foreground">{comment.memberName}님과 친구를 맺어보세요.</div>
+                            <Button
+                              size="sm"
+                              disabled={friendLoading}
+                              onClick={() => handleAddFriend(comment.publicId, comment.memberName)}
+                              className="w-full"
+                            >
+                              {friendLoading ? "요청 중..." : "친구 요청 보내기"}
+                            </Button>
+                            {friendSuccess && <div className="text-green-600 text-xs mt-2">{friendSuccess}</div>}
+                            {friendError && <div className="text-destructive text-xs mt-2">{friendError}</div>}
+                          </PopoverContent>
+                        </Popover>
+                      )}
                     </div>
                     {/* 더보기 버튼 (수정/삭제) */}
-                    {(user?.memberId as number) === comment.memberId && (
+                    {user?.publicId === comment.publicId && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-6 w-6">

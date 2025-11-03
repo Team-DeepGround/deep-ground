@@ -5,17 +5,26 @@ import { useRouter, usePathname } from "next/navigation"
 import { auth, getTokenExp } from "@/lib/auth"
 
 interface AuthContextType {
-  isAuthenticated: boolean
+  isAuthenticated: boolean;
   user: {
-    role: string | null
-    email: string | null
-    memberId: number | null
-    nickname: string | null
-    profileId?: number | null // 프로필 ID 추가
-    profileImageUrl?: string | null // 프로필 이미지 URL 추가
-  } | null
-  login: (token: string, role?: string, email?: string, memberId?: number, nickname?: string) => void
-  logout: () => void
+    role: string | null;
+    email: string | null;
+    memberId: number | null;
+    nickname: string | null;
+    profileId?: number | null; // 프로필 ID 추가
+    profileImageUrl?: string | null; // 프로필 이미지 URL 추가
+    publicId: string | null; // UUID 추가
+    profilePublicId?: string | null; // 프로필 UUID 추가
+  } | null;
+  login: (
+    token: string,
+    role?: string,
+    email?: string,
+    memberId?: number,
+    nickname?: string,
+    publicId?: string
+  ) => void;
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -60,6 +69,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         auth.removeEmail()
         auth.removeMemberId()
         auth.removeNickname()
+        auth.removePublicId()
         localStorage.removeItem("token_exp")
         setIsAuthenticated(false)
         setUser(null)
@@ -74,11 +84,14 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         const savedEmail = await auth.getEmail()
         const savedMemberId = await auth.getMemberId()
         const savedNickname = await auth.getNickname()
+        const savedPublicId = await auth.getPublicId() // 1. localStorage에서 publicId를 가져옵니다.
+
         setUser({
           role: savedRole,
           email: savedEmail,
           memberId: savedMemberId,
           nickname: savedNickname,
+          publicId: savedPublicId, // 2. user 상태에 publicId를 설정합니다.
         })
 
         // ROLE_GUEST 접근 차단
@@ -101,7 +114,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     roleArg?: string,
     emailArg?: string,
     memberIdArg?: number,
-    nicknameArg?: string
+    nicknameArg?: string,
+    publicIdArg?: string
   ) => {
     auth.setToken(token)
 
@@ -124,7 +138,19 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       auth.setNickname?.(nicknameArg)
     }
 
+    if (publicIdArg) {
+      auth.setPublicId?.(publicIdArg)
+    }
+
     setIsAuthenticated(true)
+    // 로그인 시 user 상태를 즉시 업데이트하여 publicId를 포함시킵니다.
+    setUser({
+      role: roleArg ?? null,
+      email: emailArg ?? null,
+      memberId: memberIdArg ?? null,
+      nickname: nicknameArg ?? null,
+      publicId: publicIdArg ?? null,
+    });
   }
 
   // ✅ 로그아웃: 닉네임 포함 정리
@@ -133,6 +159,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     auth.removeRole()
     auth.removeEmail()
     auth.removeMemberId()
+    auth.removePublicId()
     auth.removeNickname()
     localStorage.removeItem("token_exp")
     setIsAuthenticated(false)
@@ -148,6 +175,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           role: user?.role ?? null,
           email: user?.email ?? null,
           memberId: user?.memberId ?? null,
+          publicId: user?.publicId ?? null,
           nickname: user?.nickname ?? null,
         } : null,
         login,

@@ -180,12 +180,12 @@ export function FeedReplies({ feedCommentId, onShow }: FeedRepliesProps) {
     await loadReplies(feedCommentId)
   }
 
-  const handleAddFriend = async (memberId: number, memberName: string) => {
+  const handleAddFriend = async (publicId: string, memberName: string) => {
     setFriendLoading(true)
     setFriendError(null)
     setFriendSuccess(null)
     try {
-      const res = await api.get(`/members/${memberId}`)
+      const res = await api.get(`/members/profile/${publicId}`)
       const email = res?.result?.email
       if (!email) throw new Error("이메일 정보를 찾을 수 없습니다.")
       const response = await api.post('/friends/request', { receiverEmail: email })
@@ -230,7 +230,7 @@ export function FeedReplies({ feedCommentId, onShow }: FeedRepliesProps) {
                             <Button
                               size="sm"
                               disabled={friendLoading}
-                              onClick={() => handleAddFriend(reply.memberId, reply.memberName)}
+                              onClick={() => handleAddFriend(reply.publicId, reply.memberName)}
                               className="w-full"
                             >
                               {friendLoading ? "요청 중..." : "친구 요청 보내기"}
@@ -253,7 +253,7 @@ export function FeedReplies({ feedCommentId, onShow }: FeedRepliesProps) {
                           <span className="text-xs ml-1">{reply.likeCount}</span>
                         </Button>
                         {/* 수정/삭제 버튼 (본인만 노출) */}
-                        {user?.memberId === reply.memberId && (
+                        {user?.publicId === reply.publicId && (
                           <>
                             {editingReplyId === reply.feedReplyId ? (
                               <Button size="icon" variant="ghost" className="h-auto px-1 py-1" onClick={handleCancelEditReply}><span className="sr-only">취소</span>❌</Button>

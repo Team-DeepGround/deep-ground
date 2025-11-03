@@ -152,7 +152,7 @@ export default function QuestionDetailPage() {
       const res = await fetch(`/api/v1/questions/${params.id}`,
         accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : undefined
       )
-      const data = await res.json()
+      const data = await res.json();
       const q = data.result?.question || data.result
       
       setQuestion(q)
@@ -535,7 +535,7 @@ export default function QuestionDetailPage() {
       
       const data = await response.json();
       // 상태 변경 후 즉시 UI 업데이트
-      setQuestion((prev: any) => ({ ...prev, questionStatus: newStatus }));
+      setQuestion((prev: any) => ({ ...prev, questionStatus: newStatus, status: newStatus }));
       
       toast({ title: "상태 변경 완료", description: `질문 상태가 '${statusLabel(newStatus)}'로 변경되었습니다.` });
       
@@ -558,6 +558,7 @@ export default function QuestionDetailPage() {
     if (status === "OPEN") return "미해결";
     if (status === "RESOLVED") return "해결중";
     if (status === "CLOSED") return "해결완료";
+    if (status === "DELETED") return "삭제됨";
     return "미해결";
   };
 

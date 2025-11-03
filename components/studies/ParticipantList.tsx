@@ -1,21 +1,22 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Participant } from "@/types/study"
 import { api } from "@/lib/api-client"
 import { Button } from "../ui/button"
+import { useAuth } from "@/components/auth-provider"
 
 interface ParticipantListProps {
   studyId: number
-  writerId: number
+  writerPublicId: string
   groupLimit: number
-  currentMemberId?: number
 }
 
-export function ParticipantList({ studyId, writerId, groupLimit, currentMemberId }: ParticipantListProps) {
+export function ParticipantList({ studyId, writerPublicId, groupLimit }: ParticipantListProps) {
   const [participants, setParticipants] = useState<Participant[]>([])
+  const { user } = useAuth()
 
   useEffect(() => {
     if (!studyId) return
@@ -31,12 +32,12 @@ export function ParticipantList({ studyId, writerId, groupLimit, currentMemberId
 
   // ✅ 정렬: 스터디장 → 나 → 나머지(가나다)
   const sorted = [...participants].sort((a, b) => {
-    const aLeader = a.memberId === writerId
-    const bLeader = b.memberId === writerId
+    const aLeader = a.memberPublicId === writerPublicId
+    const bLeader = b.memberPublicId === writerPublicId
     if (aLeader !== bLeader) return aLeader ? -1 : 1
 
-    const aYou = currentMemberId && a.memberId === currentMemberId
-    const bYou = currentMemberId && b.memberId === currentMemberId
+    const aYou = user?.publicId && a.memberPublicId === user.publicId
+    const bYou = user?.publicId && b.memberPublicId === user.publicId
     if (aYou !== bYou) return aYou ? -1 : 1
 
     return (a.nickname || "").localeCompare(b.nickname || "")
@@ -56,15 +57,16 @@ export function ParticipantList({ studyId, writerId, groupLimit, currentMemberId
       <CardContent>
         <div className="space-y-4">
           {sorted.map((p) => {
-            const isLeader = p.memberId === writerId
-            const isYou = !!currentMemberId && p.memberId === currentMemberId
+            const isLeader = p.memberPublicId === writerPublicId
+            const isYou = !!user?.publicId && p.memberPublicId === user.publicId
 
             return (
               <div
-                key={p.memberId}
+                key={p.memberPublicId}
                 className="flex items-center gap-4 p-2 border rounded-lg"
               >
                 <Avatar>
+                  <AvatarImage src={p.profileImage} alt={p.nickname} />
                   <AvatarFallback>{p.nickname?.charAt(0) || "?"}</AvatarFallback>
                 </Avatar>
 
@@ -77,7 +79,7 @@ export function ParticipantList({ studyId, writerId, groupLimit, currentMemberId
                 </div>
 
                 <Button variant="ghost" size="sm" asChild>
-                  <Link href={`/profile/${p.profileId}`}>프로필</Link>
+                  <Link href={`/profile/${p.profilePublicId}`}>프로필</Link>
                 </Button>
               </div>
             )

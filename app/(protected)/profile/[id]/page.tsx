@@ -23,7 +23,7 @@ import {
 } from "lucide-react"
 
 type ProfileData = {
-  memberId: number | string
+  publicId: string
   profileImage?: string
   nickname: string
   email?: string
@@ -66,7 +66,7 @@ export default function UserProfilePage() {
   const [studiesLoading, setStudiesLoading] = useState(true)
 
   const isMyProfile = useMemo(() => {
-    return String((user as any)?.profileId ?? "") === String(profileId ?? "")
+    return user?.publicId === profileId
   }, [user, profileId])
 
   // 1) 프로필 로드
@@ -81,7 +81,7 @@ export default function UserProfilePage() {
 
         const p = res.result || res || {}
         setProfile({
-          memberId: p.memberId ?? p.id ?? "",
+          publicId: p.publicId ?? p.id ?? '',
           profileImage: p.profileImage,
           nickname: p.nickname,
           email: p.email,
@@ -95,7 +95,7 @@ export default function UserProfilePage() {
           linkedInUrl: p.linkedInUrl ?? p.links?.linkedin,
           websiteUrl: p.websiteUrl ?? p.links?.website,
           twitterUrl: p.twitterUrl ?? p.links?.twitter,
-        })
+        });
       } catch (err: any) {
         toast({
           title: "프로필 로드 실패",
@@ -114,17 +114,14 @@ export default function UserProfilePage() {
   // 2) 멤버 스터디 로드
   useEffect(() => {
     const fetchStudies = async () => {
-      if (!profile?.memberId) return
-      setStudiesLoading(true)
+      if (!profile?.publicId) return;
+      setStudiesLoading(true);
       try {
-        const r = await api.get(`/members/${profile.memberId}/studies`).catch(() => null)
+        const r = await api
+          .get(`/members/${profile.publicId}/studies`)
+          .catch(() => null);
 
-        const page =
-          r?.result?.content ??
-          r?.result ??
-          r?.content ??
-          r ??
-          []
+        const page = r?.result?.content ?? r?.result ?? r?.content ?? r ?? [];
 
         const mapped: Study[] = page.map((s: any) => ({
           id: s.id,
@@ -132,64 +129,70 @@ export default function UserProfilePage() {
           description: s.explanation,
           coverImage: undefined,
           status: s.groupStatus,
-        }))
+        }));
 
-        setStudies(mapped)
+        setStudies(mapped);
       } catch {
-        setStudies([])
+        setStudies([]);
       } finally {
-        setStudiesLoading(false)
+        setStudiesLoading(false);
       }
-    }
+    };
 
-    fetchStudies()
-  }, [profile?.memberId])
+    fetchStudies();
+  }, [profile?.publicId]);
 
   // 3) 친구 상태 확인
   useEffect(() => {
-    if (!profile?.memberId || isMyProfile) {
-      setStatusLoading(false)
-      return
+    if (!profile?.publicId || isMyProfile) {
+      setStatusLoading(false);
+      return;
     }
 
     const checkFriendStatus = async () => {
-      setStatusLoading(true)
+      setStatusLoading(true);
       try {
-        const res = await api.get(`/friends/status`, {
-          params: { targetMemberId: String(profile.memberId) },
-        }).catch(() => null)
+        const res = await api
+          .get(`/friends/status`, {
+            params: { targetMemberPublicId: String(profile.publicId) },
+          })
+          .catch(() => null);
 
-        const status = res?.result?.status || "NONE";
+        const status = res?.result?.status || 'NONE';
 
-        if (status === "FRIENDS") {
-          setFriendState("friends")
-        } else if (status === "PENDING_SENT") {
-          setFriendState("pending")
-        } else if (status === "PENDING_RECEIVED") {
-          setFriendState("received")
+        if (status === 'FRIENDS') {
+          setFriendState('friends');
+        } else if (status === 'PENDING_SENT') {
+          setFriendState('pending');
+        } else if (status === 'PENDING_RECEIVED') {
+          setFriendState('received');
         } else {
-          setFriendState("none")
+          setFriendState('none');
         }
       } catch (err) {
-        setFriendState("none")
+        setFriendState('none');
       } finally {
-        setStatusLoading(false)
+        setStatusLoading(false);
       }
-    }
+    };
 
-    checkFriendStatus()
-  }, [profile?.memberId, isMyProfile])
+    checkFriendStatus();
+  }, [profile?.publicId, isMyProfile]);
 
 
   // 4) 친구 요청 핸들러
   const handleSendFriendRequest = async () => {
-    if (!profile?.memberId) {
-      toast({ title: "요청 불가", description: "프로필 ID가 없습니다.", variant: "destructive" })
-      return
+    if (!profile?.publicId) {
+      toast({
+        title: '요청 불가',
+        description: '프로필 ID가 없습니다.',
+        variant: 'destructive',
+      });
+      return;
     }
     setFriendLoading(true)
     try {
-      await api.post(`/friends/from-profile/${profile.memberId}`)
+      await api.post(`/friends/from-profile/${profile.publicId}`)
       
       setFriendState("pending")
       toast({

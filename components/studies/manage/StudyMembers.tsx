@@ -24,7 +24,8 @@ import { ReportModal } from "@/components/report/report-modal" // ✅ 신고 모
 
 interface StudyMember {
   memberId: number
-  profileId: number // ✅ 추가됨
+  memberPublicId: string
+  profilePublicId: string
   nickname: string
   joinedAt: string
   owner: boolean
@@ -33,15 +34,15 @@ interface StudyMember {
 interface StudyMembersProps {
   members: StudyMember[]
   onInviteMember: (email: string) => void
-  onKickMember: (memberId: number) => Promise<void>
+  onKickMember: (memberPublicId: string) => Promise<void>
 }
 
 export function StudyMembers({ members, onInviteMember, onKickMember }: StudyMembersProps) {
   const [inviteEmail, setInviteEmail] = useState("")
-  const [kickMemberId, setKickMemberId] = useState<number | null>(null)
+  const [kickMemberPublicId, setKickMemberId] = useState<string | null>(null)
   const [showKickDialog, setShowKickDialog] = useState(false)
   const [reportTargetId, setReportTargetId] = useState<number | null>(null) // ✅ 신고 대상 상태
-  const [kickingMemberId, setKickingMemberId] = useState<number | null>(null) // 강퇴 중인 멤버 ID
+  const [kickingMemberPublicId, setKickingMemberId] = useState<string | null>(null); // 강퇴 중인 멤버 ID
   const { toast } = useToast()
 
   const handleInviteMember = () => {
@@ -58,30 +59,30 @@ export function StudyMembers({ members, onInviteMember, onKickMember }: StudyMem
     setInviteEmail("")
   }
 
-  const openKickDialog = (memberId: number) => {
+  const openKickDialog = (memberPublicId: string) => {
     // 이미 강퇴 중인 멤버인지 확인
-    if (kickingMemberId === memberId) {
+    if (kickMemberPublicId === memberPublicId) {
       toast({
-        title: "처리 중",
-        description: "이미 강퇴 처리 중입니다. 잠시만 기다려주세요.",
-        variant: "destructive",
-      })
-      return
+        title: '처리 중',
+        description: '이미 강퇴 처리 중입니다. 잠시만 기다려주세요.',
+        variant: 'destructive',
+      });
+      return;
     }
     
-    setKickMemberId(memberId)
+    setKickMemberId(memberPublicId)
     setShowKickDialog(true)
   }
 
   const handleKickMember = async () => {
-    if (!kickMemberId) return
+    if (!kickMemberPublicId) return;
     
     // 강퇴 중 상태로 설정
-    setKickingMemberId(kickMemberId)
+    setKickingMemberId(kickMemberPublicId);
     setShowKickDialog(false)
     
     try {
-      await onKickMember(kickMemberId)
+      await onKickMember(kickMemberPublicId);
     } finally {
       // 강퇴 완료 후 상태 초기화
       setKickingMemberId(null)
@@ -101,7 +102,10 @@ export function StudyMembers({ members, onInviteMember, onKickMember }: StudyMem
         <CardContent>
           <div className="space-y-4">
             {members.map((member) => (
-              <div key={member.memberId} className="flex items-center justify-between p-3 rounded-lg border">
+              <div
+                key={member.memberPublicId}
+                className="flex items-center justify-between p-3 rounded-lg border"
+              >
                 <div className="flex items-center gap-3">
                   <Avatar>
                     <AvatarFallback>{member.nickname[0]}</AvatarFallback>
@@ -109,7 +113,9 @@ export function StudyMembers({ members, onInviteMember, onKickMember }: StudyMem
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="font-medium">{member.nickname}</p>
-                      {member.owner && <Badge variant="secondary">스터디장</Badge>}
+                      {member.owner && (
+                        <Badge variant="secondary">스터디장</Badge>
+                      )}
                     </div>
                     <p className="text-sm text-muted-foreground mt-1">
                       참여일: {new Date(member.joinedAt).toLocaleDateString()}
@@ -118,24 +124,30 @@ export function StudyMembers({ members, onInviteMember, onKickMember }: StudyMem
                 </div>
                 <div className="flex items-center gap-2">
                   <Button variant="ghost" size="sm" asChild>
-                    <Link href={`/profile/${member.profileId}`}>프로필</Link>
+                    <Link href={`/profile/${member.profilePublicId}`}>
+                      프로필
+                    </Link>
                   </Button>
-                {!member.owner && (
+                  {!member.owner && (
                     <>
                       <Button
                         variant="ghost"
                         size="sm"
                         className="text-destructive"
-                        onClick={() => openKickDialog(member.memberId)}
-                        disabled={kickingMemberId === member.memberId}
+                        onClick={() => openKickDialog(member.memberPublicId)}
+                        disabled={
+                          kickingMemberPublicId === member.memberPublicId
+                        }
                       >
-                        {kickingMemberId === member.memberId ? "강퇴 중..." : "강퇴"}
+                        {kickMemberPublicId === member.memberPublicId
+                          ? '강퇴 중...'
+                          : '강퇴'}
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => setReportTargetId(member.memberId)}
-                        disabled={kickingMemberId === member.memberId}
+                        disabled={kickMemberPublicId === member.memberPublicId}
                       >
                         신고
                       </Button>
@@ -147,26 +159,29 @@ export function StudyMembers({ members, onInviteMember, onKickMember }: StudyMem
           </div>
         </CardContent>
 
-      <Dialog open={showKickDialog} onOpenChange={setShowKickDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>멤버 강퇴</DialogTitle>
-            <DialogDescription>
-              정말로 이 멤버를 강퇴하시겠습니까?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowKickDialog(false)}>
-              취소
-            </Button>
-            <Button variant="destructive" onClick={handleKickMember}>
-              강퇴하기
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </Card>
-    {/* ✅ 신고 모달 */}
+        <Dialog open={showKickDialog} onOpenChange={setShowKickDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>멤버 강퇴</DialogTitle>
+              <DialogDescription>
+                정말로 이 멤버를 강퇴하시겠습니까?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowKickDialog(false)}
+              >
+                취소
+              </Button>
+              <Button variant="destructive" onClick={handleKickMember}>
+                강퇴하기
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </Card>
+      {/* ✅ 신고 모달 */}
       {reportTargetId !== null && (
         <ReportModal
           targetId={reportTargetId}
@@ -177,5 +192,5 @@ export function StudyMembers({ members, onInviteMember, onKickMember }: StudyMem
         />
       )}
     </>
-  )
+  );
 }
