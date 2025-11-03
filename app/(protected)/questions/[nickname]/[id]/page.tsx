@@ -116,7 +116,7 @@ export default function QuestionDetailPage() {
   const router = useRouter()
   const { toast } = useToast()
   const { user } = useAuth()
-  const memberId = user?.memberId
+  const publicId = user?.publicId
   const [answerContent, setAnswerContent] = useState("")
   const [uploadedImages, setUploadedImages] = useState<File[]>([])
 
@@ -575,7 +575,7 @@ export default function QuestionDetailPage() {
         {/* 질문 카드 컴포넌트 */}
         <QuestionDetailCard
           question={question}
-          memberId={memberId ?? null}
+          publicId={publicId ?? null}
           statusUpdating={statusUpdating}
           handleStatusChange={handleStatusChange}
           onEdit={() => router.push(`/questions/${params.nickname}/${params.id}/edit`)}
@@ -618,7 +618,7 @@ export default function QuestionDetailPage() {
           setEditingCommentId={setEditingCommentId}
           question={question}
           toast={toast}
-          memberId={memberId ?? null}
+          publicId={publicId ?? null}
         />
 
         {/* 답변 작성 폼 컴포넌트 */}

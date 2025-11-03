@@ -10,7 +10,7 @@ import { api } from "@/lib/api-client";
 
 interface QuestionDetailCardProps {
   question: any;
-  memberId: number | null;
+  publicId: string | null;
   statusUpdating: boolean;
   handleStatusChange: (status: string) => void;
   onEdit: () => void;
@@ -19,7 +19,7 @@ interface QuestionDetailCardProps {
 
 export default function QuestionDetailCard({ 
   question, 
-  memberId, 
+  publicId, 
   statusUpdating, 
   handleStatusChange, 
   onEdit, 
@@ -53,7 +53,11 @@ export default function QuestionDetailCard({
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-1">
               {question?.techStacks?.map((tag: any, idx: number) => (
-                <Badge key={tag ? String(tag) : idx} variant="secondary" className="font-normal text-xs">
+                <Badge
+                  key={tag ? String(tag) : idx}
+                  variant="secondary"
+                  className="font-normal text-xs"
+                >
                   {tag.name || tag}
                 </Badge>
               ))}
@@ -63,13 +67,37 @@ export default function QuestionDetailCard({
               <Calendar className="h-3.5 w-3.5" />
               <span>
                 {question?.createdAt
-                  ? new Date(question.createdAt).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                  ? new Date(question.createdAt).toLocaleDateString('ko-KR', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
                   : question?.created_at
-                  ? new Date(question.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                  ? new Date(question.created_at).toLocaleDateString('ko-KR', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
                   : question?.createDate
-                  ? new Date(question.createDate).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                  ? new Date(question.createDate).toLocaleDateString('ko-KR', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
                   : question?.regDate
-                  ? new Date(question.regDate).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                  ? new Date(question.regDate).toLocaleDateString('ko-KR', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
                   : '작성 시간 정보 없음'}
               </span>
             </div>
@@ -80,58 +108,65 @@ export default function QuestionDetailCard({
                 className="text-xs font-semibold px-2 py-0.5 rounded-full border-2 shadow-sm text-black bg-gray-200 border-gray-400 min-w-[48px] text-center"
                 style={{
                   color: '#111',
-                  background: "#e5e7eb",
-                  borderColor: "#9ca3af",
-                  lineHeight: "1.2",
+                  background: '#e5e7eb',
+                  borderColor: '#9ca3af',
+                  lineHeight: '1.2',
                   fontWeight: 600,
-                  fontSize: "0.75rem",
-                  minWidth: "48px",
-                  textAlign: "center"
+                  fontSize: '0.75rem',
+                  minWidth: '48px',
+                  textAlign: 'center',
                 }}
-              > 
-                {(question?.questionStatus || question?.status) === "OPEN"
-                  ? "미해결"
-                  : (question?.questionStatus || question?.status) === "RESOLVED"
-                  ? "해결중"
-                  : (question?.questionStatus || question?.status) === "CLOSED"
-                  ? "해결완료"
-                  : "미해결"}
+              >
+                {(question?.questionStatus || question?.status) === 'OPEN'
+                  ? '미해결'
+                  : (question?.questionStatus || question?.status) ===
+                    'RESOLVED'
+                  ? '해결중'
+                  : (question?.questionStatus || question?.status) === 'CLOSED'
+                  ? '해결완료'
+                  : '미해결'}
               </span>
-              {memberId && question?.memberId && Number(memberId) === Number(question.memberId) && (
-                <select
-                  className="ml-2 text-sm font-medium border border-gray-300 bg-white px-2 py-1 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
-                  value={question?.questionStatus || question?.status || 'OPEN'}
-                  disabled={!!statusUpdating}
-                  onChange={e => handleStatusChange(e.target.value)}
-                >
-                  <option value="OPEN">미해결</option>
-                  <option value="RESOLVED">해결중</option>
-                  <option value="CLOSED">해결완료</option>
-                </select>
-              )}
+              {publicId &&
+                question?.publicId &&
+                publicId === question.publicId && (
+                  <select
+                    className="ml-2 text-sm font-medium border border-gray-300 bg-white px-2 py-1 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
+                    value={
+                      question?.questionStatus || question?.status || 'OPEN'
+                    }
+                    disabled={!!statusUpdating}
+                    onChange={(e) => handleStatusChange(e.target.value)}
+                  >
+                    <option value="OPEN">미해결</option>
+                    <option value="RESOLVED">해결중</option>
+                    <option value="CLOSED">해결완료</option>
+                  </select>
+                )}
             </div>
-            {memberId && question?.memberId && Number(memberId) === Number(question.memberId) && (
-              <div className="flex gap-2 items-center mt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-1"
-                  onClick={onEdit}
-                  aria-label="질문 수정하기"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-1"
-                  aria-label="질문 삭제하기"
-                  onClick={onDelete}
-                >
-                  <Trash className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
+            {publicId &&
+              question?.publicId &&
+              publicId === question.publicId && (
+                <div className="flex gap-2 items-center mt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-1"
+                    onClick={onEdit}
+                    aria-label="질문 수정하기"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-1"
+                    aria-label="질문 삭제하기"
+                    onClick={onDelete}
+                  >
+                    <Trash className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
           </div>
         </div>
       </CardHeader>
@@ -139,36 +174,42 @@ export default function QuestionDetailCard({
         <div className="flex items-center gap-3 mb-4">
           <Avatar>
             <AvatarImage
-              src={question?.imageUrl || "/placeholder.svg"}
-              alt={question?.nickname || "알 수 없음"}
+              src={question?.imageUrl || '/placeholder.svg'}
+              alt={question?.nickname || '알 수 없음'}
             />
             <AvatarFallback>
-              {question?.nickname ? question.nickname[0] : "?"}
+              {question?.nickname ? question.nickname[0] : '?'}
             </AvatarFallback>
           </Avatar>
           <div>
-            <button 
-              className="font-medium hover:underline focus:outline-none text-left" 
+            <button
+              className="font-medium hover:underline focus:outline-none text-left"
               type="button"
               onClick={handleProfileClick}
             >
-              {question?.nickname || "알 수 없음"}
+              {question?.nickname || '알 수 없음'}
             </button>
             <div className="text-xs text-muted-foreground">작성자</div>
           </div>
         </div>
         <div className="space-y-4">
-          <MarkdownRenderer content={question?.content || ""} />
-          {question?.mediaUrl && Array.isArray(question.mediaUrl) && question.mediaUrl.length > 0 && (
-            <div className="space-y-4">
-              {question.mediaUrl.map((url: string, idx: number) => (
-                <div key={url || idx} className="rounded-md overflow-hidden">
-                  {/* AuthImage는 부모에서 import해서 넘겨주거나, 이곳에서 직접 구현 필요 */}
-                  <img src={url} alt={`질문 이미지 ${idx + 1}`} style={{ maxWidth: "100%" }} />
-                </div>
-              ))}
-            </div>
-          )}
+          <MarkdownRenderer content={question?.content || ''} />
+          {question?.mediaUrl &&
+            Array.isArray(question.mediaUrl) &&
+            question.mediaUrl.length > 0 && (
+              <div className="space-y-4">
+                {question.mediaUrl.map((url: string, idx: number) => (
+                  <div key={url || idx} className="rounded-md overflow-hidden">
+                    {/* AuthImage는 부모에서 import해서 넘겨주거나, 이곳에서 직접 구현 필요 */}
+                    <img
+                      src={url}
+                      alt={`질문 이미지 ${idx + 1}`}
+                      style={{ maxWidth: '100%' }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
         </div>
       </CardContent>
     </Card>
