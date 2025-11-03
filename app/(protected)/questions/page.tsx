@@ -564,6 +564,7 @@ function QuestionCard({ question, onTitleClick }: QuestionCardProps) {
   const router = useRouter();
   const authorName = question.nickname || "알 수 없음";
   const authorAvatar = question.imageUrl || question.author?.avatar || "/placeholder.svg";
+  const questionUrl = `/questions/${question.nickname}/${question.id}`;
   
   // 상태 한글 변환 함수
   const statusLabel = (status?: string) => {
@@ -614,14 +615,7 @@ function QuestionCard({ question, onTitleClick }: QuestionCardProps) {
               </div>
               <h3 className="text-lg font-semibold mt-1 flex items-center gap-2">
                 <button
-                  onClick={() => {
-                    const qid = question.questionId ?? question.id;
-                    if (qid) {
-                      window.location.href = `/questions/${question.nickname}/${question.id}`;
-                    } else {
-                      alert('질문 ID가 없습니다!');
-                    }
-                  }}
+                  onClick={() => router.push(questionUrl)}
                   className="text-left hover:underline hover:text-primary transition-colors focus:outline-none"
                 >
                   {question.title}
@@ -684,10 +678,9 @@ function QuestionCard({ question, onTitleClick }: QuestionCardProps) {
           </div>
         </div>
         <Button asChild size="sm">
-          <Link href={`/questions/${question.id}`}>답변하기</Link>
+          <Link href={questionUrl}>답변하기</Link>
         </Button>
       </CardFooter>
     </Card>
   )
 }
-
