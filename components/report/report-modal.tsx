@@ -95,7 +95,7 @@ export function ReportModal({
       }
 
       await axios.post(
-        "/api/v1/report",
+        '/api/v1/report',
         {
           targetType,
           targetId,
@@ -108,7 +108,7 @@ export function ReportModal({
             Authorization: `Bearer ${token}`,
           },
         }
-      )
+      );
 
       toast({
         title: "신고 완료",

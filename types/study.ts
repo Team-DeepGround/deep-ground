@@ -14,9 +14,10 @@ export interface Comment {
 }
 
 export interface Participant {
-  memberId: number
-  profileId: number
+  memberPublicId: string
+  profilePublicId: string
   nickname: string
+  profileImage?: string
 }
 
 export interface StudyGroupDetail {
@@ -24,6 +25,7 @@ export interface StudyGroupDetail {
   title: string
   explanation: string
   writer: string
+  writeMemberPublicId: string
   memberCount: number
   groupLimit: number
   location: string

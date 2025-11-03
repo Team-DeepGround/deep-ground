@@ -93,16 +93,16 @@ export default function AnswerList({
   const router = useRouter();
 
   const handleProfileClick = async (memberId: number, memberProfileId?: number) => {
-    const targetProfileId = memberProfileId || memberId;
+    const targetProfileId = memberProfileId;
     try {
       // API 클라이언트를 사용하여 프로필 존재 여부 확인
-      await api.get(`/members/profile/${targetProfileId}`);
-      router.push(`/profile/${targetProfileId}`);
+      await api.get(`/members/profile/${memberProfileId}`);
+      router.push(`/profile/${memberProfileId}`);
     } catch (error: any) {
-      if (error.status === 400) {
+      if (error.response?.status === 400 || error.status === 400) {
         alert('해당 사용자의 프로필이 존재하지 않습니다.');
       } else {
-        alert('프로필을 조회하는 중 오류가 발생했습니다.');
+        alert(`프로필을 조회하는 중 오류가 발생했습니다: ${error.message}`);
       }
     }
   };
@@ -116,12 +116,12 @@ export default function AnswerList({
             <div className="flex justify-between items-start">
               <div className="flex items-center gap-3">
                 <Avatar>
-                  <AvatarImage 
-                    src={answer.imageUrl || answer.author?.avatar || "/placeholder.svg"} 
-                    alt={answer.nickname || `User ${answer.memberId}`} 
+                  <AvatarImage
+                    src={answer.imageUrl || "/placeholder.svg"}
+                    alt={answer.nickname || `User ${answer.memberId}`}
                   />
                   <AvatarFallback>
-                    {answer.nickname ? answer.nickname[0] : answer.memberId}
+                    {answer.nickname ? answer.nickname[0] : 'U'}
                   </AvatarFallback>
                 </Avatar>
                 <div>
@@ -130,7 +130,7 @@ export default function AnswerList({
                     type="button"
                     onClick={() => handleProfileClick(answer.memberId, answer.memberProfileId)}
                   >
-                    {answer.nickname || answer.author?.nickname || answer.author?.name || `User ${answer.memberId}`}
+                    {answer.nickname || `User ${answer.memberId}`}
                   </button>
                   <div className="text-xs text-muted-foreground flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
@@ -193,7 +193,7 @@ export default function AnswerList({
                 </div>
               </div>
               <div className="flex gap-2">
-                {answer.isAccepted && (
+                {answer.accepted && (
                   <Badge variant="secondary">
                     <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
                     채택된 답변
@@ -239,7 +239,7 @@ export default function AnswerList({
           </CardHeader>
           <CardContent className="pt-0">
             <div className="space-y-4">
-              <MarkdownRenderer content={answer.answerContent || ""} />
+              <MarkdownRenderer content={answer.answerContent || answer.content || ""} />
               {answer.mediaUrl && answer.mediaUrl.length > 0 && (
                 <div className="space-y-4">
                   {answer.mediaUrl.map((url: string, idx: number) => {
@@ -265,11 +265,6 @@ export default function AnswerList({
           </CardContent>
           <CardFooter className="flex flex-col items-start gap-4 pt-0">
             <div className="flex justify-end gap-2 w-full">
-              {!answer.isAccepted && question?.isResolved === false && (
-                <Button variant="outline" size="sm">
-                  답변 채택하기
-                </Button>
-              )}
               <Button
                 variant="ghost"
                 size="sm"

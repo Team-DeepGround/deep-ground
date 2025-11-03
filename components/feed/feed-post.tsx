@@ -181,7 +181,14 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
     setExistingImageUrls(prev => prev.filter(u => u !== url))
   }
 
-  const isOwner = user?.memberId === post.memberId
+  // ================= 🔍 디버깅을 위한 콘솔 로그 추가 =================
+  console.log(`[피드 ID: ${post.feedId}] 소유자 확인:`, {
+    "로그인한 사용자 ID (user.publicId)": user?.publicId,
+    "피드 작성자 ID (post.publicId)": post.publicId,
+    "비교 결과 (isOwner)": user?.publicId === post.publicId,
+  });
+  // =================================================================
+  const isOwner = user?.publicId === post.publicId;
 
   // 공유된 피드 렌더링
   const renderSharedFeed = (sharedFeed: FetchFeedResponse) => (
@@ -284,7 +291,7 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
-                    router.push(`/profile/${post.profileId}`)
+                    router.push(`/profile/${post.profilePublicId}`)
                   }}
                   className="font-medium hover:underline focus:outline-none"
                   type="button"
@@ -292,7 +299,7 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
                   {post.memberName}
                 </button>
                 <p className="text-xs text-muted-foreground">{new Date(post.createdAt).toLocaleDateString()}</p>
-                {post.isShared && post.sharedBy && (
+                {post.shared && post.sharedBy && (
                   <div className="flex items-center gap-1 mt-1">
                     <Repeat className="h-3 w-3 text-blue-500" />
                     <span className="text-xs text-blue-600">
@@ -423,7 +430,7 @@ export function FeedPost({ post: initialPost, onRefresh }: FeedPostProps) {
               <span>{post.commentCount}</span>
             </Button>
             {/* 공유된 피드가 아닌 경우에만 공유 버튼 표시 */}
-            {!post.isShared && (
+            {!post.shared && (
               <div onClick={(e) => e.stopPropagation()}>
                 <HybridShareButton
                   shareUrl={feedShareUrl}

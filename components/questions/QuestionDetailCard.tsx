@@ -28,17 +28,17 @@ export default function QuestionDetailCard({
   const router = useRouter();
 
   const handleProfileClick = async () => {
-    const profileId = question.memberProfileId || question.profileId || question.memberId;
+    const profileId = question.profilePublicId;
     if (profileId) {
       try {
         // API 클라이언트를 사용하여 프로필 존재 여부 확인
         await api.get(`/members/profile/${profileId}`);
         router.push(`/profile/${profileId}`);
       } catch (error: any) {
-        if (error.status === 400) {
+        if (error.response?.status === 400 || error.status === 400) {
           alert('해당 사용자의 프로필이 존재하지 않습니다.');
         } else {
-          alert('프로필을 조회하는 중 오류가 발생했습니다.');
+          alert(`프로필을 조회하는 중 오류가 발생했습니다: ${error.message}`);
         }
       }
     }
@@ -53,16 +53,10 @@ export default function QuestionDetailCard({
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-1">
               {question?.techStacks?.map((tag: any, idx: number) => (
-                <Badge key={tag ? String(tag) : idx} variant="secondary" className="font-normal">
-                  {tag}
+                <Badge key={tag ? String(tag) : idx} variant="secondary" className="font-normal text-xs">
+                  {tag.name || tag}
                 </Badge>
               ))}
-              {question?.isResolved && (
-                <Badge variant="secondary" className="ml-2">
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                  해결됨
-                </Badge>
-              )}
             </div>
             <CardTitle className="text-2xl">{question?.title}</CardTitle>
             <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
@@ -94,19 +88,19 @@ export default function QuestionDetailCard({
                   minWidth: "48px",
                   textAlign: "center"
                 }}
-              >
-                {question?.questionStatus === "OPEN"
+              > 
+                {(question?.questionStatus || question?.status) === "OPEN"
                   ? "미해결"
-                  : question?.questionStatus === "RESOLVED"
+                  : (question?.questionStatus || question?.status) === "RESOLVED"
                   ? "해결중"
-                  : question?.questionStatus === "CLOSED"
+                  : (question?.questionStatus || question?.status) === "CLOSED"
                   ? "해결완료"
                   : "미해결"}
               </span>
               {memberId && question?.memberId && Number(memberId) === Number(question.memberId) && (
                 <select
                   className="ml-2 text-sm font-medium border border-gray-300 bg-white px-2 py-1 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
-                  value={question?.questionStatus || 'OPEN'}
+                  value={question?.questionStatus || question?.status || 'OPEN'}
                   disabled={!!statusUpdating}
                   onChange={e => handleStatusChange(e.target.value)}
                 >
@@ -144,12 +138,12 @@ export default function QuestionDetailCard({
       <CardContent className="pt-0">
         <div className="flex items-center gap-3 mb-4">
           <Avatar>
-            <AvatarImage 
-              src={question?.imageUrl || question?.author?.avatar || "/placeholder.svg"} 
-              alt={question?.author?.name || question?.nickname || "알 수 없음"} 
+            <AvatarImage
+              src={question?.imageUrl || "/placeholder.svg"}
+              alt={question?.nickname || "알 수 없음"}
             />
             <AvatarFallback>
-              {question?.author?.name ? question.author.name[0] : question?.nickname ? question.nickname[0] : "?"}
+              {question?.nickname ? question.nickname[0] : "?"}
             </AvatarFallback>
           </Avatar>
           <div>
@@ -158,15 +152,7 @@ export default function QuestionDetailCard({
               type="button"
               onClick={handleProfileClick}
             >
-              {question?.author?.name
-                ? question.author.name
-                : question?.author?.nickname
-                ? question.author.nickname
-                : question?.nickname
-                ? question.nickname
-                : question?.memberId
-                ? `ID: ${question.memberId}`
-                : "알 수 없음"}
+              {question?.nickname || "알 수 없음"}
             </button>
             <div className="text-xs text-muted-foreground">작성자</div>
           </div>

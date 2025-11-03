@@ -28,12 +28,11 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const response = await api.post<LoginResponse>(
-        "/auth/login",
+      const response: LoginResponse = await api.post(
+        '/auth/login',
         { email, password },
         { requireAuth: false }
-      )
-
+      );
 
       if (response.result?.accessToken) {
         // ✅ role, email, memberId 추가 저장
@@ -42,7 +41,8 @@ export default function LoginPage() {
           response.result.role,
           response.result.email,
           response.result.memberId,
-          response.result.nickname
+          response.result.nickname,
+          response.result.publicId
         )
 
         const role = response.result.role

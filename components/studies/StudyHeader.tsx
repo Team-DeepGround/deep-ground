@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { Share2, LogOut, Trash2 } from "lucide-react"
 import { StudyGroupDetail } from "@/types/study"
+import { useAuth } from "@/components/auth-provider"
 
 interface StudyHeaderProps {
   study: StudyGroupDetail
@@ -9,7 +10,6 @@ interface StudyHeaderProps {
   onShare: () => void
   onLeaveStudy?: () => void
   onDeleteStudy?: () => void
-  currentMemberId?: number
 }
 
 export function StudyHeader({
@@ -19,8 +19,9 @@ export function StudyHeader({
   onShare,
   onLeaveStudy,
   onDeleteStudy,
-  currentMemberId,
 }: StudyHeaderProps) {
+  const { user } = useAuth()
+
   const getButtonText = () => {
     switch (memberStatus) {
       case "APPROVED":
@@ -37,7 +38,7 @@ export function StudyHeader({
   const isButtonDisabled = memberStatus === "APPROVED" || memberStatus === "PENDING"
   
   // writeMemberId 필드로 스터디장 확인
-  const isStudyLeader = currentMemberId && study.writeMemberId && Number(currentMemberId) === Number(study.writeMemberId)
+  const isStudyLeader = user?.publicId === study.writeMemberPublicId
   
 
   return (

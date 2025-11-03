@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 interface Applicant {
-  memberId: number
+  memberPublicId: string // 백엔드 응답에 맞춰 memberPublicId로 변경
   nickname: string
   joinedAt: null
   owner: false
@@ -11,8 +11,8 @@ interface Applicant {
 
 interface StudyApplicantsProps {
   applicants: Applicant[]
-  onApprove: (memberId: number) => void
-  onReject: (memberId: number) => void
+  onApprove: (memberPublicId: string) => void // 파라미터 이름은 API URL에 맞춰 유지
+  onReject: (memberPublicId: string) => void // 파라미터 이름은 API URL에 맞춰 유지
 }
 
 export function StudyApplicants({ applicants, onApprove, onReject }: StudyApplicantsProps) {
@@ -25,7 +25,7 @@ export function StudyApplicants({ applicants, onApprove, onReject }: StudyApplic
       <CardContent>
         <div className="space-y-4">
           {applicants.map((applicant) => (
-            <div key={applicant.memberId} className="flex items-center justify-between p-3 rounded-lg border">
+            <div key={applicant.memberPublicId} className="flex items-center justify-between p-3 rounded-lg border">
               <div className="flex items-center gap-3">
                 <Avatar>
                   <AvatarFallback>{applicant.nickname[0]}</AvatarFallback>
@@ -38,7 +38,7 @@ export function StudyApplicants({ applicants, onApprove, onReject }: StudyApplic
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => onApprove(applicant.memberId)}
+                  onClick={() => onApprove(applicant.memberPublicId)}
                 >
                   승인
                 </Button>
@@ -46,7 +46,7 @@ export function StudyApplicants({ applicants, onApprove, onReject }: StudyApplic
                   variant="outline"
                   size="sm"
                   className="text-destructive"
-                  onClick={() => onReject(applicant.memberId)}
+                  onClick={() => onReject(applicant.memberPublicId)}
                 >
                   거절
                 </Button>
