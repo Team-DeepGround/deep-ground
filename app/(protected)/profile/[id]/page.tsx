@@ -26,7 +26,7 @@ type ProfileData = {
   publicId: string
   profileImage?: string
   nickname: string
-  email?: string
+
   introduction?: string
   job?: string
   company?: string
@@ -84,7 +84,6 @@ export default function UserProfilePage() {
           publicId: p.publicId ?? p.id ?? '',
           profileImage: p.profileImage,
           nickname: p.nickname,
-          email: p.email,
           introduction: p.introduction ?? p.bio,
           job: p.job,
           company: p.company,
@@ -277,9 +276,6 @@ export default function UserProfilePage() {
             </Avatar>
 
             <h1 className="mt-4 text-3xl md:text-4xl font-extrabold tracking-tight">{profile.nickname}</h1>
-            {profile.email && (
-              <p className="text-muted-foreground mt-1 text-base md:text-lg">{profile.email}</p>
-            )}
 
             <p className="mt-3 text-base md:text-lg text-muted-foreground leading-relaxed">
               {profile.introduction?.trim() || "자기 소개를 쓰세요 제발"}

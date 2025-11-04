@@ -15,8 +15,8 @@ import { ApiError } from "@/lib/api-client"
 // API 응답 타입 정의
 interface Friend {
   friendId: number;
-  otherMemberName: string;
-  profileId?: number | null; // ✅ 추가됨
+  otherMemberNickname: string;
+  profilePublicId?: string | null; // ✅ 추가됨
   status: 'REQUEST' | 'CANCEL' | 'ACCEPT' | 'REFUSAL';
 }
 
@@ -30,7 +30,7 @@ export default function FriendsPage() {
   const { toast } = useToast()
   const router = useRouter()
   const [searchTerm, setSearchTerm] = useState("")
-  const [emailSearch, setEmailSearch] = useState("")
+  const [nicknameSearch, setNicknameSearch] = useState("")
   const [friends, setFriends] = useState<Friend[]>([])
   const [friendRequests, setFriendRequests] = useState<Friend[]>([])
   const [sentRequests, setSentRequests] = useState<Friend[]>([])
@@ -82,25 +82,16 @@ export default function FriendsPage() {
   // 친구 검색 필터링
   const filteredFriends = friends.filter(
     (friend) =>
-      friend.otherMemberName.toLowerCase().includes(searchTerm.toLowerCase())
+      friend.otherMemberNickname.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   // 핸들러 함수들 (기존과 동일)
   const handleSendRequest = async () => {
     if (isSubmitting) return
-    if (!emailSearch) {
+    if (!nicknameSearch || nicknameSearch.trim().length < 2) {
       toast({
-        title: "이메일 필요",
-        description: "친구 요청을 보낼 이메일을 입력해주세요.",
-        variant: "destructive",
-      })
-      return
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(emailSearch)) {
-      toast({
-        title: "이메일 형식 오류",
-        description: "올바른 이메일 형식을 입력해주세요.",
+        title: "닉네임 필요",
+        description: "친구 요청을 보낼 닉네임을 입력해주세요.",
         variant: "destructive",
       })
       return
@@ -108,14 +99,14 @@ export default function FriendsPage() {
     try {
       setIsSubmitting(true)
       const response = await api.post('/friends/request', {
-        receiverEmail: emailSearch
+        nickname: nicknameSearch.trim()
       })
       if (response?.status === 200) {
         toast({
           title: "친구 요청 전송",
           description: response.message || "친구 요청이 성공적으로 전송되었습니다.",
         })
-        setEmailSearch("")
+        setNicknameSearch("")
         await loadData()
       }
     } catch (error) {
@@ -237,8 +228,8 @@ export default function FriendsPage() {
         <h1 className="text-3xl font-bold mb-8">친구 관리</h1>
         <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-6">
           <FriendAddCard
-            emailSearch={emailSearch}
-            setEmailSearch={setEmailSearch}
+            nicknameSearch={nicknameSearch}
+            setNicknameSearch={setNicknameSearch}
             isSubmitting={isSubmitting}
             onSendRequest={handleSendRequest}
           />
@@ -282,9 +273,9 @@ export default function FriendsPage() {
   )
 }
 
-function FriendAddCard({ emailSearch, setEmailSearch, isSubmitting, onSendRequest }: {
-  emailSearch: string;
-  setEmailSearch: (v: string) => void;
+function FriendAddCard({ nicknameSearch, setNicknameSearch, isSubmitting, onSendRequest }: {
+  nicknameSearch: string;
+  setNicknameSearch: (v: string) => void;
   isSubmitting: boolean;
   onSendRequest: () => void;
 }) {
@@ -292,15 +283,15 @@ function FriendAddCard({ emailSearch, setEmailSearch, isSubmitting, onSendReques
     <Card>
       <CardHeader>
         <CardTitle>친구 추가</CardTitle>
-        <CardDescription>이메일로 친구를 찾아 추가하세요</CardDescription>
+        <CardDescription>닉네임으로 친구를 찾아 추가하세요</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label>이메일</Label>
+          <Label>닉네임</Label>
           <Input
-            placeholder="friend@example.com"
-            value={emailSearch}
-            onChange={(e) => setEmailSearch(e.target.value)}
+            placeholder="닉네임을 입력해주세요"
+            value={nicknameSearch}
+            onChange={(e) => setNicknameSearch(e.target.value)}
             disabled={isSubmitting}
           />
         </div>
@@ -348,20 +339,27 @@ function FriendListCard({ isLoading, friends, searchTerm, setSearchTerm, isSubmi
         ) : friends.length > 0 ? (
           <div className="space-y-4">
             {friends.map((friend) => (
-              <div key={friend.friendId} className="flex items-center justify-between">
+              <div
+                key={friend.friendId}
+                className="flex items-center justify-between"
+              >
                 <div className="flex items-center gap-3">
                   <Avatar>
-                    <AvatarFallback>{friend.otherMemberName[0]}</AvatarFallback>
+                    <AvatarFallback>
+                      {friend.otherMemberNickname[0]}
+                    </AvatarFallback>
                   </Avatar>
                   <div>
-                    <div className="font-medium">{friend.otherMemberName}</div>
+                    <div className="font-medium">
+                      {friend.otherMemberNickname}
+                    </div>
                   </div>
                 </div>
                 <div className="flex gap-2">
                   {/* ✅ 프로필 보기 버튼 - 프로필 ID가 있을 경우만 렌더링 */}
-                  {friend.profileId != null && (
+                  {friend.profilePublicId != null && (
                     <Button variant="ghost" size="sm" asChild>
-                      <a href={`/profile/${friend.profileId}`}>프로필</a>
+                      <a href={`/profile/${friend.profilePublicId}`}>프로필</a>
                     </Button>
                   )}
                   <Button
@@ -376,19 +374,18 @@ function FriendListCard({ isLoading, friends, searchTerm, setSearchTerm, isSubmi
               </div>
             ))}
           </div>
-
         ) : (
           <div className="text-center py-12">
             <UserPlus className="mx-auto h-12 w-12 text-muted-foreground" />
             <h3 className="mt-4 text-lg font-semibold">친구가 없습니다</h3>
             <p className="text-muted-foreground">
-              {searchTerm ? "검색 결과가 없습니다." : "친구를 추가해보세요!"}
+              {searchTerm ? '검색 결과가 없습니다.' : '친구를 추가해보세요!'}
             </p>
           </div>
         )}
       </CardContent>
     </Card>
-  )
+  );
 }
 
 
@@ -413,24 +410,28 @@ function FriendRequestsCard({ isLoading, friendRequests, isSubmitting, onAccept,
               <div key={request.friendId} className="p-4 border rounded-lg">
                 <div className="flex items-center gap-3 mb-3">
                   <Avatar>
-                    <AvatarFallback>{request.otherMemberName[0]}</AvatarFallback>
+                    <AvatarFallback>
+                      {request.otherMemberNickname[0]}
+                    </AvatarFallback>
                   </Avatar>
                   <div>
-                    <div className="font-medium">{request.otherMemberName}</div>
+                    <div className="font-medium">
+                      {request.otherMemberNickname}
+                    </div>
                   </div>
                 </div>
                 <div className="flex gap-2 justify-end">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => onReject(request.friendId)}
                     disabled={isSubmitting}
                   >
                     <X className="mr-2 h-4 w-4" />
                     거절
                   </Button>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     onClick={() => onAccept(request.friendId)}
                     disabled={isSubmitting}
                   >
@@ -445,12 +446,14 @@ function FriendRequestsCard({ isLoading, friendRequests, isSubmitting, onAccept,
           <div className="text-center py-12">
             <Mail className="mx-auto h-12 w-12 text-muted-foreground" />
             <h3 className="mt-4 text-lg font-semibold">받은 요청 없음</h3>
-            <p className="text-muted-foreground">현재 받은 친구 요청이 없습니다.</p>
+            <p className="text-muted-foreground">
+              현재 받은 친구 요청이 없습니다.
+            </p>
           </div>
         )}
       </CardContent>
     </Card>
-  )
+  );
 }
 
 function SentRequestsCard({ isLoading, sentRequests, isSubmitting, onCancel }: {
@@ -473,16 +476,20 @@ function SentRequestsCard({ isLoading, sentRequests, isSubmitting, onCancel }: {
               <div key={request.friendId} className="p-4 border rounded-lg">
                 <div className="flex items-center gap-3 mb-3">
                   <Avatar>
-                    <AvatarFallback>{request.otherMemberName[0]}</AvatarFallback>
+                    <AvatarFallback>
+                      {request.otherMemberNickname[0]}
+                    </AvatarFallback>
                   </Avatar>
                   <div>
-                    <div className="font-medium">{request.otherMemberName}</div>
+                    <div className="font-medium">
+                      {request.otherMemberNickname}
+                    </div>
                   </div>
                 </div>
                 <div className="flex justify-end">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => onCancel(request.friendId)}
                     disabled={isSubmitting}
                   >
@@ -497,12 +504,14 @@ function SentRequestsCard({ isLoading, sentRequests, isSubmitting, onCancel }: {
           <div className="text-center py-12">
             <Mail className="mx-auto h-12 w-12 text-muted-foreground" />
             <h3 className="mt-4 text-lg font-semibold">보낸 요청 없음</h3>
-            <p className="text-muted-foreground">현재 보낸 친구 요청이 없습니다.</p>
+            <p className="text-muted-foreground">
+              현재 보낸 친구 요청이 없습니다.
+            </p>
           </div>
         )}
       </CardContent>
     </Card>
-  )
+  );
 }
 
 function Label({ children }: { children: React.ReactNode }) {
