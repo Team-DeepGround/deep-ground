@@ -19,10 +19,13 @@ import { api } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
 
 interface MyStudy {
-  id: number
-  title: string
-  createdAt: string
-  groupStatus: "RECRUITING" | "IN_PROGRESS" | "COMPLETED"
+  id: number;
+  title: string;
+  createdAt: string;
+  organizer: {
+    nickname: string;
+  };
+  groupStatus: "RECRUITING" | "IN_PROGRESS" | "COMPLETED";
 }
 
 interface StudyListProps {
@@ -200,7 +203,7 @@ export function StudyList({
             className="cursor-pointer hover:shadow-lg transition-all duration-200 border-2 hover:border-primary/50 hover:scale-[1.02] group" 
             onClick={() => {
               if (study.id) {
-                const url = isCreated ? `/studies/manage/${study.id}` : `/studies/${study.id}`
+                const url = isCreated ? `/studies/manage/${study.id}` : `/studies/${study.organizer.nickname || 'user'}/${study.id}`
                 router.push(url)
               } else {
                 
