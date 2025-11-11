@@ -11,10 +11,13 @@ import { Separator } from "@/components/ui/separator"
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card"
 
 interface MyStudy {
-  id: number
-  title: string
-  createdAt: string
-  groupStatus: "RECRUITING" | "IN_PROGRESS" | "COMPLETED"
+  id: number;
+  title: string;
+  createdAt: string;
+  organizer: {
+    nickname: string;
+  };
+  groupStatus: "RECRUITING" | "IN_PROGRESS" | "COMPLETED";
 }
 
 interface JoinedStudy {
@@ -58,12 +61,15 @@ export default function MyStudiesPage() {
         const joinedResponse = await api.get("/study-group/joined")
         if (joinedResponse.status === 200 && joinedResponse.result) {
           // 참여한 스터디 데이터 형식 변환
-          const formattedJoinedStudies: MyStudy[] = joinedResponse.result.map((study: any, index: number) => {
+          const formattedJoinedStudies: MyStudy[] = joinedResponse.result.map((study: any) => {
             const studyId = study.studyGroupId || study.id
             return {
               id: studyId, // studyGroupId가 없으면 id 사용
               title: study.title,
-              createdAt: study.participatedAt,
+              createdAt: study.participatedAt, 
+              organizer: {
+                nickname: study.createdBy || study.writer || 'unknown',
+              },
               groupStatus: "IN_PROGRESS" as const // 참여한 스터디는 진행중 상태로 표시
             }
           }).filter((study: MyStudy) => {
@@ -252,7 +258,7 @@ export default function MyStudiesPage() {
           <div>
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold">내가 참여한 스터디</h2>
-              <span className="text-sm text-muted-foreground">{joinedStudies.length}개</span>
+              <span className="text-sm text-muted-foreground">{joinedStudies.length}</span>
             </div>
             <StudyList 
               studies={joinedStudies}

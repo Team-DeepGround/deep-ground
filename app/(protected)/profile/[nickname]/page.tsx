@@ -121,27 +121,11 @@ export default function ProfilePage() {
         // 생성한 스터디
         const createdStudiesResponse = await api.get("/study-group/my")
         if (createdStudiesResponse && createdStudiesResponse.result) {
-          const formattedCreatedStudies = createdStudiesResponse.result.map((study: any) => {
-            const isOnline = study.isOffline !== undefined ? !study.isOffline : true;
-            return {
-              id: study.id,
-              title: study.title || "제목 없음",
-              description: study.description || study.explanation || "",
-              period: study.period || "기간 정보 없음",
-              recruitmentPeriod: study.recruitmentPeriod || "모집 기간 정보 없음",
-              tags: study.tags || study.techStacks || [],
-              maxMembers: study.maxMembers || study.groupLimit || 0,
-              currentMembers: study.currentMembers || study.memberCount || 0,
-              organizer: {
-                nickname: study.organizer?.nickname || profile.nickname || "작성자 정보 없음",
-                avatar: study.organizer?.avatar || profile.profileImage || "/placeholder-user.jpg"
-              },
-              isOnline: isOnline,
-              location: study.location || "장소 정보 없음",
-              studyStartDate: study.studyStartDate,
-              studyEndDate: study.studyEndDate,
-            };
-          });
+          // isOffline 필드를 isOnline으로 변환
+          const formattedCreatedStudies = createdStudiesResponse.result.map((study: any) => ({
+            ...study,
+            isOnline: study.isOffline !== undefined ? !study.isOffline : true
+          }))
           setCreatedStudies(formattedCreatedStudies)
         }
 
@@ -155,25 +139,29 @@ export default function ProfilePage() {
             const isOnline = study.isOffline !== undefined ? !study.isOffline : true
             return {
               id: studyId,
-              title: study.title || "제목 없음",
-              description: study.description || study.explanation || "",
-              period: study.period || "기간 정보 없음",
-              recruitmentPeriod: study.recruitmentPeriod || "모집 기간 정보 없음",
+              title: study.title || '제목 없음',
+              description: study.description || study.explanation || '',
+              period: study.period || '기간 정보 없음',
+              recruitmentPeriod:
+                study.recruitmentPeriod || '모집 기간 정보 없음',
               tags: study.tags || study.techStacks || [],
               maxMembers: study.maxMembers || study.groupLimit || 0,
               currentMembers: study.currentMembers || study.memberCount || 0,
               organizer: {
-                nickname: study.createdBy || "작성자 정보 없음",
-                avatar: study.organizer?.avatar || "/placeholder-user.jpg"
+                nickname:
+                  study.organizer?.nickname ||
+                  study.createdBy ||
+                  '작성자 정보 없음',
+                avatar: study.organizer?.avatar || '/placeholder-user.jpg',
               },
               isOnline: isOnline,
-              location: study.location || "장소 정보 없음",
+              location: study.location || '장소 정보 없음',
               // API 응답 필드 추가
               currentMemberCount: study.currentMemberCount,
               groupMemberCount: study.groupMemberCount,
               studyStartDate: study.studyStartDate,
               studyEndDate: study.studyEndDate,
-            }
+            };
           }).filter(study => study.id && study.id !== undefined)
           setJoinedStudies(formattedJoinedStudies)
         }
@@ -308,7 +296,6 @@ export default function ProfilePage() {
               if (isCreated) {
                 router.push(`/studies/manage/${study.id}`)
               } else {
-                // study.organizer.name을 닉네임으로 사용
                 router.push(`/studies/${study.organizer.nickname}/${study.id}`)
               }
             }}
@@ -335,7 +322,7 @@ export default function ProfilePage() {
         </p>
         <Button size="sm" className="mt-3" onClick={(e) => {
           e.stopPropagation()
-          router.push(`/feed/${feed.feedId}`)
+          router.push(`/feed/${feed.memberName}/${feed.feedId}`)
         }}>
           상세보기
         </Button>
