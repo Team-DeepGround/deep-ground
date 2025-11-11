@@ -1,6 +1,12 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState } from "react"
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback, // 1. useCallback 임포트
+} from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { auth, getTokenExp } from "@/lib/auth"
 
@@ -109,52 +115,55 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   }, [pathname, router])
 
   // ✅ 로그인: 닉네임까지 저장
-  const login = (
-    token: string,
-    roleArg?: string,
-    emailArg?: string,
-    memberIdArg?: number,
-    nicknameArg?: string,
-    publicIdArg?: string
-  ) => {
-    auth.setToken(token)
+  const login = useCallback( // 2. login 함수를 useCallback으로 래핑
+    (
+      token: string,
+      roleArg?: string,
+      emailArg?: string,
+      memberIdArg?: number,
+      nicknameArg?: string,
+      publicIdArg?: string
+    ) => {
+      auth.setToken(token)
 
-    if (roleArg) {
-      auth.setRole(roleArg)
-    }
+      if (roleArg) {
+        auth.setRole(roleArg)
+      }
 
-    const exp = getTokenExp(token)
-    if (exp) localStorage.setItem("token_exp", exp.toString())
+      const exp = getTokenExp(token)
+      if (exp) localStorage.setItem("token_exp", exp.toString())
 
-    if (emailArg) {
-      auth.setEmail(emailArg)
-    }
+      if (emailArg) {
+        auth.setEmail(emailArg)
+      }
 
-    if (memberIdArg !== undefined) {
-      auth.setMemberId(memberIdArg)
-    }
+      if (memberIdArg !== undefined) {
+        auth.setMemberId(memberIdArg)
+      }
 
-    if (nicknameArg) {
-      auth.setNickname?.(nicknameArg)
-    }
+      if (nicknameArg) {
+        auth.setNickname?.(nicknameArg)
+      }
 
-    if (publicIdArg) {
-      auth.setPublicId?.(publicIdArg)
-    }
+      if (publicIdArg) {
+        auth.setPublicId?.(publicIdArg)
+      }
 
-    setIsAuthenticated(true)
-    // 로그인 시 user 상태를 즉시 업데이트하여 publicId를 포함시킵니다.
-    setUser({
-      role: roleArg ?? null,
-      email: emailArg ?? null,
-      memberId: memberIdArg ?? null,
-      nickname: nicknameArg ?? null,
-      publicId: publicIdArg ?? null,
-    });
-  }
+      setIsAuthenticated(true)
+      // 로그인 시 user 상태를 즉시 업데이트하여 publicId를 포함시킵니다.
+      setUser({
+        role: roleArg ?? null,
+        email: emailArg ?? null,
+        memberId: memberIdArg ?? null,
+        nickname: nicknameArg ?? null,
+        publicId: publicIdArg ?? null,
+      });
+    },
+    [] // 3. 의존성 배열 추가 (setState 함수들은 의존성 필요 없음)
+  )
 
   // ✅ 로그아웃: 닉네임 포함 정리
-  const logout = () => {
+  const logout = useCallback(() => { // 4. logout 함수를 useCallback으로 래핑
     auth.removeToken()
     auth.removeRole()
     auth.removeEmail()
@@ -165,7 +174,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     setIsAuthenticated(false)
     setUser(null)
     router.push("/auth/login")
-  }
+  }, [router]) // 5. router를 의존성 배열에 추가
 
   return (
     <AuthContext.Provider
