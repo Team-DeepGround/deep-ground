@@ -44,6 +44,13 @@ export const sendMessage = (client: Client, chatRoomId: number, message: string,
     message: message.trim(),
     mediaIds,
   };
+  try {
+    // 전송 직전 payload 확인용 로그
+    console.log('[chat] sendMessage payload', {
+      chatRoomId,
+      payload: chatMessagePayload,
+    });
+  } catch {}
 
   client.publish({
     destination: `/app/chatrooms/${chatRoomId}/message`,

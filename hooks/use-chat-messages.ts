@@ -395,6 +395,17 @@ export const useChatMessages = (
       stompClientState,
       chatRoomId,
       (newMessage: ChatMessage) => {
+        try {
+          const snapshot = allChatRoomMessagesRef.current?.[chatRoomId];
+          console.log('[chat] live message received', {
+            chatRoomId,
+            newMessage,
+          });
+          console.log('[chat] memberInfos snapshot', {
+            memberInfos: snapshot?.memberInfos,
+            myMemberId: myInfoRef.current?.memberId,
+          });
+        } catch {}
         setAllChatRoomMessages((prev) => {
           const currentRoomState = prev[chatRoomId];
           if (currentRoomState) {
