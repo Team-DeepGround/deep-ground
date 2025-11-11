@@ -261,110 +261,122 @@ export const useChatMessages = (
       stompClientState,
       chatRoomId,
       (res: InitChatRoomResponse) => {
-        const memberInfosWithIsMe = res.memberInfos;
-        // 내 정보 ref에 저장 (isMe → me)
-        myInfoRef.current = memberInfosWithIsMe.find((m) => m.me);
+        // memberInfos의 me 플래그를 보정: 서버가 me를 제공하지 않을 경우 내 memberId를 기반으로 설정
+        (async () => {
+          let myMemberId: number | null = null;
+          try {
+            myMemberId = await auth.getMemberId();
+          } catch {}
 
-        setAllChatRoomMessages((prev) => {
-          const newState = {
-            ...prev,
-            [chatRoomId]: {
-              // ISO 8601 문자열은 그대로 비교해도 정렬이 잘 되지만, new Date()로 명시적으로 변환하는 것이 더 안전합니다.
-              messages: [...res.chatMessage.messages].sort(
-                (a, b) =>
-                  new Date(a.createdAt).getTime() -
-                  new Date(b.createdAt).getTime()
-              ),
-              nextCursor: res.chatMessage.nextCursor,
-              hasNext: res.chatMessage.hasNext,
-              memberInfos: memberInfosWithIsMe,
-              isLoadingMessages: false,
-            },
-          };
-          // 최신 메시지 계산
-          const sortedMessages = [...res.chatMessage.messages].sort(
-            (a, b) =>
-              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-          );
-          const latestMessage =
-            sortedMessages.length > 0
-              ? sortedMessages[sortedMessages.length - 1]
-              : null;
-          // 최초 1회만 /read 전송 (내 memberId가 있을 때만)
-          if (
-            latestMessage &&
-            myInfoRef.current &&
-            !initialReadSent.current.has(chatRoomId)
-          ) {
-            console.log(`[useChatMessages] Sending read receipt on init for chatRoomId: ${chatRoomId}, time: ${latestMessage.createdAt}`);
-            try {
-              sendReadReceipt(
-                stompClientState,
-                chatRoomId,
-                myInfoRef.current.memberId,
-                latestMessage.createdAt
+          const memberInfosWithIsMe = (res.memberInfos || []).map((m) => ({
+            ...m,
+            me: m.me === true || (myMemberId !== null && m.memberId === myMemberId),
+          }));
+
+          // 내 정보 ref에 저장
+          myInfoRef.current = memberInfosWithIsMe.find((m) => m.me);
+
+          setAllChatRoomMessages((prev) => {
+            const newState = {
+              ...prev,
+              [chatRoomId]: {
+                // ISO 8601 문자열은 그대로 비교해도 정렬이 잘 되지만, new Date()로 명시적으로 변환하는 것이 더 안전합니다.
+                messages: [...res.chatMessage.messages].sort(
+                  (a, b) =>
+                    new Date(a.createdAt).getTime() -
+                    new Date(b.createdAt).getTime()
+                ),
+                nextCursor: res.chatMessage.nextCursor,
+                hasNext: res.chatMessage.hasNext,
+                memberInfos: memberInfosWithIsMe,
+                isLoadingMessages: false,
+              },
+            };
+            // 최신 메시지 계산
+            const sortedMessages = [...res.chatMessage.messages].sort(
+              (a, b) =>
+                new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            );
+            const latestMessage =
+              sortedMessages.length > 0
+                ? sortedMessages[sortedMessages.length - 1]
+                : null;
+            // 최초 1회만 /read 전송 (내 memberId가 있을 때만)
+            if (
+              latestMessage &&
+              myInfoRef.current &&
+              !initialReadSent.current.has(chatRoomId)
+            ) {
+              console.log(`[useChatMessages] Sending read receipt on init for chatRoomId: ${chatRoomId}, time: ${latestMessage.createdAt}`);
+              try {
+                sendReadReceipt(
+                  stompClientState,
+                  chatRoomId,
+                  myInfoRef.current.memberId,
+                  latestMessage.createdAt
+                );
+                initialReadSent.current.add(chatRoomId);
+              } catch (error) {
+                toast({
+                  title: '읽음 처리 실패',
+                  description:
+                    '메시지 읽음 상태를 서버에 전송하는데 실패했습니다.',
+                  variant: 'destructive',
+                });
+              }
+
+              // 클라이언트 UI 즉시 업데이트: 목록에서 unreadCount를 0으로
+              setFriendChatRooms((prev: any[]) =>
+                prev.map((room: any) =>
+                  room.chatRoomId === chatRoomId
+                    ? {
+                        ...room,
+                        unreadCount:
+                          selectedChatRoomRef.current?.chatRoomId === chatRoomId
+                            ? 0
+                            : 0,
+                      }
+                    : room
+                )
               );
-              initialReadSent.current.add(chatRoomId);
-            } catch (error) {
-              toast({
-                title: '읽음 처리 실패',
-                description:
-                  '메시지 읽음 상태를 서버에 전송하는데 실패했습니다.',
-                variant: 'destructive',
-              });
+              setStudyGroupChatRooms((prev: any[]) =>
+                prev.map((room: any) =>
+                  room.chatRoomId === chatRoomId
+                    ? {
+                        ...room,
+                        unreadCount:
+                          selectedChatRoomRef.current?.chatRoomId === chatRoomId
+                            ? 0
+                            : 0,
+                      }
+                    : room
+                )
+              );
             }
 
-            // 클라이언트 UI 즉시 업데이트: 목록에서 unreadCount를 0으로
-            setFriendChatRooms((prev: any[]) =>
-              prev.map((room: any) =>
-                room.chatRoomId === chatRoomId
-                  ? {
-                      ...room,
-                      unreadCount:
-                        selectedChatRoomRef.current?.chatRoomId === chatRoomId
-                          ? 0
-                          : 0,
-                    }
-                  : room
-              )
-            );
-            setStudyGroupChatRooms((prev: any[]) =>
-              prev.map((room: any) =>
-                room.chatRoomId === chatRoomId
-                  ? {
-                      ...room,
-                      unreadCount:
-                        selectedChatRoomRef.current?.chatRoomId === chatRoomId
-                          ? 0
-                          : 0,
-                    }
-                  : room
-              )
-            );
-          }
+            // 메시지 로드 후 스크롤을 맨 아래로 즉시 이동
+            requestAnimationFrame(() => {
+              if (messagesEndRef.current && scrollableDivRef.current) {
+                scrollToBottom(scrollableDivRef.current, false);
+                setIsChatContentVisible(true);
+                isScrolledToBottomRef.current = true;
+              }
+            });
 
-          // 메시지 로드 후 스크롤을 맨 아래로 즉시 이동
-          requestAnimationFrame(() => {
-            if (messagesEndRef.current && scrollableDivRef.current) {
-              scrollToBottom(scrollableDivRef.current, false);
-              setIsChatContentVisible(true);
-              isScrolledToBottomRef.current = true;
-            }
+            return newState;
           });
 
-          return newState;
-        });
-
-        // 멤버 정보 없는 senderId에 대해 fetchAndAddMemberInfo 호출
-        const allSenderIds = new Set(
-          res.chatMessage.messages.map((msg) => msg.senderId)
-        );
-        const knownMemberIds = new Set(res.memberInfos.map((m) => m.memberId));
-        allSenderIds.forEach((senderId) => {
-          if (!knownMemberIds.has(senderId)) {
-            fetchAndAddMemberInfo(chatRoomId, senderId);
-          }
-        });
+          // 멤버 정보 없는 senderId에 대해 fetchAndAddMemberInfo 호출
+          const allSenderIds = new Set(
+            res.chatMessage.messages.map((msg) => msg.senderId)
+          );
+          const knownMemberIds = new Set(memberInfosWithIsMe.map((m) => m.memberId));
+          allSenderIds.forEach((senderId) => {
+            if (!knownMemberIds.has(senderId)) {
+              fetchAndAddMemberInfo(chatRoomId, senderId);
+            }
+          });
+        })();
       },
       (error) => {
         toast({
