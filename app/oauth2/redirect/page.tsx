@@ -32,6 +32,7 @@ function OAuth2Content() {
     const accessToken = searchParams.get("accessToken")
     const emailParam = searchParams.get("email")
     const nicknameParam = searchParams.get("nickname")
+    const publicIdParam = searchParams.get("publicId") // ✅ 백엔드에서 내려주는 경우
 
     const run = async () => {
       if (!accessToken) {
@@ -40,30 +41,56 @@ function OAuth2Content() {
         return
       }
 
-      // 🔍 토큰에서 role, memberId 파싱 (백엔드 클레임 키에 맞춰 후보로 체크)
       const payload = parseJwt<any>(accessToken) || {}
+
+      // role
       const role =
         payload.role ||
         payload.auth ||
         (Array.isArray(payload.authorities) ? payload.authorities[0] : null) ||
         null
+
+      // memberId
       const memberId =
-        payload.memberId ?? payload.id ?? (payload.sub ? Number(payload.sub) : null)
+        payload.memberId ??
+        payload.id ??
+        (payload.sub ? Number(payload.sub) : null)
 
-      // 쿼리스트링에서 받은 값 복원
-      const email = emailParam ? decodeURIComponent(emailParam) : payload.email ?? null
-      const nickname = nicknameParam ? decodeURIComponent(nicknameParam) : null
+      // email / nickname
+      const email =
+        emailParam
+          ? decodeURIComponent(emailParam)
+          : payload.email ?? null
 
-      // ✅ 모든 값 저장 (이게 포인트!)
-      login(accessToken, role ?? undefined, email ?? undefined, memberId ?? undefined, nickname ?? undefined)
+      const nickname =
+        nicknameParam
+          ? decodeURIComponent(nicknameParam)
+          : payload.nickname ?? payload.name ?? null
+
+      // ✅ publicId (쿼리스트링 > JWT payload 우선순위)
+      const publicId =
+        publicIdParam
+          ? decodeURIComponent(publicIdParam)
+          : payload.publicId ?? payload.userPublicId ?? null
+
+      // ✅ AuthContext 시그니처에 맞게 모두 전달
+      login(
+        accessToken,
+        role ?? undefined,
+        email ?? undefined,
+        memberId ?? undefined,
+        nickname ?? undefined,
+        publicId ?? undefined
+      )
 
       toast.success(`${nickname || email}님, 소셜 로그인에 성공했습니다.`)
 
-      // 프로필 존재 여부 체크해서 라우팅
+      // 프로필 존재 여부에 따라 라우팅
       try {
         const profileRes = await api.get("/members/profile/me", {
           headers: { Authorization: `Bearer ${accessToken}` },
         })
+
         if (profileRes.result && Object.keys(profileRes.result).length > 0) {
           router.replace("/")
         } else {
