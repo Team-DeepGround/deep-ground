@@ -15,6 +15,8 @@ interface QuestionCardProps {
 
 export default function QuestionCard({ question, onTitleClick }: QuestionCardProps) {
   const router = useRouter();
+
+  console.log("QuestionCard data:", question);
   
   const authorName = question.nickname || "알 수 없음";
   const authorAvatar = question.imageUrl || question.author?.avatar || "/placeholder.svg";
@@ -26,7 +28,13 @@ export default function QuestionCard({ question, onTitleClick }: QuestionCardPro
   };
 
   const handleProfileClick = async () => {
-    const profileId = question.profilePublicId;
+    // 💡 [수정] 'profilePublicId' 대신 실제 UUID가 담긴 키 이름을 사용하세요.
+    // 1순위 후보: question.publicId (피드 댓글과 동일)
+    // 2순위 후보: question.authorPublicId (더 명시적)
+    // 3순위 후보: question.memberPublicId
+    // (위 console.log로 확인한 정확한 키 이름을 넣으세요)
+    const profileId = question.publicId || question.profilePublicId; 
+
     if (profileId) {
       try {
         // API 클라이언트를 사용하여 프로필 존재 여부 확인
@@ -39,6 +47,10 @@ export default function QuestionCard({ question, onTitleClick }: QuestionCardPro
           alert(`프로필을 조회하는 중 오류가 발생했습니다: ${error.message}`);
         }
       }
+    } else {
+      // 💡 [추가] profileId가 없을 때 사용자에게 피드백을 줍니다.
+      console.warn("프로필 ID(publicId)를 찾을 수 없습니다.", question);
+      // alert('프로필 ID를 찾을 수 없어 이동할 수 없습니다.'); // 필요시 주석 해제
     }
   };
   return (
