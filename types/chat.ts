@@ -50,6 +50,7 @@ export interface ApiResponse<T> {
         memberId?: number; // 단일 멤버 정보 조회 시
         nickname?: string; // 단일 멤버 정보 조회 시
         lastReadMessageTime?: string; // 단일 멤버 정보 조회 시
+        me?: boolean; // 단일 멤버 정보 조회 시 (내가 본인인지 여부)
         mediaIds?: string[]; // 미디어 업로드 응답 시
     };
 }

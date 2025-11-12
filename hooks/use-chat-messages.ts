@@ -268,13 +268,38 @@ export const useChatMessages = (
             myMemberId = await auth.getMemberId();
           } catch {}
 
-          const memberInfosWithIsMe = (res.memberInfos || []).map((m) => ({
-            ...m,
-            me: m.me === true || (myMemberId !== null && m.memberId === myMemberId),
-          }));
+          // memberInfos 처리: me 플래그 보정 및 닉네임 확인
+          const memberInfosWithIsMe = (res.memberInfos || []).map((m) => {
+            const isMe = m.me === true || (myMemberId !== null && m.memberId === myMemberId);
+            return {
+              ...m,
+              memberId: m.memberId ?? 0, // memberId가 없으면 0 (하지만 일반적으로는 있어야 함)
+              nickname: m.nickname || '알 수 없음', // nickname이 없으면 기본값
+              lastReadMessageTime: m.lastReadMessageTime || new Date(0).toISOString(),
+              me: isMe,
+            };
+          });
 
           // 내 정보 ref에 저장
           myInfoRef.current = memberInfosWithIsMe.find((m) => m.me);
+          
+          // 디버깅: memberInfos 처리 결과 확인 (문제 발생 시에만 로그)
+          if (memberInfosWithIsMe.some(m => !m.nickname || m.nickname === '알 수 없음')) {
+            console.warn('[use-chat-messages] Some memberInfos missing nickname', {
+              memberInfos: memberInfosWithIsMe,
+              originalMemberInfos: res.memberInfos,
+              myMemberId,
+              chatRoomId
+            });
+          }
+          
+          if (!myInfoRef.current) {
+            console.warn('[use-chat-messages] My info not found in memberInfos', {
+              memberInfos: memberInfosWithIsMe,
+              myMemberId,
+              chatRoomId
+            });
+          }
 
           setAllChatRoomMessages((prev) => {
             const newState = {

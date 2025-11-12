@@ -101,10 +101,19 @@ export const fetchMemberInfo = async (chatRoomId: number, memberId: number): Pro
     throw new Error('Unauthenticated');
   }
   const response: ApiResponse<any> = await api.get(`/chatrooms/${chatRoomId}/members/${memberId}`);
+  
+  // API 응답에서 memberId 또는 publicId를 확인
+  // memberId가 없으면 요청한 memberId를 사용
+  const resultMemberId = response.result.memberId ?? memberId;
+  const nickname = response.result.nickname ?? '알 수 없음';
+  const lastReadMessageTime = response.result.lastReadMessageTime || new Date(0).toISOString();
+  const me = response.result.me ?? false;
+  
   return {
-    memberId: response.result.memberId ?? 0,
-    nickname: response.result.nickname ?? '알 수 없음',
-    lastReadMessageTime: response.result.lastReadMessageTime || new Date(0).toISOString()
+    memberId: resultMemberId,
+    nickname: nickname,
+    lastReadMessageTime: lastReadMessageTime,
+    me: me
   };
 };
 
