@@ -357,12 +357,13 @@ export default function UserProfilePage() {
                         )}
                         </div>
 
-                        <CardContent className="p-4">
-                        {/* 상단: 제목만 */}
+                        <CardContent className="p-4 flex flex-col justify-between h-full">
+                        {/* 제목 */}
                         <p className="text-lg font-semibold pr-28 truncate">{s.title}</p>
 
-                        {/* 하단: 기간/인원 + 상세보기 버튼 (오른쪽 정렬) */}
-                        <div className="mt-3 flex items-center justify-end gap-3">
+                        {/* 하단 영역: 왼쪽은 기간/인원, 오른쪽은 버튼 */}
+                        <div className="mt-3 flex items-center justify-between">
+                            {/* 왼쪽: 기간 + 인원 */}
                             <div className="flex items-center gap-4 text-sm text-muted-foreground">
                             {(s.studyStartDate || s.studyEndDate) && (
                                 <span className="inline-flex items-center gap-1">
@@ -378,6 +379,7 @@ export default function UserProfilePage() {
                             )}
                             </div>
 
+                            {/* 오른쪽: 상세보기 버튼 */}
                             <Button asChild size="sm" variant="default" className="shrink-0">
                             <Link href={`/studies/${encodeURIComponent(s.ownerNickname)}/${s.id}`}>
                                 상세보기
@@ -386,7 +388,7 @@ export default function UserProfilePage() {
                         </div>
                         </CardContent>
                     </div>
-                    </Card>
+                </Card>
               ))}
             </div>
           )}
