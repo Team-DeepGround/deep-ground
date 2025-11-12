@@ -33,7 +33,7 @@ export default function QuestionCard({ question, onTitleClick }: QuestionCardPro
     // 2순위 후보: question.authorPublicId (더 명시적)
     // 3순위 후보: question.memberPublicId
     // (위 console.log로 확인한 정확한 키 이름을 넣으세요)
-    const profileId = question.publicId || question.profilePublicId; 
+    const profileId = question.profilePublicId || question.publicId; 
 
     if (profileId) {
       try {
