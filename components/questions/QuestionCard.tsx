@@ -27,30 +27,20 @@ export default function QuestionCard({ question, onTitleClick }: QuestionCardPro
     return "미해결";
   };
 
-  const handleProfileClick = async () => {
-    // 💡 [수정] 'profilePublicId' 대신 실제 UUID가 담긴 키 이름을 사용하세요.
-    // 1순위 후보: question.publicId (피드 댓글과 동일)
-    // 2순위 후보: question.authorPublicId (더 명시적)
-    // 3순위 후보: question.memberPublicId
-    // (위 console.log로 확인한 정확한 키 이름을 넣으세요)
-    const profileId = question.profilePublicId || question.publicId; 
+  const handleProfileClick = () => {
+    
+    // 1. 로그에서 확인한 정확한 키 'profilePublicId'를 사용합니다.
+    const profileId = question.profilePublicId; 
 
     if (profileId) {
-      try {
-        // API 클라이언트를 사용하여 프로필 존재 여부 확인
-        await api.get(`/members/profile/${profileId}`);
-        router.push(`/profile/${profileId}`);
-      } catch (error: any) {
-        if (error.response?.status === 400 || error.status === 400) {
-          alert('해당 사용자의 프로필이 존재하지 않습니다.');
-        } else {
-          alert(`프로필을 조회하는 중 오류가 발생했습니다: ${error.message}`);
-        }
-      }
+      // 2. API 검사 없이, 즉시 프로필 페이지로 이동시킵니다.
+      console.log("이동 시도:", `/profile/${profileId}`); // 💡 디버깅 로그
+      router.push(`/profile/${profileId}`);
+      
     } else {
-      // 💡 [추가] profileId가 없을 때 사용자에게 피드백을 줍니다.
-      console.warn("프로필 ID(publicId)를 찾을 수 없습니다.", question);
-      // alert('프로필 ID를 찾을 수 없어 이동할 수 없습니다.'); // 필요시 주석 해제
+      // 3. profileId가 없는 경우에만 경고를 띄웁니다.
+      console.warn("프로필 ID(profilePublicId)를 찾을 수 없습니다.", question);
+      alert('프로필 ID를 찾을 수 없어 이동할 수 없습니다.');
     }
   };
   return (
