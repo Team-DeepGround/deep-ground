@@ -39,23 +39,10 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
   // 메시지 렌더링을 위한 메모이제이션
   const messageElements = useMemo(() => {
     return displayMessages.map((msg, index) => {
-      // senderId로 멤버 정보 찾기
       const sender = displayMemberInfos.find(m => m.memberId === msg.senderId);
-      
-      // isMe 판단: sender의 me 플래그 확인
+      // isMe만 사용
       const isMe = sender?.me === true;
-      // 닉네임 가져오기: 내 메시지는 "나", 상대방은 닉네임 또는 "알 수 없음"
-      const senderName = isMe ? "나" : (sender?.nickname || "알 수 없음");
-      
-      // 디버깅: sender를 찾지 못한 경우 또는 닉네임이 없는 경우 로그
-      if (!sender || (!sender.nickname && !isMe)) {
-        console.warn('[chat-messages] Missing sender info', {
-          messageId: msg.id,
-          senderId: msg.senderId,
-          sender: sender ? { memberId: sender.memberId, nickname: sender.nickname, me: sender.me } : null,
-          availableMemberIds: displayMemberInfos.map(m => ({ memberId: m.memberId, nickname: m.nickname, me: m.me }))
-        });
-      }
+      const senderName = isMe ? "나" : sender?.nickname || "알 수 없음";
 
       // 날짜 구분선 로직
       const currentDate = new Date(msg.createdAt);
