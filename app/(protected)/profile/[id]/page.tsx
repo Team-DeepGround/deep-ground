@@ -345,49 +345,48 @@ export default function UserProfilePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {studies.map((s) => (
                 <Card key={s.id} className="overflow-hidden">
-                  <div className="relative">
-                    {/* 우상단 뱃지들 */}
-                    <div className="absolute right-3 top-3 flex items-center gap-2">
-                      <Badge variant="default">{s.isOffline ? "오프라인" : "온라인"}</Badge>
-                      {s.status === "RECRUITING" && <Badge variant="default">모집중</Badge>}
-                      {s.status === "ONGOING" && <Badge variant="secondary">진행중</Badge>}
-                      {s.status === "DONE" && <Badge variant="outline">종료</Badge>}
-                      {s.status && !["RECRUITING", "ONGOING", "DONE"].includes(s.status) && (
-                        <Badge variant="default">{s.status}</Badge>
-                      )}
+                    <div className="relative">
+                        {/* 우상단 뱃지들 */}
+                        <div className="absolute right-3 top-3 flex items-center gap-2">
+                        <Badge variant="default">{s.isOffline ? "오프라인" : "온라인"}</Badge>
+                        {s.status === "RECRUITING" && <Badge variant="default">모집중</Badge>}
+                        {s.status === "ONGOING" && <Badge variant="secondary">진행중</Badge>}
+                        {s.status === "DONE" && <Badge variant="outline">종료</Badge>}
+                        {s.status && !["RECRUITING", "ONGOING", "DONE"].includes(s.status) && (
+                            <Badge variant="default">{s.status}</Badge>
+                        )}
+                        </div>
+
+                        <CardContent className="p-4">
+                        {/* 상단: 제목만 */}
+                        <p className="text-lg font-semibold pr-28 truncate">{s.title}</p>
+
+                        {/* 하단: 기간/인원 + 상세보기 버튼 (오른쪽 정렬) */}
+                        <div className="mt-3 flex items-center justify-end gap-3">
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            {(s.studyStartDate || s.studyEndDate) && (
+                                <span className="inline-flex items-center gap-1">
+                                <Calendar className="h-4 w-4" />
+                                {formatDate(s.studyStartDate)} ~ {formatDate(s.studyEndDate)}
+                                </span>
+                            )}
+                            {(s.currentMemberCount != null || s.groupMemberCount != null) && (
+                                <span className="inline-flex items-center gap-1">
+                                <Users className="h-4 w-4" />
+                                {s.currentMemberCount ?? 0}/{s.groupMemberCount ?? 0}명
+                                </span>
+                            )}
+                            </div>
+
+                            <Button asChild size="sm" variant="default" className="shrink-0">
+                            <Link href={`/studies/${encodeURIComponent(s.ownerNickname)}/${s.id}`}>
+                                상세보기
+                            </Link>
+                            </Button>
+                        </div>
+                        </CardContent>
                     </div>
-
-                    <CardContent className="p-4">
-                      {/* 제목 */}
-                      <p className="text-lg font-semibold pr-28 truncate">{s.title}</p>
-
-                      {/* 기간 & 인원 */}
-                      <div className="mt-2 flex items-center gap-4 text-sm text-muted-foreground">
-                        {(s.studyStartDate || s.studyEndDate) && (
-                          <span className="inline-flex items-center gap-1">
-                            <Calendar className="h-4 w-4" />
-                            {formatDate(s.studyStartDate)} ~ {formatDate(s.studyEndDate)}
-                          </span>
-                        )}
-                        {(s.currentMemberCount != null || s.groupMemberCount != null) && (
-                          <span className="inline-flex items-center gap-1">
-                            <Users className="h-4 w-4" />
-                            {s.currentMemberCount ?? 0}/{s.groupMemberCount ?? 0}명
-                          </span>
-                        )}
-                      </div>
-
-                      {/* 상세보기 버튼 */}
-                      <div className="mt-3 flex justify-end">
-                        <Button asChild size="sm" variant="default">
-                          <Link href={`/studies/${encodeURIComponent(s.ownerNickname)}/${s.id}`}>
-                            상세보기
-                          </Link>
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </div>
-                </Card>
+                    </Card>
               ))}
             </div>
           )}
