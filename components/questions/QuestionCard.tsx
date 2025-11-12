@@ -5,8 +5,6 @@ import { Button } from "@/components/ui/button";
 import { MessageSquare, Calendar } from "lucide-react";
 import Link from "next/link";
 import { formatReadableDate } from "@/lib/utils";
-import { useRouter } from "next/navigation";
-import { api } from "@/lib/api-client";
 
 interface QuestionCardProps {
   question: any;
@@ -14,8 +12,6 @@ interface QuestionCardProps {
 }
 
 export default function QuestionCard({ question, onTitleClick }: QuestionCardProps) {
-  const router = useRouter();
-
   const authorName = question.nickname || "알 수 없음";
   const authorAvatar = question.imageUrl || question.author?.avatar || "/placeholder.svg";
   const statusLabel = (status?: string) => {
@@ -23,20 +19,6 @@ export default function QuestionCard({ question, onTitleClick }: QuestionCardPro
     if (status === "RESOLVED") return "해결중";
     if (status === "CLOSED") return "해결완료";
     return "미해결";
-  };
-
-  const handleProfileClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    // 1. 'feed-post.tsx'와 동일하게 'profilePublicId'를 사용합니다.
-    e.stopPropagation(); // 이벤트 버블링을 막아 다른 onClick 이벤트와의 충돌을 방지합니다.
-
-    const profileId = question.profilePublicId;
-    if (profileId) {
-      // 2. API 호출 없이 즉시 프로필 페이지로 이동시킵니다.
-      router.push(`/profile/${profileId}`);
-    } else {
-      // 3. 'profilePublicId'가 없는 경우에 대한 예외 처리
-      alert('해당 사용자의 프로필 정보를 찾을 수 없습니다.');
-    }
   };
 
   return (
@@ -50,13 +32,17 @@ export default function QuestionCard({ question, onTitleClick }: QuestionCardPro
             </Avatar>
             <div>
               <div className="flex items-center gap-2">
-                <button 
-                  className="text-sm font-medium hover:underline focus:outline-none" 
-                  type="button"
-                  onClick={handleProfileClick}
-                >
-                  {authorName}
-                </button>
+                {question.profilePublicId ? (
+                  <Link
+                    href={`/profile/${question.profilePublicId}`}
+                    className="text-sm font-medium hover:underline focus:outline-none"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {authorName}
+                  </Link>
+                ) : (
+                  <span className="text-sm font-medium">{authorName}</span>
+                )}
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
                   {question.createdAt ? formatReadableDate(question.createdAt) : ''}
