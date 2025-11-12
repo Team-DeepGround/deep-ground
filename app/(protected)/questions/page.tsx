@@ -574,20 +574,17 @@ function QuestionCard({ question, onTitleClick }: QuestionCardProps) {
     return "미해결";
   };
 
-  const handleProfileClick = async () => {
-    const profileId = question.memberProfileId || question.profileId || question.memberId;
+  const handleProfileClick = () => {
+    const profileId =
+      question.profilePublicId ||  // ✅ 있으면 이걸 최우선
+      question.profileId ||
+      question.memberProfileId ||
+      question.memberId;
+
     if (profileId) {
-      try {
-        // API 클라이언트를 사용하여 프로필 존재 여부 확인
-        await api.get(`/members/profile/${profileId}`);
-        router.push(`/profile/${profileId}`);
-      } catch (error: any) {
-        if (error.status === 400) {
-          alert('해당 사용자의 프로필이 존재하지 않습니다.');
-        } else {
-          alert('프로필을 조회하는 중 오류가 발생했습니다.');
-        }
-      }
+      router.push(`/profile/${profileId}`);
+    } else {
+      alert("해당 사용자의 프로필이 존재하지 않습니다.");
     }
   };
   return (
