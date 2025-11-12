@@ -102,7 +102,7 @@ export const fetchMemberInfo = async (chatRoomId: number, memberId: number): Pro
   }
   const response: ApiResponse<any> = await api.get(`/chatrooms/${chatRoomId}/members/${memberId}`);
   return {
-    memberId: response.result.memberId ?? 0,
+    memberId: memberId,
     nickname: response.result.nickname ?? '알 수 없음',
     lastReadMessageTime: response.result.lastReadMessageTime || new Date(0).toISOString(),
     me: response.result.me === true // 서버 응답의 me 값을 명시적으로 boolean 처리
