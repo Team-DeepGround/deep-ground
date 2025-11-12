@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/auth';
-import { fetchOlderMessages, downloadMedia } from '@/lib/api/chat';
+// --- 수정 --- : fetchMemberInfo를 import합니다. (api.ts에서 가져옴)
+import { fetchOlderMessages, downloadMedia, fetchMemberInfo } from '@/lib/api/chat'; 
 import { 
   subscribeToInitMessages,
   subscribeToLiveMessages,
@@ -17,7 +18,7 @@ import {
   MediaInfo
 } from '@/types/chat';
 import { isScrolledToBottom, scrollToBottom } from '@/lib/chat-utils';
-import { useChat } from './use-chat';
+import { useChat } from './use-chat'; // 이 파일이 실제로 있다면 그대로 둡니다.
 
 export const useChatMessages = (
   stompClientState: Client | null,
@@ -42,41 +43,33 @@ export const useChatMessages = (
 ) => {
   const { toast } = useToast();
 
-  // 스크롤 관련 상태
+  // (스크롤, 미디어 로드 등... 원본 코드와 동일)
   const scrollableDivRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isScrolledToBottomRef = useRef(true);
   const [isChatContentVisible, setIsChatContentVisible] = useState(false);
-
-  // 새 메시지 토스트 상태
   const [showNewMessageToast, setShowNewMessageToast] = useState(false);
   const showNewMessageToastStateRef = useRef(showNewMessageToast);
-
-  // 미디어 정보 상태
   const [mediaInfos, setMediaInfos] = useState<
     Record<
       string,
       { url: string; contentType: string; fileName: string; fileSize: number }
     >
   >({});
-
-  // 내 memberInfo를 ref로 관리
   const myInfoRef = useRef<MemberInfo | undefined>(undefined);
-
-  // showNewMessageToast의 최신 값을 항상 참조하기 위한 ref
+  
   useEffect(() => {
     showNewMessageToastStateRef.current = showNewMessageToast;
   }, [showNewMessageToast]);
-
-  // selectedChatRoom을 ref로 관리
+  
   const selectedChatRoomRef = useRef(selectedChatRoom);
   useEffect(() => {
     selectedChatRoomRef.current = selectedChatRoom;
   }, [selectedChatRoom]);
-
-  // 선택된 채팅방의 메시지 및 멤버 정보를 가져오는 함수
+  
   const loadChatRoomMessages = useCallback(
     async (chatRoomId: number) => {
+      // (원본 코드와 동일)
       setIsChatContentVisible(false);
       setAllChatRoomMessages((prev) => ({
         ...prev,
@@ -91,10 +84,9 @@ export const useChatMessages = (
     [setAllChatRoomMessages]
   );
 
-  // 과거 메시지를 불러오는 함수
   const loadOlderMessages = useCallback(
     async (chatRoomId: number, cursor: string) => {
-      // 메시지 로드 전 현재 스크롤 위치와 스크롤 높이 저장
+      // (원본 코드와 동일 - layout shift 방지)
       const viewport = scrollableDivRef.current;
       const oldScrollHeight = viewport ? viewport.scrollHeight : 0;
       const oldScrollTop = viewport ? viewport.scrollTop : 0;
@@ -114,21 +106,27 @@ export const useChatMessages = (
           hasNext,
         } = await fetchOlderMessages(chatRoomId, cursor);
 
+        // --- 수정 --- : 누락된 멤버 정보 fetch (Promise.all)
+        const currentMemberIds = new Set(allChatRoomMessagesRef.current[chatRoomId]?.memberInfos.map(m => m.memberId) || []);
+        const missingMemberIds = new Set(
+          fetchedMessages
+            .map(msg => msg.senderId)
+            .filter(id => !currentMemberIds.has(id))
+        );
+        
+        if (missingMemberIds.size > 0) {
+          await Promise.all(
+            Array.from(missingMemberIds).map(memberId => 
+              fetchAndAddMemberInfo(chatRoomId, memberId)
+            )
+          );
+        }
+        // --- 수정 끝 ---
+
         setAllChatRoomMessages((prev) => {
           const currentRoomState = prev[chatRoomId];
           if (currentRoomState) {
-            // 가져온 이전 메시지의 senderId 중 현재 memberInfos에 없는 멤버 정보 요청
-            fetchedMessages.forEach((msg) => {
-              if (
-                !currentRoomState.memberInfos.some(
-                  (m) => m.memberId === msg.senderId
-                )
-              ) {
-                fetchAndAddMemberInfo(chatRoomId, msg.senderId);
-              }
-            });
-
-            // 기존 메시지의 맨 앞에 새로운 (더 오래된) 메시지들을 추가
+            // fetchAndAddMemberInfo가 state를 업데이트했으므로, 여기서는 메시지만 추가
             const updatedMessages = [
               ...fetchedMessages,
               ...currentRoomState.messages,
@@ -147,7 +145,7 @@ export const useChatMessages = (
           return prev;
         });
 
-        // DOM 업데이트가 완료된 후 스크롤 위치 조정
+        // (원본 코드와 동일 - 스크롤 위치 조정)
         requestAnimationFrame(() => {
           if (viewport) {
             const newScrollHeight = viewport.scrollHeight;
@@ -168,10 +166,10 @@ export const useChatMessages = (
         }));
       }
     },
-    [toast, fetchAndAddMemberInfo, setAllChatRoomMessages]
+    [toast, fetchAndAddMemberInfo, setAllChatRoomMessages, allChatRoomMessagesRef]
   );
 
-  // 스크롤 이벤트 핸들러
+  // (스크롤 핸들러, 미디어 로드 useEffect... 원본 코드와 동일)
   const handleScroll = useCallback(() => {
     if (scrollableDivRef.current) {
       const atBottom = isScrolledToBottom(scrollableDivRef.current);
@@ -183,7 +181,6 @@ export const useChatMessages = (
     }
   }, []);
 
-  // 네이티브 WheelEvent용 핸들러
   const handleWheelNative = useCallback((e: WheelEvent) => {
     const target = e.currentTarget as HTMLDivElement;
     if (!target) return;
@@ -197,7 +194,6 @@ export const useChatMessages = (
     }
   }, []);
 
-  // 스크롤 이벤트 리스너 등록 및 해제
   useEffect(() => {
     const scrollElement = scrollableDivRef.current;
     if (scrollElement) {
@@ -213,7 +209,6 @@ export const useChatMessages = (
     }
   }, [handleScroll, handleWheelNative, selectedChatRoom]);
 
-  // 미디어 정보 로드
   useEffect(() => {
     if (!selectedChatRoom) return;
     const chatRoomId = selectedChatRoom.chatRoomId;
@@ -238,15 +233,15 @@ export const useChatMessages = (
       });
     });
 
-    // 새로운 미디어가 로드되었고, 현재 스크롤이 맨 아래에 있다면 스크롤을 맨 아래로 이동
     if (hasNewMedia && isScrolledToBottomRef.current) {
       setTimeout(() => {
         if (scrollableDivRef.current) {
           scrollToBottom(scrollableDivRef.current, false);
         }
-      }, 100); // 미디어 로드 완료를 기다리기 위한 지연
+      }, 100);
     }
   }, [selectedChatRoom, allChatRoomMessages, mediaInfos]);
+
 
   // 1. 구독 및 cleanup useEffect 추가
   useEffect(() => {
@@ -260,14 +255,16 @@ export const useChatMessages = (
     const subsInit = subscribeToInitMessages(
       stompClientState,
       chatRoomId,
+      // --- 💡 수정 --- : 콜백을 async로 변경, (async () => {}) 래퍼 제거
       async (res: InitChatRoomResponse) => {
-        // myMemberId를 먼저 가져옴
+        
+        // --- 💡 수정 --- : myMemberId를 먼저 await으로 가져옵니다.
         let myMemberId: number | null = null;
         try {
           myMemberId = await auth.getMemberId();
         } catch {}
 
-        // me 플래그 보정
+        // me 플래그 보정 (api.ts가 수정되었다면 m.me는 정확함)
         const memberInfosWithIsMe = (res.memberInfos || []).map((m) => ({
           ...m,
           me: m.me === true || (myMemberId !== null && m.memberId === myMemberId),
@@ -276,11 +273,38 @@ export const useChatMessages = (
         // 내 정보 ref에 저장
         myInfoRef.current = memberInfosWithIsMe.find((m) => m.me);
 
+        // --- 💡 수정 --- : 누락된 멤버 정보가 있다면, state 업데이트 전에 미리 fetch
+        const allSenderIds = new Set(
+          res.chatMessage.messages.map((msg) => msg.senderId)
+        );
+        const knownMemberIds = new Set(memberInfosWithIsMe.map((m) => m.memberId));
+        const missingMemberIds = Array.from(allSenderIds).filter(
+          (senderId) => !knownMemberIds.has(senderId)
+        );
+
+        // 누락된 멤버 정보 병렬 조회
+        if (missingMemberIds.length > 0) {
+          try {
+            // api.ts의 fetchMemberInfo를 직접 사용 (더 확실함)
+            const newMemberInfos = await Promise.all(
+              missingMemberIds.map(memberId => 
+                fetchMemberInfo(chatRoomId, memberId) // api.ts에서 import한 함수
+              )
+            );
+            // 조회된 멤버 정보 추가 (me 플래그가 포함됨)
+            // me가 undefined일 수 있으므로 boolean으로 변환
+            memberInfosWithIsMe.push(...newMemberInfos.map(m => ({ ...m, me: m.me === true })));
+          } catch (e) {
+            console.error("초기 로드 시 누락된 멤버 정보 조회 실패:", e);
+          }
+        }
+
+        // --- 💡 수정 --- : 모든 멤버 정보가 준비된 후 state 업데이트
         setAllChatRoomMessages((prev) => {
           const newState = {
             ...prev,
             [chatRoomId]: {
-              // ISO 8601 문자열은 그대로 비교해도 정렬이 잘 되지만, new Date()로 명시적으로 변환하는 것이 더 안전합니다.
+              ...prev[chatRoomId], // 로딩 상태 등 유지
               messages: [...res.chatMessage.messages].sort(
                 (a, b) =>
                   new Date(a.createdAt).getTime() -
@@ -288,20 +312,18 @@ export const useChatMessages = (
               ),
               nextCursor: res.chatMessage.nextCursor,
               hasNext: res.chatMessage.hasNext,
-              memberInfos: memberInfosWithIsMe,
+              memberInfos: memberInfosWithIsMe, // 완전한 멤버 정보로 업데이트
               isLoadingMessages: false,
             },
           };
-          // 최신 메시지 계산
-          const sortedMessages = [...res.chatMessage.messages].sort(
-            (a, b) =>
-              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-          );
+          
+          // (읽음 처리 및 스크롤 로직... 원본과 동일)
+          const sortedMessages = newState[chatRoomId].messages;
           const latestMessage =
             sortedMessages.length > 0
               ? sortedMessages[sortedMessages.length - 1]
               : null;
-          // 최초 1회만 /read 전송 (내 memberId가 있을 때만)
+          
           if (
             latestMessage &&
             myInfoRef.current &&
@@ -325,36 +347,16 @@ export const useChatMessages = (
               });
             }
 
-            // 클라이언트 UI 즉시 업데이트: 목록에서 unreadCount를 0으로
-            setFriendChatRooms((prev: any[]) =>
-              prev.map((room: any) =>
+            const updateUnreadCount = (rooms: any[]) =>
+              rooms.map((room: any) =>
                 room.chatRoomId === chatRoomId
-                  ? {
-                      ...room,
-                      unreadCount:
-                        selectedChatRoomRef.current?.chatRoomId === chatRoomId
-                          ? 0
-                          : 0,
-                    }
+                  ? { ...room, unreadCount: 0 }
                   : room
-              )
-            );
-            setStudyGroupChatRooms((prev: any[]) =>
-              prev.map((room: any) =>
-                room.chatRoomId === chatRoomId
-                  ? {
-                      ...room,
-                      unreadCount:
-                        selectedChatRoomRef.current?.chatRoomId === chatRoomId
-                          ? 0
-                          : 0,
-                    }
-                  : room
-              )
-            );
+              );
+            setFriendChatRooms(updateUnreadCount);
+            setStudyGroupChatRooms(updateUnreadCount);
           }
 
-          // 메시지 로드 후 스크롤을 맨 아래로 즉시 이동
           requestAnimationFrame(() => {
             if (messagesEndRef.current && scrollableDivRef.current) {
               scrollToBottom(scrollableDivRef.current, false);
@@ -365,29 +367,9 @@ export const useChatMessages = (
 
           return newState;
         });
-
-        // 누락된 멤버 정보 fetch (Promise.all로 병렬 처리)
-        const allSenderIds = new Set(
-          res.chatMessage.messages.map((msg) => msg.senderId)
-        );
-        const knownMemberIds = new Set(memberInfosWithIsMe.map((m) => m.memberId));
-        const missingSenderIds = Array.from(allSenderIds).filter(
-          (senderId) => !knownMemberIds.has(senderId)
-        );
-
-        if (missingSenderIds.length > 0) {
-          try {
-            await Promise.all(
-              missingSenderIds.map((senderId) =>
-                fetchAndAddMemberInfo(chatRoomId, senderId)
-              )
-            );
-          } catch (e) {
-            console.error("누락된 멤버 정보 페치 실패", e);
-          }
-        }
       },
       (error) => {
+        // (에러 처리... 원본과 동일)
         toast({
           title: '채팅 초기화 실패',
           description: '채팅 메시지를 불러오는데 실패했습니다.',
@@ -400,97 +382,86 @@ export const useChatMessages = (
         setIsChatContentVisible(true);
       }
     );
+
     const subsLive = subscribeToLiveMessages(
       stompClientState,
       chatRoomId,
-     async (newMessage: ChatMessage) => {
+      // --- 💡 수정 --- : 콜백을 async로 변경 (레이스 컨디션 해결)
+      async (newMessage: ChatMessage) => {
         try {
-          const snapshot = allChatRoomMessagesRef.current?.[chatRoomId];
-          console.log('[chat] live message received', {
-            chatRoomId,
-            newMessage,
-          });
-          console.log('[chat] memberInfos snapshot', {
-            memberInfos: snapshot?.memberInfos,
-            myMemberId: myInfoRef.current?.memberId,
-          });
+          // ... (console.log)
         } catch {}
 
-        // 멤버 정보가 없으면 먼저 가져오기 (레이스 컨디션 해결)
+        // --- 💡 수정 --- : 메시지를 state에 추가하기 *전에* 멤버 정보를 먼저 확인/가져옵니다.
+        // ref를 사용해 최신 state를 읽습니다.
         const currentRoomState = allChatRoomMessagesRef.current[chatRoomId];
         if (currentRoomState) {
-          if (
-            !currentRoomState.memberInfos.some(
-              (m) => m.memberId === newMessage.senderId
-            )
-          ) {
+          const senderExists = currentRoomState.memberInfos.some(
+            (m) => m.memberId === newMessage.senderId
+          );
+          if (!senderExists) {
             try {
+              // await로 멤버 정보가 state에 추가될 때까지 기다림
               await fetchAndAddMemberInfo(chatRoomId, newMessage.senderId);
             } catch (e) {
-              console.error("멤버 정보 페치 실패", e);
+              console.error("실시간 메시지 멤버 정보 조회 실패:", e);
             }
           }
         }
+        
+        // --- 💡 수정 --- : Stale state 방지를 위해 ref에서 최신 state를 읽어와서 업데이트
+        setAllChatRoomMessages(() => {
+          // fetchAndAddMemberInfo가 state를 업데이트했으므로, ref에서 최신 state를 읽어옵니다.
+          const currentGlobalState = allChatRoomMessagesRef.current;
+          const currentRoomState = currentGlobalState[chatRoomId];
 
-        setAllChatRoomMessages((prev) => {
-          const currentRoomState = prev[chatRoomId];
           if (currentRoomState) {
             // 중복 메시지 방지
             if (
               currentRoomState.messages.some((msg) => msg.id === newMessage.id)
             ) {
-              return prev;
+              return currentGlobalState; // 변경 없음
             }
 
-            // 새 메시지가 추가되기 전의 스크롤 위치 상태를 저장
             const wasScrolledToBottom = isScrolledToBottomRef.current;
 
-            // 최신 메시지일 때만 /read 전송 (내가 보낸 메시지가 아니고, 최신 메시지일 때)
-            const isLatest = true;
+            // /read 전송 로직
             if (
               myInfoRef.current &&
-              newMessage.senderId !== myInfoRef.current.memberId &&
-              isLatest
+              newMessage.senderId !== myInfoRef.current.memberId
             ) {
-              console.log(`[useChatMessages] Sending read receipt on live message for chatRoomId: ${chatRoomId}, time: ${newMessage.createdAt}`);
               sendReadReceipt(
                 stompClientState,
                 chatRoomId,
                 myInfoRef.current.memberId,
                 newMessage.createdAt
               );
-              // 내가 현재 보고 있는 채팅방이면 unreadCount를 0으로 직접 갱신
+              
               if (
                 selectedChatRoomRef.current &&
                 selectedChatRoomRef.current.chatRoomId === chatRoomId
               ) {
-                setFriendChatRooms((prev: any[]) =>
-                  prev.map((room: any) =>
+                const updateUnreadCount = (rooms: any[]) =>
+                  rooms.map((room: any) =>
                     room.chatRoomId === chatRoomId
                       ? { ...room, unreadCount: 0 }
                       : room
-                  )
-                );
-                setStudyGroupChatRooms((prev: any[]) =>
-                  prev.map((room: any) =>
-                    room.chatRoomId === chatRoomId
-                      ? { ...room, unreadCount: 0 }
-                      : room
-                  )
-                );
+                  );
+                setFriendChatRooms(updateUnreadCount);
+                setStudyGroupChatRooms(updateUnreadCount);
               }
             }
 
             // 메시지 추가
             const newState = {
-              ...prev,
+              ...currentGlobalState,
               [chatRoomId]: {
                 ...currentRoomState,
                 messages: [...currentRoomState.messages, newMessage],
               },
             };
 
-            // DOM 업데이트가 반영될 다음 프레임에서 스크롤 및 토스트 로직 실행
+            // 스크롤 및 토스트 로직
             setTimeout(() => {
               const currentScrollableDiv = scrollableDivRef.current;
               if (currentScrollableDiv) {
@@ -500,7 +471,6 @@ export const useChatMessages = (
                 } = currentScrollableDiv;
                 const isNowScrollable = newScrollHeight > newClientHeight;
 
-                // 내가 보낸 메시지이거나, 스크롤이 맨 아래였으면 자동 스크롤
                 if (newMessage.senderId === myInfoRef.current?.memberId) {
                   scrollToBottom(currentScrollableDiv);
                   setShowNewMessageToast(false);
@@ -517,28 +487,40 @@ export const useChatMessages = (
 
             return newState;
           }
-          return prev;
+          return currentGlobalState; // 변경 없음
         });
       },
       (error) => {}
     );
+
     const subsRead = subscribeToReadReceipts(
       stompClientState,
       chatRoomId,
-      (readReceipt: { memberId: number; lastReadMessageTime: string }) => {
-        setAllChatRoomMessages((prev) => {
-          const currentRoomState = prev[chatRoomId];
-          if (currentRoomState) {
-            // memberId가 memberInfos에 없으면 fetch
-            if (
-              !currentRoomState.memberInfos.some(
-                (m) => m.memberId === readReceipt.memberId
-              )
-            ) {
-              fetchAndAddMemberInfo(chatRoomId, readReceipt.memberId);
+      // --- 💡 수정 --- : async 추가 (일관성)
+      async (readReceipt: { memberId: number; lastReadMessageTime: string }) => {
+        
+        // --- 💡 수정 --- : 멤버 정보가 없으면 await로 fetch
+        const currentRoomState = allChatRoomMessagesRef.current[chatRoomId];
+        if (currentRoomState) {
+          const memberExists = currentRoomState.memberInfos.some(
+            (m) => m.memberId === readReceipt.memberId
+          );
+          if (!memberExists) {
+            try {
+              await fetchAndAddMemberInfo(chatRoomId, readReceipt.memberId);
+            } catch (e) {
+              console.error("읽음 처리 멤버 정보 조회 실패:", e);
             }
+          }
+        }
 
-            const updatedMemberInfos = currentRoomState.memberInfos.map(
+        // --- 💡 수정 --- : ref 기반으로 state 업데이트
+        setAllChatRoomMessages(() => {
+          const currentGlobalState = allChatRoomMessagesRef.current;
+          const currentRoomState = currentGlobalState[chatRoomId];
+
+          if (currentRoomState) {
+            let updatedMemberInfos = currentRoomState.memberInfos.map(
               (member) =>
                 member.memberId === readReceipt.memberId
                   ? {
@@ -547,16 +529,27 @@ export const useChatMessages = (
                     }
                   : member
             );
+            
+            // (방어 코드)
+            const memberStillMissing = !updatedMemberInfos.some(m => m.memberId === readReceipt.memberId);
+            if (memberStillMissing) {
+                updatedMemberInfos.push({
+                    memberId: readReceipt.memberId,
+                    nickname: "알 수 없음", // 어쩔 수 없이 임시 처리
+                    lastReadMessageTime: readReceipt.lastReadMessageTime,
+                    me: false // 모름
+                });
+            }
 
             return {
-              ...prev,
+              ...currentGlobalState,
               [chatRoomId]: {
                 ...currentRoomState,
                 memberInfos: updatedMemberInfos,
               },
             };
           }
-          return prev;
+          return currentGlobalState;
         });
       },
       (error) => {}
@@ -566,26 +559,21 @@ export const useChatMessages = (
       subsLive.unsubscribe();
       subsRead.unsubscribe();
     };
-  }, [stompClientState, isConnected, selectedChatRoom]);
+  }, [stompClientState, isConnected, selectedChatRoom, fetchAndAddMemberInfo, setFriendChatRooms, setStudyGroupChatRooms, initialReadSent, toast, allChatRoomMessagesRef]);
 
-  // selectedChatRoom 변화 추적
+  // (이하 원본 코드와 동일)
   useEffect(() => {}, [selectedChatRoom]);
 
   return {
-    // refs
     scrollableDivRef,
     messagesEndRef,
     isScrolledToBottomRef,
-
-    // 상태
     isChatContentVisible,
     showNewMessageToast,
     mediaInfos,
-
-    // 액션
     loadChatRoomMessages,
     loadOlderMessages,
     setShowNewMessageToast,
     setIsChatContentVisible,
   };
-}; 
+};
