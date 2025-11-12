@@ -19,6 +19,8 @@ import {
   MapPin,
   GraduationCap,
   Loader2,
+  Calendar,
+  Users,
 } from "lucide-react"
 
 type ProfileData = {
@@ -44,9 +46,25 @@ type Study = {
   coverImage?: string
   status?: "RECRUITING" | "ONGOING" | "DONE" | string
   ownerNickname: string
+  isOffline?: boolean
+  studyStartDate?: string
+  studyEndDate?: string
+  groupMemberCount?: number
+  currentMemberCount?: number
 }
 
 type FriendStateType = "none" | "pending" | "friends" | "received"
+
+// 날짜 포맷 유틸: 2025-11-11 -> 2025.11.11
+function formatDate(d?: string) {
+  if (!d) return ""
+  try {
+    const [y, m, day] = d.split("-").map(Number)
+    return `${y}.${String(m).padStart(2, "0")}.${String(day).padStart(2, "0")}`
+  } catch {
+    return d
+  }
+}
 
 export default function UserProfilePage() {
   const params = useParams()
@@ -64,9 +82,7 @@ export default function UserProfilePage() {
   const [studies, setStudies] = useState<Study[]>([])
   const [studiesLoading, setStudiesLoading] = useState(true)
 
-  const isMyProfile = useMemo(() => {
-    return user?.publicId === profileId
-  }, [user, profileId])
+  const isMyProfile = useMemo(() => user?.publicId === profileId, [user, profileId])
 
   // 1) 프로필 로드
   useEffect(() => {
@@ -77,7 +93,6 @@ export default function UserProfilePage() {
       try {
         const res = await api.get(`/members/profile/${profileId}`)
         if (!mounted) return
-
         const p = res.result || res || {}
 
         setProfile({
@@ -106,35 +121,31 @@ export default function UserProfilePage() {
       }
     }
 
-    if (profileId) {
-      fetchProfile()
-    }
-
-    return () => {
-      mounted = false
-    }
+    if (profileId) fetchProfile()
+    return () => { mounted = false }
   }, [profileId, toast])
 
   // 2) 멤버 스터디 로드
   useEffect(() => {
     const fetchStudies = async () => {
       if (!profile?.publicId) return
-
       setStudiesLoading(true)
       try {
-        const r = await api
-          .get(`/members/${profile.publicId}/studies`)
-          .catch(() => null)
-
+        const r = await api.get(`/members/${profile.publicId}/studies`).catch(() => null)
         const page = r?.result?.content ?? r?.content ?? r ?? []
 
         const mapped: Study[] = page.map((s: any) => ({
           id: s.id,
-          title: s.title,
+          title: String(s.title ?? "").trim(),
           description: s.explanation,
           coverImage: undefined,
           status: s.groupStatus,
-          ownerNickname: s.ownerNickname, // ✅ 백엔드 응답 필드 사용
+          ownerNickname: s.ownerNickname,
+          isOffline: s.isOffline,
+          studyStartDate: s.studyStartDate,
+          studyEndDate: s.studyEndDate,
+          groupMemberCount: s.groupMemberCount,
+          currentMemberCount: s.currentMemberCount,
         }))
 
         setStudies(mapped)
@@ -159,22 +170,14 @@ export default function UserProfilePage() {
       setStatusLoading(true)
       try {
         const res = await api
-          .get(`/friends/status`, {
-            params: { targetMemberPublicId: String(profile.publicId) },
-          })
+          .get(`/friends/status`, { params: { targetMemberPublicId: String(profile.publicId) } })
           .catch(() => null)
 
         const status = res?.result?.status || "NONE"
-
-        if (status === "FRIENDS") {
-          setFriendState("friends")
-        } else if (status === "PENDING_SENT") {
-          setFriendState("pending")
-        } else if (status === "PENDING_RECEIVED") {
-          setFriendState("received")
-        } else {
-          setFriendState("none")
-        }
+        if (status === "FRIENDS") setFriendState("friends")
+        else if (status === "PENDING_SENT") setFriendState("pending")
+        else if (status === "PENDING_RECEIVED") setFriendState("received")
+        else setFriendState("none")
       } catch {
         setFriendState("none")
       } finally {
@@ -188,29 +191,16 @@ export default function UserProfilePage() {
   // 4) 친구 요청
   const handleSendFriendRequest = async () => {
     if (!profile?.publicId) {
-      toast({
-        title: "요청 불가",
-        description: "프로필 ID가 없습니다.",
-        variant: "destructive",
-      })
+      toast({ title: "요청 불가", description: "프로필 ID가 없습니다.", variant: "destructive" })
       return
     }
-
     setFriendLoading(true)
     try {
       await api.post(`/friends/from-profile/${profile.publicId}`)
-
       setFriendState("pending")
-      toast({
-        title: "친구 요청 완료",
-        description: `${profile.nickname}님에게 친구 요청을 보냈어요.`,
-      })
+      toast({ title: "친구 요청 완료", description: `${profile.nickname}님에게 친구 요청을 보냈어요.` })
     } catch (e: any) {
-      toast({
-        title: "친구 요청 실패",
-        description: e?.message ?? "요청 처리에 실패했습니다.",
-        variant: "destructive",
-      })
+      toast({ title: "친구 요청 실패", description: e?.message ?? "요청 처리에 실패했습니다.", variant: "destructive" })
     } finally {
       setFriendLoading(false)
     }
@@ -227,19 +217,14 @@ export default function UserProfilePage() {
 
   // 프로필 없음
   if (!profile) {
-    return (
-      <div className="container mx-auto px-4 py-16 text-center">
-        프로필을 찾을 수 없어요.
-      </div>
-    )
+    return <div className="container mx-auto px-4 py-16 text-center">프로필을 찾을 수 없어요.</div>
   }
 
   return (
     <div className="container mx-auto px-4 py-10">
       <div className="max-w-4xl mx-auto">
-        {/* 상단 영역 */}
+        {/* ===== 상단: 프로필 헤더 ===== */}
         <div className="relative">
-          {/* 우상단 버튼 */}
           <div className="absolute right-0 -top-2">
             {isMyProfile ? (
               <Button asChild size="sm" className="whitespace-nowrap">
@@ -274,21 +259,13 @@ export default function UserProfilePage() {
             )}
           </div>
 
-          {/* 프로필 정보 */}
           <div className="flex flex-col items-center text-center mb-10">
             <Avatar className="h-28 w-28 md:h-36 md:w-36">
-              <AvatarImage
-                src={profile.profileImage || "/placeholder.svg"}
-                alt={profile.nickname}
-              />
-              <AvatarFallback className="text-xl">
-                {profile.nickname?.[0]}
-              </AvatarFallback>
+              <AvatarImage src={profile.profileImage || "/placeholder.svg"} alt={profile.nickname} />
+              <AvatarFallback className="text-xl">{profile.nickname?.[0]}</AvatarFallback>
             </Avatar>
 
-            <h1 className="mt-4 text-3xl md:text-4xl font-extrabold tracking-tight">
-              {profile.nickname}
-            </h1>
+            <h1 className="mt-4 text-3xl md:text-4xl font-extrabold tracking-tight">{profile.nickname}</h1>
 
             <p className="mt-3 text-base md:text-lg text-muted-foreground leading-relaxed">
               {profile.introduction?.trim() || "자기 소개를 쓰세요 제발"}
@@ -298,21 +275,15 @@ export default function UserProfilePage() {
               {(profile.job || profile.company) && (
                 <div className="px-4 py-1.5 border rounded-md text-sm flex items-center gap-2">
                   <Briefcase className="h-4 w-4" />
-                  <span>
-                    {[profile.job, profile.company]
-                      .filter(Boolean)
-                      .join(" at ")}
-                  </span>
+                  <span>{[profile.job, profile.company].filter(Boolean).join(" at ")}</span>
                 </div>
               )}
-
               {profile.liveIn && (
                 <div className="px-4 py-1.5 border rounded-md text-sm flex items-center gap-2">
                   <MapPin className="h-4 w-4" />
                   <span>{profile.liveIn}</span>
                 </div>
               )}
-
               {profile.education && (
                 <div className="px-4 py-1.5 border rounded-md text-sm flex items-center gap-2">
                   <GraduationCap className="h-4 w-4" />
@@ -324,11 +295,7 @@ export default function UserProfilePage() {
             {profile.techStack?.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-6 justify-center">
                 {profile.techStack.map((t, i) => (
-                  <Badge
-                    key={`${t}-${i}`}
-                    variant="secondary"
-                    className="px-3 py-1.5 text-sm"
-                  >
+                  <Badge key={`${t}-${i}`} variant="secondary" className="px-3 py-1.5 text-sm">
                     {t}
                   </Badge>
                 ))}
@@ -337,38 +304,22 @@ export default function UserProfilePage() {
 
             <div className="flex gap-4 mt-6">
               {profile.githubUrl && (
-                <Link
-                  href={profile.githubUrl}
-                  target="_blank"
-                  className="text-muted-foreground hover:text-foreground"
-                >
+                <Link href={profile.githubUrl} target="_blank" className="text-muted-foreground hover:text-foreground">
                   <Github className="h-5 w-5" />
                 </Link>
               )}
               {profile.websiteUrl && (
-                <Link
-                  href={profile.websiteUrl}
-                  target="_blank"
-                  className="text-muted-foreground hover:text-foreground"
-                >
+                <Link href={profile.websiteUrl} target="_blank" className="text-muted-foreground hover:text-foreground">
                   <Globe className="h-5 w-5" />
                 </Link>
               )}
               {profile.linkedInUrl && (
-                <Link
-                  href={profile.linkedInUrl}
-                  target="_blank"
-                  className="text-muted-foreground hover:text-foreground"
-                >
+                <Link href={profile.linkedInUrl} target="_blank" className="text-muted-foreground hover:text-foreground">
                   <Linkedin className="h-5 w-5" />
                 </Link>
               )}
               {profile.twitterUrl && (
-                <Link
-                  href={profile.twitterUrl}
-                  target="_blank"
-                  className="text-muted-foreground hover:text-foreground"
-                >
+                <Link href={profile.twitterUrl} target="_blank" className="text-muted-foreground hover:text-foreground">
                   <Twitter className="h-5 w-5" />
                 </Link>
               )}
@@ -376,11 +327,9 @@ export default function UserProfilePage() {
           </div>
         </div>
 
-        {/* 참여한 스터디 섹션 */}
+        {/* ===== 참여한 스터디 ===== */}
         <section className="mt-4">
-          <h2 className="text-xl md:text-2xl font-semibold mb-4">
-            참여한 스터디
-          </h2>
+          <h2 className="text-xl md:text-2xl font-semibold mb-4">참여한 스터디</h2>
 
           {studiesLoading ? (
             <div className="py-10 flex items-center justify-center">
@@ -396,41 +345,48 @@ export default function UserProfilePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {studies.map((s) => (
                 <Card key={s.id} className="overflow-hidden">
-                  <Link
-                    href={`/studies/${encodeURIComponent(
-                      s.ownerNickname
-                    )}/${s.id}`}
-                    className="block hover:bg-muted/50 transition-colors"
-                  >
-                    <CardContent className="p-4 flex items-center justify-between">
-                      <div className="flex-1 overflow-hidden pr-4">
-                        <p className="text-lg font-semibold truncate">
-                          {s.title}
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-1 truncate">
-                          {s.description || "설명이 없습니다."}
-                        </p>
+                  <div className="relative">
+                    {/* 우상단 뱃지들 */}
+                    <div className="absolute right-3 top-3 flex items-center gap-2">
+                      <Badge variant="default">{s.isOffline ? "오프라인" : "온라인"}</Badge>
+                      {s.status === "RECRUITING" && <Badge variant="default">모집중</Badge>}
+                      {s.status === "ONGOING" && <Badge variant="secondary">진행중</Badge>}
+                      {s.status === "DONE" && <Badge variant="outline">종료</Badge>}
+                      {s.status && !["RECRUITING", "ONGOING", "DONE"].includes(s.status) && (
+                        <Badge variant="default">{s.status}</Badge>
+                      )}
+                    </div>
+
+                    <CardContent className="p-4">
+                      {/* 제목 */}
+                      <p className="text-lg font-semibold pr-28 truncate">{s.title}</p>
+
+                      {/* 기간 & 인원 */}
+                      <div className="mt-2 flex items-center gap-4 text-sm text-muted-foreground">
+                        {(s.studyStartDate || s.studyEndDate) && (
+                          <span className="inline-flex items-center gap-1">
+                            <Calendar className="h-4 w-4" />
+                            {formatDate(s.studyStartDate)} ~ {formatDate(s.studyEndDate)}
+                          </span>
+                        )}
+                        {(s.currentMemberCount != null || s.groupMemberCount != null) && (
+                          <span className="inline-flex items-center gap-1">
+                            <Users className="h-4 w-4" />
+                            {s.currentMemberCount ?? 0}/{s.groupMemberCount ?? 0}명
+                          </span>
+                        )}
                       </div>
 
-                      <div className="flex-shrink-0">
-                        {s.status === "RECRUITING" && (
-                          <Badge variant="default">모집중</Badge>
-                        )}
-                        {s.status === "ONGOING" && (
-                          <Badge variant="secondary">진행중</Badge>
-                        )}
-                        {s.status === "DONE" && (
-                          <Badge variant="outline">종료</Badge>
-                        )}
-                        {s.status &&
-                          !["RECRUITING", "ONGOING", "DONE"].includes(
-                            s.status
-                          ) && (
-                            <Badge variant="default">{s.status}</Badge>
-                          )}
+                      {/* 상세보기 버튼 */}
+                      <div className="mt-3 flex justify-end">
+                        <Button asChild size="sm" variant="default">
+                          <Link href={`/studies/${encodeURIComponent(s.ownerNickname)}/${s.id}`}>
+                            상세보기
+                          </Link>
+                        </Button>
                       </div>
                     </CardContent>
-                  </Link>
+                  </div>
                 </Card>
               ))}
             </div>
