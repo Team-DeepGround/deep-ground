@@ -16,8 +16,6 @@ interface QuestionCardProps {
 export default function QuestionCard({ question, onTitleClick }: QuestionCardProps) {
   const router = useRouter();
 
-  console.log("QuestionCard data:", question);
-  
   const authorName = question.nickname || "알 수 없음";
   const authorAvatar = question.imageUrl || question.author?.avatar || "/placeholder.svg";
   const statusLabel = (status?: string) => {
@@ -27,24 +25,15 @@ export default function QuestionCard({ question, onTitleClick }: QuestionCardPro
     return "미해결";
   };
 
-  const handleProfileClick = () => {
-    
-    // 1. 로그에서 확인한 정확한 키 'profilePublicId'를 사용합니다.
-    const profileId = question.profilePublicId; 
-
-  const handleProfileClick = async () => {
+  const handleProfileClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     // 1. 'feed-post.tsx'와 동일하게 'profilePublicId'를 사용합니다.
+    e.stopPropagation(); // 이벤트 버블링을 막아 다른 onClick 이벤트와의 충돌을 방지합니다.
+
     const profileId = question.profilePublicId;
     if (profileId) {
-      // 2. API 검사 없이, 즉시 프로필 페이지로 이동시킵니다.
-      console.log("이동 시도:", `/profile/${profileId}`); // 💡 디버깅 로그
       // 2. API 호출 없이 즉시 프로필 페이지로 이동시킵니다.
       router.push(`/profile/${profileId}`);
-      
     } else {
-      // 3. profileId가 없는 경우에만 경고를 띄웁니다.
-      console.warn("프로필 ID(profilePublicId)를 찾을 수 없습니다.", question);
-      alert('프로필 ID를 찾을 수 없어 이동할 수 없습니다.');
       // 3. 'profilePublicId'가 없는 경우에 대한 예외 처리
       alert('해당 사용자의 프로필 정보를 찾을 수 없습니다.');
     }
