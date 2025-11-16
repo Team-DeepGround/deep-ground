@@ -79,6 +79,7 @@ export interface MemberInfo {
     nickname: string;
     lastReadMessageTime: string;
     me?: boolean;   // 내가 본인이면 true (서버 필드명)
+    profileImageUrl?: string;
 }
 
 // 초기 채팅방 메시지 응답 타입
