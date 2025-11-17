@@ -22,6 +22,7 @@ export default function EditAnswerPage() {
   const [uploadedImages, setUploadedImages] = useState<File[]>([])
   const [existingImages, setExistingImages] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
+  const [questionNickname, setQuestionNickname] = useState<string>("")
   const [questionId, setQuestionId] = useState<number | null>(null)
   const [showPreview, setShowPreview] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -41,12 +42,27 @@ export default function EditAnswerPage() {
         }
         setExistingImages(urls)
       setQuestionId(res.questionId || null)
+      if (res.questionId) {
+        fetchQuestionNickname(res.questionId);
+      }
       } catch (e) {
         toast({ title: "답변 불러오기 실패", description: "답변 정보를 불러올 수 없습니다.", variant: "destructive" })
       } finally {
         setLoading(false)
       }
     }
+    async function fetchQuestionNickname(qId: number) {
+    try {
+      // 닉네임 정보를 위해 질문 상세 API를 호출합니다.
+      const res = await api.get(`/questions/${qId}`); 
+      const nickname = res.result?.nickname || res.result?.authorNickname || res.result?.memberNickname || '';
+      setQuestionNickname(nickname);
+    } catch (e) {
+      console.error("질문 닉네임을 가져오는 데 실패했습니다.", e);
+      // 실패해도 진행은 가능하도록 닉네임을 빈 문자열로 둡니다.
+      setQuestionNickname('unknown'); 
+    }
+  }
   useEffect(() => {
     if (answerId) fetchAnswer()
   }, [answerId])
@@ -148,7 +164,7 @@ export default function EditAnswerPage() {
       setUploadedImages([]);
       // 질문 상세 페이지로 이동
       if (questionId) {
-        router.push(`/questions/${questionId}?refresh=true`)
+        router.push(`/questions/${questionNickname}/${questionId}?refresh=true`)
       } else {
         router.back()
       }
