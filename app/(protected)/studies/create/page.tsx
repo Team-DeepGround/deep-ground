@@ -9,16 +9,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CalendarIcon, X } from "lucide-react"
+import { CalendarIcon } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { useToast } from "@/hooks/use-toast"
-import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
-import { Checkbox } from "@/components/ui/checkbox"
 import { api } from "@/lib/api-client"
 import { auth } from "@/lib/auth"
 import { useAuth } from "@/components/auth-provider"
@@ -26,16 +24,16 @@ import { getTechStacks, TechStack } from "@/lib/api/techStack"
 import TechStackSelector from "@/components/TechStackSelector"
 
 interface CreateStudyGroupRequest {
-  title: string;
-  explanation: string;
-  studyStartDate: string;
-  studyEndDate: string;
-  recruitStartDate: string;
-  recruitEndDate: string;
-  maxMembers: number;
-  isOffline: boolean;
-  studyLocation: string;
-  techStackNames: string[];
+  title: string
+  explanation: string
+  studyStartDate: string
+  studyEndDate: string
+  recruitStartDate: string
+  recruitEndDate: string
+  maxMembers: number
+  isOffline: boolean
+  studyLocation: string
+  techStackNames: string[]
 }
 
 export default function CreateStudyPage() {
@@ -47,15 +45,14 @@ export default function CreateStudyPage() {
   useEffect(() => {
     const checkAuth = async () => {
       const token = await auth.getToken()
-      
+
       if (!token) {
         toast({
           title: "로그인이 필요합니다",
           description: "스터디를 생성하려면 로그인이 필요합니다.",
           variant: "destructive",
         })
-        router.push('/auth/login')
-      } else {
+        router.push("/auth/login")
       }
     }
     checkAuth()
@@ -72,7 +69,6 @@ export default function CreateStudyPage() {
   const [recruitStartDate, setRecruitStartDate] = useState<Date>()
   const [recruitEndDate, setRecruitEndDate] = useState<Date>()
 
-  // 기술 태그 선택 방식으로 변경
   const [availableTags, setAvailableTags] = useState<TechStack[]>([])
   const [selectedTags, setSelectedTags] = useState<string[]>([])
 
@@ -90,8 +86,19 @@ export default function CreateStudyPage() {
     }
   }
 
+  const isPastDate = (date: Date) => {
+    const d = new Date(date)
+    d.setHours(0, 0, 0, 0)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return d < today
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
 
     // 필수 필드 검증
     if (
@@ -113,7 +120,35 @@ export default function CreateStudyPage() {
       return
     }
 
-    // 날짜 검증
+    // 오늘 기준 날짜 유효성 검사
+    if (isPastDate(recruitStartDate)) {
+      toast({
+        title: "모집 기간 오류",
+        description: "모집 시작일은 오늘 이후로 설정해주세요.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (isPastDate(recruitEndDate)) {
+      toast({
+        title: "모집 기간 오류",
+        description: "모집 종료일은 오늘 이후로 설정해주세요.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (isPastDate(studyStartDate)) {
+      toast({
+        title: "스터디 기간 오류",
+        description: "스터디 시작일은 오늘 이후로 설정해주세요.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // 날짜 관계 검증
     if (studyStartDate > studyEndDate) {
       toast({
         title: "날짜 오류",
@@ -162,9 +197,8 @@ export default function CreateStudyPage() {
     }
 
     try {
-      const parsedMaxMembers = parseInt(maxMembers, 10);
-      
-      // 인원 수 에러 
+      const parsedMaxMembers = parseInt(maxMembers, 10)
+
       if (isNaN(parsedMaxMembers) || parsedMaxMembers <= 0) {
         toast({
           title: "인원 수 오류",
@@ -173,28 +207,27 @@ export default function CreateStudyPage() {
         })
         return
       }
-      
+
       const requestData: CreateStudyGroupRequest = {
         title,
         explanation: description,
-        studyStartDate: format(studyStartDate, 'yyyy-MM-dd'),
-        studyEndDate: format(studyEndDate, 'yyyy-MM-dd'),
-        recruitStartDate: format(recruitStartDate, 'yyyy-MM-dd'),
-        recruitEndDate: format(recruitEndDate, 'yyyy-MM-dd'),
+        studyStartDate: format(studyStartDate, "yyyy-MM-dd"),
+        studyEndDate: format(studyEndDate, "yyyy-MM-dd"),
+        recruitStartDate: format(recruitStartDate, "yyyy-MM-dd"),
+        recruitEndDate: format(recruitEndDate, "yyyy-MM-dd"),
         maxMembers: parsedMaxMembers,
         isOffline: !isOnline,
         studyLocation: location,
         techStackNames: selectedTags,
       }
 
-      await api.post('/study-group', requestData)
+      await api.post("/study-group", requestData)
 
       toast({
         title: "스터디 생성 성공",
         description: "스터디가 성공적으로 생성되었습니다.",
       })
 
-      // 스터디 목록 페이지로 이동
       router.push("/studies")
     } catch (error) {
       toast({
@@ -204,6 +237,27 @@ export default function CreateStudyPage() {
       })
     }
   }
+
+  const todayLabel = format(new Date(), "yyyy.MM.dd")
+
+  const calendarModifiers = {
+    today: new Date(),
+  }
+
+  const calendarModifierStyles = {
+    today: {
+      color: "black",
+      fontWeight: "bold",
+      border: "1px solid black",
+      borderRadius: "6px",
+    },
+    disabled: {
+      opacity: 0.35,
+      filter: "blur(0.4px)",
+      cursor: "not-allowed",
+      textDecoration: "line-through",
+    },
+  } as const
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -239,7 +293,12 @@ export default function CreateStudyPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>스터디 기간</Label>
+                <Label className="flex items-center justify-between">
+                  <span>스터디 기간</span>
+                  <span className="text-xs text-muted-foreground">
+                    오늘({todayLabel}) 이전 날짜는 선택할 수 없어요
+                  </span>
+                </Label>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <div className="flex-1">
                     <Label htmlFor="studyStartDate" className="text-xs text-muted-foreground mb-1 block">
@@ -259,7 +318,15 @@ export default function CreateStudyPage() {
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
-                        <Calendar mode="single" selected={studyStartDate} onSelect={setStudyStartDate} initialFocus />
+                        <Calendar
+                          mode="single"
+                          selected={studyStartDate}
+                          onSelect={setStudyStartDate}
+                          disabled={isPastDate}
+                          modifiers={calendarModifiers}
+                          modifiersStyles={calendarModifierStyles}
+                          initialFocus
+                        />
                       </PopoverContent>
                     </Popover>
                   </div>
@@ -282,7 +349,15 @@ export default function CreateStudyPage() {
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
-                        <Calendar mode="single" selected={studyEndDate} onSelect={setStudyEndDate} initialFocus />
+                        <Calendar
+                          mode="single"
+                          selected={studyEndDate}
+                          onSelect={setStudyEndDate}
+                          disabled={isPastDate}
+                          modifiers={calendarModifiers}
+                          modifiersStyles={calendarModifierStyles}
+                          initialFocus
+                        />
                       </PopoverContent>
                     </Popover>
                   </div>
@@ -290,7 +365,12 @@ export default function CreateStudyPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>모집 기간</Label>
+                <Label className="flex items-center justify-between">
+                  <span>모집 기간</span>
+                  <span className="text-xs text-muted-foreground">
+                    오늘({todayLabel}) 이전 날짜는 선택할 수 없어요
+                  </span>
+                </Label>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <div className="flex-1">
                     <Label htmlFor="recruitStartDate" className="text-xs text-muted-foreground mb-1 block">
@@ -314,6 +394,9 @@ export default function CreateStudyPage() {
                           mode="single"
                           selected={recruitStartDate}
                           onSelect={setRecruitStartDate}
+                          disabled={isPastDate}
+                          modifiers={calendarModifiers}
+                          modifiersStyles={calendarModifierStyles}
                           initialFocus
                         />
                       </PopoverContent>
@@ -338,7 +421,15 @@ export default function CreateStudyPage() {
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
-                        <Calendar mode="single" selected={recruitEndDate} onSelect={setRecruitEndDate} initialFocus />
+                        <Calendar
+                          mode="single"
+                          selected={recruitEndDate}
+                          onSelect={setRecruitEndDate}
+                          disabled={isPastDate}
+                          modifiers={calendarModifiers}
+                          modifiersStyles={calendarModifierStyles}
+                          initialFocus
+                        />
                       </PopoverContent>
                     </Popover>
                   </div>
@@ -390,10 +481,10 @@ export default function CreateStudyPage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">관련 기술 태그</label>
                 <TechStackSelector
-                    availableTags={availableTags}
-                    selectedTags={selectedTags}
-                    onToggle={handleTagToggle}
-                  />
+                  availableTags={availableTags}
+                  selectedTags={selectedTags}
+                  onToggle={handleTagToggle}
+                />
               </div>
             </CardContent>
           </Card>

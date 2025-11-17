@@ -185,7 +185,10 @@ export default function StudyManagementPage() {
           </TabsList>
 
           <TabsContent value="schedule">
-            <StudySchedule />
+            <StudySchedule
+              studyStartDate={study.studyStartDate}
+              studyEndDate={study.studyEndDate}
+            />
           </TabsContent>
 
           <TabsContent value="members">
