@@ -24,6 +24,7 @@ export default function EditQuestionPage() {
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
   const [tags, setTags] = useState<string[]>([])
+  const [QuestionNickName, setQuestionNickName] = useState<string[]>([])
   const [uploadedImages, setUploadedImages] = useState<File[]>([])
   const [existingImages, setExistingImages] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -45,6 +46,7 @@ export default function EditQuestionPage() {
         setContent(q.content || "")
         setTags(q.techStacks || q.tags || [])
         setExistingImages(q.mediaUrls || [])
+        setQuestionNickName(q.nickname || [])
       } catch (e) {
         toast({ title: "질문 불러오기 실패", description: "질문 정보를 불러올 수 없습니다.", variant: "destructive" })
       } finally {
@@ -149,7 +151,7 @@ export default function EditQuestionPage() {
       const data = await res.json()
       if (res.ok) {
         toast({ title: "질문 수정 성공", description: "질문이 성공적으로 수정되었습니다." })
-        router.push(`/questions/${params.id}`)
+        router.push(`/questions/${QuestionNickName}/${params.id}`)
       } else {
         toast({ title: "질문 수정 실패", description: data.message || "질문 수정 중 오류가 발생했습니다.", variant: "destructive" })
       }
