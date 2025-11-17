@@ -4,12 +4,25 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent,  DialogDescription,  DialogFooter,  DialogHeader,  DialogTitle,  DialogTrigger } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Calendar, FileText, MapPin, Settings, Trash2 } from "lucide-react"
-import { createStudySchedule, fetchStudySchedulesByGroup, updateStudySchedule, deleteStudySchedule } from "@/lib/api/studySchedule"
+import {
+  createStudySchedule,
+  fetchStudySchedulesByGroup,
+  updateStudySchedule,
+  deleteStudySchedule,
+} from "@/lib/api/studySchedule"
 import { useParams } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { format } from "date-fns"
@@ -31,13 +44,19 @@ interface Schedule {
   personalNote?: string
 }
 
-export function StudySchedule() {
+interface StudyScheduleProps {
+  studyStartDate: string // "yyyy-MM-dd"
+  studyEndDate: string   // "yyyy-MM-dd"
+}
+
+export function StudySchedule({ studyStartDate, studyEndDate }: StudyScheduleProps) {
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const params = useParams()
+  const { toast } = useToast()
 
   // 새 일정 추가용 상태
   const [newSchedule, setNewSchedule] = useState({
@@ -56,41 +75,44 @@ export function StudySchedule() {
     const loadSchedules = async () => {
       try {
         const studyGroupId = Number(params.id)
-        const data = await fetchStudySchedulesByGroup(studyGroupId) 
-        const mappedSchedules = data.map((item: any) => {
-          const startDate = new Date(item.startTime)
-          const endDate = new Date(item.endTime)
-        
-          let attendance: "attending" | "not_attending" | null
+        const data = await fetchStudySchedulesByGroup(studyGroupId)
+        const mappedSchedules = data
+          .map((item: any) => {
+            const startDate = new Date(item.startTime)
+            const endDate = new Date(item.endTime)
 
-          if (item.isAvailable === true) {
-            attendance = "attending"
-          } else if (item.isAvailable === false) {
-            attendance = "not_attending"
-          } else {
-            attendance = null
-          }
+            let attendance: "attending" | "not_attending" | null
 
-          return {
-            id: item.id,
-            studyScheduleId: item.id,
-            title: item.title,
-            date: item.startTime.split("T")[0],           // date도 그냥 Date 객체로 통일
-            startTime: startDate,
-            endTime: endDate,
-            location: item.location,
-            description: item.description,
-            attendance,
-            personalNote: item.memo ?? "",
-            isImportant: item.isImportant ?? false,
-          }
-        }).sort((a, b) => a.startTime.getTime() - b.startTime.getTime()) 
-  
+            if (item.isAvailable === true) {
+              attendance = "attending"
+            } else if (item.isAvailable === false) {
+              attendance = "not_attending"
+            } else {
+              attendance = null
+            }
+
+            return {
+              id: item.id,
+              studyScheduleId: item.id,
+              title: item.title,
+              date: item.startTime.split("T")[0],
+              startTime: startDate,
+              endTime: endDate,
+              location: item.location,
+              description: item.description,
+              attendance,
+              personalNote: item.memo ?? "",
+              isImportant: item.isImportant ?? false,
+            }
+          })
+          .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
+
         setSchedules(mappedSchedules)
       } catch (error) {
+        // 필요하면 여기도 토스트 추가 가능
       }
     }
-  
+
     loadSchedules()
   }, [params.id])
 
@@ -104,59 +126,67 @@ export function StudySchedule() {
     const startDateTime = new Date(startTime)
     const endDateTime = new Date(endTime)
     const studyGroupId = Number(params.id)
-    const isConflict = schedules.some(schedule =>
-    isOverlapping(startDateTime, endDateTime, schedule.startTime, schedule.endTime)
-  )
 
-  if (isConflict) {
-    alert("다른 일정과 시간이 겹칩니다.")
-    return
-  }
+    const isConflict = schedules.some((schedule) =>
+      isOverlapping(startDateTime, endDateTime, schedule.startTime, schedule.endTime),
+    )
 
-  if (!newSchedule.title.trim()) {
-    alert("제목을 입력해주세요.")
-    return
-  }
+    if (isConflict) {
+      alert("다른 일정과 시간이 겹칩니다.")
+      return
+    }
 
-  if (!newSchedule.startTime || !newSchedule.endTime) {
-    alert("일정 시간을 입력해주세요.")
-    return
-  }
+    if (!newSchedule.title.trim()) {
+      alert("제목을 입력해주세요.")
+      return
+    }
 
-  if (newSchedule.endTime <= newSchedule.startTime) {
-    alert("종료 시간은 시작 시간보다 늦어야 합니다")
-    return
-   }
+    if (!newSchedule.date) {
+      alert("날짜를 선택해주세요.")
+      return
+    }
 
-  if (!newSchedule.description.trim()) {
-    alert("설명을 입력해주세요.")
-    return
-  }
-  
+    if (!newSchedule.startTime || !newSchedule.endTime) {
+      alert("일정 시간을 입력해주세요.")
+      return
+    }
+
+    if (newSchedule.endTime <= newSchedule.startTime) {
+      alert("종료 시간은 시작 시간보다 늦어야 합니다")
+      return
+    }
+
+    if (!newSchedule.description.trim()) {
+      alert("설명을 입력해주세요.")
+      return
+    }
+
     try {
-      const res = await createStudySchedule(studyGroupId, {
+      await createStudySchedule(studyGroupId, {
         title: newSchedule.title,
         startTime,
         endTime,
         description: newSchedule.description,
         location: newSchedule.location,
       })
+
       const fetched = await fetchStudySchedulesByGroup(studyGroupId)
 
       setSchedules(
-        fetched.map((s) => ({
-          id: s.id,
-          studyScheduleId: s.studyScheduleId,
-          title: s.title,
-          date: s.startTime.split("T")[0],
-          startTime: new Date(s.startTime),
-          endTime: new Date(s.endTime),
-          location: s.location,
-          description: s.description,
-        }))
-        .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
+        fetched
+          .map((s: any) => ({
+            id: s.id,
+            studyScheduleId: s.studyScheduleId,
+            title: s.title,
+            date: s.startTime.split("T")[0],
+            startTime: new Date(s.startTime),
+            endTime: new Date(s.endTime),
+            location: s.location,
+            description: s.description,
+          }))
+          .sort((a, b) => a.startTime.getTime() - b.startTime.getTime()),
       )
-  
+
       setNewSchedule({
         title: "",
         date: "",
@@ -166,24 +196,38 @@ export function StudySchedule() {
         description: "",
       })
       setIsAddModalOpen(false)
-      window.location.reload(); // 새로고침
-    } catch (error) {
+      window.location.reload() // 기존 로직 유지
+    } catch (error: any) {
+      console.error("일정 추가 실패:", error)
+
+      const serverMessage =
+        error?.response?.data?.message ||
+        error?.data?.message ||
+        error?.message
+
+      toast({
+        title: "일정 추가 실패",
+        description:
+          serverMessage ||
+          "유효하지 않은 일정입니다. 스터디 기간과 시간을 다시 확인해주세요.",
+        variant: "destructive",
+      })
     }
   }
 
   const handleEditSchedule = async () => {
     if (!editSchedule) return
     const studyGroupId = Number(params.id)
-    if (!editSchedule || !editSchedule.studyScheduleId) {
+    if (!editSchedule.studyScheduleId) {
       return
     }
-    
+
     const scheduleId = Number(editSchedule.studyScheduleId)
-    
+
     if (isNaN(scheduleId)) {
       return
     }
-  
+
     const startTime = format(editSchedule.startTime, "yyyy-MM-dd'T'HH:mm:ss")
     const endTime = format(editSchedule.endTime, "yyyy-MM-dd'T'HH:mm:ss")
     const startDateTime = new Date(startTime)
@@ -204,16 +248,17 @@ export function StudySchedule() {
       return
     }
 
-  const isConflict = schedules.some(schedule =>
-    schedule.studyScheduleId !== scheduleId && // 본인 일정 제외
-    isOverlapping(startDateTime, endDateTime, schedule.startTime, schedule.endTime)
-  )
+    const isConflict = schedules.some(
+      (schedule) =>
+        schedule.studyScheduleId !== scheduleId && // 본인 일정 제외
+        isOverlapping(startDateTime, endDateTime, schedule.startTime, schedule.endTime),
+    )
 
-  if (isConflict) {
-    alert("다른 일정과 시간이 겹칩니다.")
-    return
-  }
-  
+    if (isConflict) {
+      alert("다른 일정과 시간이 겹칩니다.")
+      return
+    }
+
     try {
       const res = await updateStudySchedule(studyGroupId, scheduleId, {
         title: editSchedule.title,
@@ -221,12 +266,16 @@ export function StudySchedule() {
         endTime,
         description: editSchedule.description,
         location: editSchedule.location,
-        isAvailable: editSchedule.attendance === "attending" ? true :
-                    editSchedule.attendance === "not_attending" ? false : null,
+        isAvailable:
+          editSchedule.attendance === "attending"
+            ? true
+            : editSchedule.attendance === "not_attending"
+              ? false
+              : null,
         isImportant: editSchedule.isImportant ?? false,
         memo: editSchedule.personalNote ?? "",
       })
-  
+
       const updated = res.result // ✅ result 꺼내서 사용
 
       setSchedules((prev) =>
@@ -242,14 +291,28 @@ export function StudySchedule() {
                   location: updated.location,
                   description: updated.description,
                 }
-              : s
+              : s,
           )
-          .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
+          .sort((a, b) => a.startTime.getTime() - b.startTime.getTime()),
       )
-  
+
       setIsEditModalOpen(false)
       setEditSchedule(null)
-    } catch (error) {
+    } catch (error: any) {
+      console.error("일정 수정 실패:", error)
+
+      const serverMessage =
+        error?.response?.data?.message ||
+        error?.data?.message ||
+        error?.message
+
+      toast({
+        title: "일정 수정 실패",
+        description:
+          serverMessage ||
+          "유효하지 않은 일정입니다. 스터디 기간과 시간을 다시 확인해주세요.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -259,7 +322,6 @@ export function StudySchedule() {
   }
 
   const openEditModal = (schedule: Schedule) => {
-  
     setEditSchedule({
       ...schedule,
       date: schedule.startTime.toISOString().split("T")[0],
@@ -272,20 +334,17 @@ export function StudySchedule() {
 
     const isConfirmed = window.confirm("일정을 삭제하시겠습니까?")
     if (!isConfirmed) return
-  
+
     try {
       const studyGroupId = Number(params.id)
       const result = await deleteStudySchedule(studyGroupId, scheduleId)
-      
-      // 성공 메시지 표시
+
       if (result.status === 200) {
         alert(result.message || "일정이 삭제되었습니다.")
       }
-  
-      // 일정 목록 새로고침
+
       const updated = await fetchStudySchedulesByGroup(studyGroupId)
-      const formatted = updated.map((item) => {
-        const date = new Date(item.startTime)   // string -> Date
+      const formatted = updated.map((item: any) => {
         const startTime = new Date(item.startTime)
         const endTime = new Date(item.endTime)
 
@@ -297,12 +356,12 @@ export function StudySchedule() {
         } else {
           attendance = null
         }
-  
+
         return {
           id: item.id,
           studyScheduleId: item.id,
           title: item.title,
-          date: item.startTime.split("T")[0], 
+          date: item.startTime.split("T")[0],
           startTime,
           endTime,
           location: item.location,
@@ -312,19 +371,20 @@ export function StudySchedule() {
           isImportant: item.isImportant ?? false,
         }
       })
-      setSchedules(
-        formatted.sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
-      )
-  
-    } catch (error) {
-      
-      // 더 구체적인 에러 메시지 표시
-      let errorMessage = "일정 삭제에 실패했습니다."
-      if (error instanceof Error) {
-        errorMessage = error.message
-      }
-      
-      alert(`❌ ${errorMessage}`)
+      setSchedules(formatted.sort((a, b) => a.startTime.getTime() - b.startTime.getTime()))
+    } catch (error: any) {
+      console.error("일정 삭제 실패:", error)
+
+      const serverMessage =
+        error?.response?.data?.message ||
+        error?.data?.message ||
+        error?.message
+
+      toast({
+        title: "일정 삭제 실패",
+        description: serverMessage || "일정 삭제 중 오류가 발생했습니다.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -411,7 +471,9 @@ export function StudySchedule() {
                   id="description"
                   placeholder="설명은 필수입니다"
                   value={newSchedule.description}
-                  onChange={(e) => setNewSchedule({ ...newSchedule, description: e.target.value })}
+                  onChange={(e) =>
+                    setNewSchedule({ ...newSchedule, description: e.target.value })
+                  }
                   className="col-span-3"
                 />
               </div>
@@ -428,12 +490,15 @@ export function StudySchedule() {
       <CardContent>
         <div className="space-y-4">
           {schedules.map((schedule) => (
-            <div key={schedule.id} className="flex items-start justify-between p-4 border rounded-lg">
+            <div
+              key={schedule.id}
+              className="flex items-start justify-between p-4 border rounded-lg"
+            >
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
                   <h3 className="font-semibold">{schedule.title}</h3>
                   <Badge variant="outline">
-                  {format(schedule.date, "yyyy-MM-dd")}
+                    {format(schedule.date, "yyyy-MM-dd")}
                   </Badge>
                 </div>
                 <p className="text-sm text-muted-foreground mb-2">{schedule.description}</p>
@@ -458,7 +523,7 @@ export function StudySchedule() {
                   size="sm"
                   onClick={() => handleDeleteSchedule(schedule.id)}
                 >
-                <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="mr-2 h-4 w-4" />
                   삭제
                 </Button>
               </div>
@@ -481,15 +546,18 @@ export function StudySchedule() {
         schedule={editSchedule}
         setSchedule={setEditSchedule}
         onSubmit={handleEditSchedule}
+        studyStartDate={studyStartDate}
+        studyEndDate={studyEndDate}
       />
-    </Card> 
+    </Card>
   )
 }
 
+// 미리보기용 (실제 라우팅에서는 안 써도 됨)
 export default function Component() {
   return (
     <div className="p-6">
-      <StudySchedule />
+      <StudySchedule studyStartDate="2025-01-10" studyEndDate="2025-01-20" />
     </div>
   )
 }

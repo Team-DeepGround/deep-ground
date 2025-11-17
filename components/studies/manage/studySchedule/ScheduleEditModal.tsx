@@ -1,26 +1,38 @@
 "use client"
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import TimePicker from "./TimePicker"
-import { format } from "date-fns"
+import { format, parseISO } from "date-fns"
+import { Calendar as CalendarIcon } from "lucide-react"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
+import { ko } from "date-fns/locale"
 
 interface Schedule {
-    id: number
-    studyScheduleId: number
-    title: string
-    date: string
-    startTime: Date
-    endTime: Date
-    location: string
-    description: string
-    attendance?: "attending" | "not_attending" | null
-    isImportant?: boolean
-    personalNote?: string
-  }
+  id: number
+  studyScheduleId: number
+  title: string
+  date: string
+  startTime: Date
+  endTime: Date
+  location: string
+  description: string
+  attendance?: "attending" | "not_attending" | null
+  isImportant?: boolean
+  personalNote?: string
+}
 
 interface Props {
   open: boolean
@@ -28,17 +40,35 @@ interface Props {
   schedule: Schedule | null
   setSchedule: (schedule: Schedule | null) => void
   onSubmit: () => void
+  // ✅ 스터디 기간
+  studyStartDate: string // "yyyy-MM-dd"
+  studyEndDate: string   // "yyyy-MM-dd"
 }
 
-export default function ScheduleEditModal({ open, onOpenChange, schedule, setSchedule, onSubmit }: Props) {
+export default function ScheduleEditModal({
+  open,
+  onOpenChange,
+  schedule,
+  setSchedule,
+  onSubmit,
+  studyStartDate,
+  studyEndDate,
+}: Props) {
   if (!schedule) return null
+
+  const start = parseISO(studyStartDate)
+  const end = parseISO(studyEndDate)
+
+  const selectedDate = schedule.date ? parseISO(schedule.date) : schedule.startTime
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>일정 수정</DialogTitle>
-          <DialogDescription>일정 정보를 수정하세요.</DialogDescription>
+          <DialogDescription>
+            일정 정보를 수정하세요. 스터디 기간({studyStartDate} ~ {studyEndDate}) 내에서만 변경할 수 있습니다.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-6 py-4">
@@ -54,26 +84,72 @@ export default function ScheduleEditModal({ open, onOpenChange, schedule, setSch
               className="col-span-3"
             />
           </div>
+
+          {/* 🔥 달력으로 날짜 선택 + 범위 밖 블러 처리 */}
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="edit-date" className="text-right">
-              날짜
-            </Label>
-            <Input
-              id="edit-date"
-              type="date"
-              value={schedule.date}
-              onChange={(e) => {
-                const newDate = e.target.value
-                setSchedule({
-                  ...schedule,
-                  date: newDate,
-                  startTime: new Date(`${newDate}T${format(schedule.startTime, "HH:mm")}:00`),
-                  endTime: new Date(`${newDate}T${format(schedule.endTime, "HH:mm")}:00`),
-                })
-              }}
-              className="col-span-3"
-            />
+            <Label className="text-right">날짜</Label>
+            <div className="col-span-3">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !schedule.date && "text-muted-foreground",
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {selectedDate
+                      ? format(selectedDate, "PPP", { locale: ko })
+                      : "날짜 선택"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    locale={ko}
+                    selected={selectedDate}
+                    onSelect={(day) => {
+                      if (!day) return
+                      const newDate = format(day, "yyyy-MM-dd")
+                      setSchedule({
+                        ...schedule,
+                        date: newDate,
+                        startTime: new Date(
+                          `${newDate}T${format(schedule.startTime, "HH:mm")}:00`,
+                        ),
+                        endTime: new Date(
+                          `${newDate}T${format(schedule.endTime, "HH:mm")}:00`,
+                        ),
+                      })
+                    }}
+                    // ✅ 스터디 기간 밖은 비활성화
+                    disabled={(date) => date < start || date > end}
+                    modifiers={{
+                      today: new Date(),
+                      outsideRange: (date) => date < start || date > end,
+                    }}
+                    modifiersStyles={{
+                      today: {
+                        color: "black",
+                        fontWeight: "bold",
+                        border: "1px solid black",
+                        borderRadius: "6px",
+                      },
+                      outsideRange: {
+                        opacity: 0.35,
+                        filter: "blur(0.4px)",
+                        cursor: "not-allowed",
+                        textDecoration: "line-through",
+                      },
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
+
           <div className="grid grid-cols-4 items-center gap-4">
             <Label className="text-right">시작 시간</Label>
             <div className="col-span-3">
