@@ -170,7 +170,7 @@ export default function UserProfilePage() {
       setStatusLoading(true)
       try {
         const res = await api
-          .get(`/friends/status`, { params: { targetMemberPublicId: String(profile.publicId) } })
+          .get(`/friends/status`, { params: { targetPublicId: String(profile.publicId) } })
           .catch(() => null)
 
         const status = res?.result?.status || "NONE"
