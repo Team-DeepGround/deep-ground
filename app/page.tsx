@@ -150,7 +150,7 @@ export default function Home() {
         ) : studies.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {studies.slice(0, 4).map((study) => (
-              <Link key={study.id} href={`/studies/${study.id}`} className="block">
+              <Link key={study.id} href={`/studies/${study.organizer.name}/${study.id}`} className="block">
                 <div className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow border border-gray-200 h-full">
                   {/* 제목 */}
                   <h3 className="text-xl font-bold mb-4 text-black">
