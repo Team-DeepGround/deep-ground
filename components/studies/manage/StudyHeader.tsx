@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Calendar, ExternalLink, MapPin, Settings, Users } from "lucide-react"
+import { Calendar, MapPin, Settings, Users } from "lucide-react" // 👈 ExternalLink 제거
 import Link from "next/link"
 import { StudyGroupDetail } from "@/types/study"
 
@@ -25,12 +25,7 @@ export function StudyHeader({ study }: StudyHeaderProps) {
         </div>
 
         <div className="flex items-center gap-2 ml-4">
-          <Button variant="outline" asChild>
-            <Link href={`/studies/${study.id}`}>
-              <ExternalLink className="mr-2 h-4 w-4" />
-              공개 페이지 보기
-            </Link>
-          </Button>
+          {/* ✅ 공개 페이지 보기 버튼 제거 */}
           <Button asChild>
             <Link href={`/studies/edit/${study.id}`}>
               <Settings className="mr-2 h-4 w-4" />
@@ -68,4 +63,4 @@ export function StudyHeader({ study }: StudyHeaderProps) {
       </div>
     </div>
   )
-} 
+}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { useToast } from "@/hooks/use-toast"
@@ -13,8 +13,8 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getTechStacks, TechStack } from "@/lib/api/techStack"
-import { Calendar, MapPin, Users } from "lucide-react"
 import { api } from "@/lib/api-client"
+import { useAuth } from "@/components/auth-provider"
 
 interface StudySettingsForm {
   title: string
@@ -29,27 +29,20 @@ interface StudySettingsForm {
   techTags: string[]
 }
 
-// 더미 데이터
-const dummyStudyData = {
-  title: "React 스터디",
-  description: "React와 Next.js를 함께 공부하는 스터디입니다. 실무에서 자주 사용되는 패턴과 최신 기술을 학습합니다.",
-  isOnline: true,
-  location: "서울 강남구",
-  groupLimit: 6,
-  studyStartDate: "2024-03-01",
-  studyEndDate: "2024-04-30",
-  recruitStartDate: "2024-02-15",
-  recruitEndDate: "2024-02-28",
-  techTags: ["React", "TypeScript", "Next.js"]
-}
-
 export default function StudyEditPage() {
   const router = useRouter()
   const params = useParams()
   const { toast } = useToast()
+  const { user } = useAuth()
+
+  // ✅ id 안전 추출
+  const rawId = params?.id
+  const studyId = Array.isArray(rawId) ? rawId[0] : rawId
+
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [availableTags, setAvailableTags] = useState<TechStack[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [study, setStudy] = useState<any | null>(null)
 
   const {
     register,
@@ -66,22 +59,29 @@ export default function StudyEditPage() {
   }, [])
 
   useEffect(() => {
+    if (!studyId) return
+
     // 실제 스터디 데이터 불러오기
     const fetchStudy = async () => {
       try {
-        const response = await api.get(`/study-group/${params.id}`)
+        const response = await api.get(`/study-group/${studyId}`)
         if (response.status === 200 && response.result) {
-          const study = response.result
-          setValue("title", study.title)
-          setValue("description", study.explanation)
-          setValue("isOnline", !study.offline)
-          setValue("location", study.location)
-          setValue("groupLimit", study.groupLimit)
-          setValue("studyStartDate", study.studyStartDate)
-          setValue("studyEndDate", study.studyEndDate)
-          setValue("recruitStartDate", study.recruitStartDate)
-          setValue("recruitEndDate", study.recruitEndDate)
-          setSelectedTags(study.techStacks.map((t: { name: string }) => t.name))
+          const s = response.result
+          setStudy(s)
+
+          setValue("title", s.title)
+          setValue("description", s.explanation)
+          // 백엔드 필드명에 맞춰서 조정 (isOffline / offline 등)
+          setValue("isOnline", s.isOffline !== undefined ? !s.isOffline : !s.offline)
+          setValue("location", s.location ?? s.studyLocation ?? "")
+          setValue("groupLimit", s.groupLimit ?? s.groupMemberCount ?? 0)
+          setValue("studyStartDate", s.studyStartDate)
+          setValue("studyEndDate", s.studyEndDate)
+          setValue("recruitStartDate", s.recruitStartDate)
+          setValue("recruitEndDate", s.recruitEndDate)
+          setSelectedTags(
+            (s.techStacks ?? s.techTags ?? []).map((t: { name: string }) => t.name)
+          )
         }
       } catch (error) {
         toast({
@@ -94,12 +94,37 @@ export default function StudyEditPage() {
       }
     }
     fetchStudy()
-  }, [params.id, setValue, toast])
+  }, [studyId, setValue, toast])
+
+  // ✅ 상세 페이지용 닉네임 결정
+  // 1) study 안에 있는 작성자/방장 닉네임
+  // 2) 현재 로그인 사용자 닉네임
+  // 3) "user" (fallback)
+  const detailNickname = useMemo(() => {
+    const candidates = [
+      study?.creatorNickname,
+      study?.ownerNickname,
+      study?.createdBy,
+      study?.leaderNickname,
+      user?.nickname,
+    ].filter(Boolean) as string[]
+
+    return candidates[0] ?? "user"
+  }, [study, user?.nickname])
 
   const onSubmit = async (data: StudySettingsForm) => {
+    if (!studyId) {
+      toast({
+        title: "잘못된 접근",
+        description: "스터디 ID가 올바르지 않습니다.",
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
       const requestBody = {
-        id: Number(params.id),
+        id: Number(studyId),
         title: data.title,
         explanation: data.description,
         studyStartDate: data.studyStartDate,
@@ -107,16 +132,24 @@ export default function StudyEditPage() {
         recruitStartDate: data.recruitStartDate,
         recruitEndDate: data.recruitEndDate,
         groupMemberCount: data.groupLimit,
-        isOffline: !data.isOnline ? true : false,
+        isOffline: data.isOnline ? false : true,
         studyLocation: data.location,
         techStackNames: selectedTags,
       }
-      await api.patch(`/study-group/${params.id}`, requestBody)
+
+      await api.patch(`/study-group/${studyId}`, requestBody)
+
       toast({
         title: "설정 저장 완료",
         description: "스터디 설정이 저장되었습니다.",
       })
-      router.push(`/studies/${params.id}`)
+
+      // ✅ 수정 후 상세 페이지로: /studies/[nickname]/[id]
+      router.push(
+        `/studies/${encodeURIComponent(detailNickname)}/${encodeURIComponent(
+          String(studyId)
+        )}`
+      )
     } catch (error) {
       toast({
         title: "설정 저장 실패",
@@ -178,17 +211,16 @@ export default function StudyEditPage() {
                     {...register("description", { required: "설명을 입력해주세요" })}
                   />
                   {errors.description && (
-                    <p className="text-sm text-red-500">{errors.description.message}</p>
+                    <p className="text-sm text-red-500">
+                      {errors.description.message}
+                    </p>
                   )}
                 </div>
 
                 <div className="space-y-2">
                   <Label>스터디 방식</Label>
                   <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="isOnline"
-                      {...register("isOnline")}
-                    />
+                    <Checkbox id="isOnline" {...register("isOnline")} />
                     <Label htmlFor="isOnline">온라인 스터디</Label>
                   </div>
                 </div>
@@ -201,7 +233,9 @@ export default function StudyEditPage() {
                       {...register("location", { required: "장소를 입력해주세요" })}
                     />
                     {errors.location && (
-                      <p className="text-sm text-red-500">{errors.location.message}</p>
+                      <p className="text-sm text-red-500">
+                        {errors.location.message}
+                      </p>
                     )}
                   </div>
                 )}
@@ -220,7 +254,9 @@ export default function StudyEditPage() {
                     })}
                   />
                   {errors.groupLimit && (
-                    <p className="text-sm text-red-500">{errors.groupLimit.message}</p>
+                    <p className="text-sm text-red-500">
+                      {errors.groupLimit.message}
+                    </p>
                   )}
                 </div>
 
@@ -230,7 +266,9 @@ export default function StudyEditPage() {
                     {availableTags.map((tag) => (
                       <Badge
                         key={tag.id}
-                        variant={selectedTags.includes(tag.name) ? "default" : "outline"}
+                        variant={
+                          selectedTags.includes(tag.name) ? "default" : "outline"
+                        }
                         className="cursor-pointer"
                         onClick={() => handleTagToggle(tag.name)}
                       >
@@ -263,10 +301,14 @@ export default function StudyEditPage() {
                       <Input
                         id="studyStartDate"
                         type="date"
-                        {...register("studyStartDate", { required: "시작일을 선택해주세요" })}
+                        {...register("studyStartDate", {
+                          required: "시작일을 선택해주세요",
+                        })}
                       />
                       {errors.studyStartDate && (
-                        <p className="text-sm text-red-500">{errors.studyStartDate.message}</p>
+                        <p className="text-sm text-red-500">
+                          {errors.studyStartDate.message}
+                        </p>
                       )}
                     </div>
                     <div>
@@ -274,10 +316,14 @@ export default function StudyEditPage() {
                       <Input
                         id="studyEndDate"
                         type="date"
-                        {...register("studyEndDate", { required: "종료일을 선택해주세요" })}
+                        {...register("studyEndDate", {
+                          required: "종료일을 선택해주세요",
+                        })}
                       />
                       {errors.studyEndDate && (
-                        <p className="text-sm text-red-500">{errors.studyEndDate.message}</p>
+                        <p className="text-sm text-red-500">
+                          {errors.studyEndDate.message}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -291,10 +337,14 @@ export default function StudyEditPage() {
                       <Input
                         id="recruitStartDate"
                         type="date"
-                        {...register("recruitStartDate", { required: "시작일을 선택해주세요" })}
+                        {...register("recruitStartDate", {
+                          required: "시작일을 선택해주세요",
+                        })}
                       />
                       {errors.recruitStartDate && (
-                        <p className="text-sm text-red-500">{errors.recruitStartDate.message}</p>
+                        <p className="text-sm text-red-500">
+                          {errors.recruitStartDate.message}
+                        </p>
                       )}
                     </div>
                     <div>
@@ -302,10 +352,14 @@ export default function StudyEditPage() {
                       <Input
                         id="recruitEndDate"
                         type="date"
-                        {...register("recruitEndDate", { required: "종료일을 선택해주세요" })}
+                        {...register("recruitEndDate", {
+                          required: "종료일을 선택해주세요",
+                        })}
                       />
                       {errors.recruitEndDate && (
-                        <p className="text-sm text-red-500">{errors.recruitEndDate.message}</p>
+                        <p className="text-sm text-red-500">
+                          {errors.recruitEndDate.message}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -321,4 +375,4 @@ export default function StudyEditPage() {
       </Tabs>
     </div>
   )
-} 
+}

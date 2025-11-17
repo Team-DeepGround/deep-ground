@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
@@ -10,6 +10,8 @@ import { StudyHeader } from "@/components/studies/manage/StudyHeader"
 import { StudySchedule } from "@/components/studies/manage/studySchedule/StudySchedule"
 import { StudyMembers } from "@/components/studies/manage/StudyMembers"
 import { StudyApplicants } from "@/components/studies/manage/StudyApplicants"
+import { Button } from "@/components/ui/button"
+import { useAuth } from "@/components/auth-provider"
 
 interface StudyMember {
   memberPublicId: string
@@ -19,45 +21,72 @@ interface StudyMember {
 }
 
 interface Applicant {
-  memberPublicId: string; // 백엔드 응답에 맞춰 memberPublicId로 변경
-  nickname: string;
-  joinedAt: null;
-  owner: false;
+  memberPublicId: string
+  nickname: string
+  joinedAt: null
+  owner: false
 }
 
 export default function StudyManagementPage() {
   const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
+  const { user } = useAuth()
+
+  // ✅ id 안전 추출
+  const rawId = params?.id
+  const id = Array.isArray(rawId) ? rawId[0] : rawId
+
   const [study, setStudy] = useState<StudyGroupDetail | null>(null)
   const [members, setMembers] = useState<StudyMember[]>([])
   const [applicants, setApplicants] = useState<Applicant[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
+  // ✅ 상세 페이지에 붙일 닉네임 우선순위:
+  // 1) study 내 작성자/방장 닉네임 후보
+  // 2) 현재 로그인 사용자 닉네임
+  // 3) "user" (fallback)
+  const detailNickname = useMemo(() => {
+    const candidates = [
+      (study as any)?.creatorNickname,
+      (study as any)?.ownerNickname,
+      (study as any)?.createdBy,
+      user?.nickname,
+    ].filter(Boolean) as string[]
+    return candidates[0] ?? "user"
+  }, [study, user?.nickname])
+
+  const goDetail = () => {
+    if (!id) return
+    router.push(`/studies/${encodeURIComponent(detailNickname)}/${id}`)
+  }
+
   useEffect(() => {
+    if (!id) return
+
     const fetchStudyDetail = async () => {
       try {
-        const response = await api.get(`/study-group/${params.id}`)
+        const response = await api.get(`/study-group/${id}`)
         if (response.status === 200 && response.result) {
           setStudy(response.result)
         }
       } catch (error) {
+        // 필요 시 토스트
       }
     }
 
     const fetchMembers = async () => {
       try {
-        const response = await api.get(`/study-group/${params.id}/members`)
+        const response = await api.get(`/study-group/${id}/members`)
         if (response.status === 200 && response.result) {
           setMembers(response.result)
         }
-      } catch (error) {
-      }
+      } catch (error) {}
     }
 
     const fetchApplicants = async () => {
       try {
-        const response = await api.get(`/study-group/${params.id}/applicants`)
+        const response = await api.get(`/study-group/${id}/applicants`)
         setApplicants(response.result)
       } catch (error) {
         toast({
@@ -73,7 +102,7 @@ export default function StudyManagementPage() {
     fetchStudyDetail()
     fetchMembers()
     fetchApplicants()
-  }, [params.id, toast])
+  }, [id, toast])
 
   if (isLoading) {
     return <div>로딩 중...</div>
@@ -84,7 +113,6 @@ export default function StudyManagementPage() {
   }
 
   const handleInviteMember = (email: string) => {
-    // 초대 로직 (실제로는 API 호출)
     toast({
       title: "초대 메일 발송 완료",
       description: `${email}로 스터디 초대 메일을 발송했습니다.`,
@@ -93,24 +121,15 @@ export default function StudyManagementPage() {
 
   const handleKickMember = async (memberPublicId: string): Promise<void> => {
     try {
-      // 먼저 UI에서 해당 멤버를 제거 (즉시 반영)
-      setMembers(prevMembers => prevMembers.filter(member => member.memberPublicId !== memberPublicId))
-      
-      await api.delete(`/study-group/${params.id}/kick/${memberPublicId}`)
-
-      // API 호출 성공 후 서버에서 최신 목록을 가져와서 동기화
-      const response = await api.get(`/study-group/${params.id}/members`)
+      // optimistic update
+      setMembers(prev => prev.filter(m => m.memberPublicId !== memberPublicId))
+      await api.delete(`/study-group/${id}/kick/${memberPublicId}`)
+      const response = await api.get(`/study-group/${id}/members`)
       setMembers(response.result)
-
-      toast({
-        title: "멤버 강퇴",
-        description: "멤버가 스터디에서 강퇴되었습니다.",
-      })
+      toast({ title: "멤버 강퇴", description: "멤버가 스터디에서 강퇴되었습니다." })
     } catch (error) {
-      // API 호출 실패 시 UI를 원래 상태로 복원
-      const response = await api.get(`/study-group/${params.id}/members`)
+      const response = await api.get(`/study-group/${id}/members`)
       setMembers(response.result)
-      
       toast({
         title: "오류 발생",
         description: "멤버 강퇴에 실패했습니다.",
@@ -119,48 +138,44 @@ export default function StudyManagementPage() {
     }
   }
 
-  const handleApprove = async (memberPublicId: string) => { // 파라미터 이름은 API URL에 맞춰 유지
+  const handleApprove = async (memberPublicId: string) => {
     try {
-      await api.post(`/study-group/${params.id}/accept/${memberPublicId}`);
-      // 승인 후 목록 새로고침
-      const response = await api.get(`/study-group/${params.id}/applicants`);
-      setApplicants(response.result);
-      toast({
-        title: '승인 완료',
-        description: '참여 신청이 승인되었습니다.',
-      });
+      await api.post(`/study-group/${id}/accept/${memberPublicId}`)
+      const response = await api.get(`/study-group/${id}/applicants`)
+      setApplicants(response.result)
+      toast({ title: "승인 완료", description: "참여 신청이 승인되었습니다." })
     } catch (error) {
       toast({
-        title: '오류 발생',
-        description: '참여 신청 승인에 실패했습니다.',
-        variant: 'destructive',
-      });
+        title: "오류 발생",
+        description: "참여 신청 승인에 실패했습니다.",
+        variant: "destructive",
+      })
     }
-  };
+  }
 
-  const handleReject = async (memberPublicId: string) => { // 파라미터 이름은 API URL에 맞춰 유지
+  const handleReject = async (memberPublicId: string) => {
     try {
-      await api.delete(`/study-group/${params.id}/kick/${memberPublicId}`);
-      // 거절 후 목록 새로고침
-      const response = await api.get(`/study-group/${params.id}/applicants`);
-      setApplicants(response.result);
-      toast({
-        title: '거절 완료',
-        description: '참여 신청이 거절되었습니다.',
-      });
+      await api.delete(`/study-group/${id}/kick/${memberPublicId}`)
+      const response = await api.get(`/study-group/${id}/applicants`)
+      setApplicants(response.result)
+      toast({ title: "거절 완료", description: "참여 신청이 거절되었습니다." })
     } catch (error) {
       toast({
-        title: '오류 발생',
-        description: '참여 신청 거절에 실패했습니다.',
-        variant: 'destructive',
-      });
+        title: "오류 발생",
+        description: "참여 신청 거절에 실패했습니다.",
+        variant: "destructive",
+      })
     }
-  };
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
-        <StudyHeader study={study} />
+        {/* 🔥 여기: 기존 공개페이지 보기 버튼 자리 -> 스터디 상세 보기 버튼 */}
+        <div className="flex items-start justify-between mb-3 gap-4">
+          <StudyHeader study={study} />
+          <Button onClick={goDetail}>스터디 상세 보기</Button>
+        </div>
 
         <Tabs defaultValue="schedule">
           <TabsList className="grid w-full grid-cols-3">
