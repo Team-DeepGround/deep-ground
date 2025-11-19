@@ -25,7 +25,7 @@ function parseJwt<T = any>(token: string): T | null {
 
 async function fetchPublicIdFromServer(token: string) {
   try {
-    const res = await api.get("/members/me", {
+    const res = await api.get("/members/profile/me", {
       headers: { Authorization: `Bearer ${token}` }
     })
 
