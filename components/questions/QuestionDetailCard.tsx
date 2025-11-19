@@ -44,7 +44,10 @@ export default function QuestionDetailCard({
     }
   };
   
-  
+  const isAuthor = 
+  publicId && 
+  question?.publicId && 
+  String(publicId).trim().toLowerCase() === String(question.publicId).trim().toLowerCase();
   
   return (
     <Card className="mb-8">
@@ -126,9 +129,7 @@ export default function QuestionDetailCard({
                   ? '해결완료'
                   : '미해결'}
               </span>
-              {publicId &&
-                question?.publicId &&
-                publicId === question.publicId && (
+              { isAuthor && (
                   <select
                     className="ml-2 text-sm font-medium border border-gray-300 bg-white px-2 py-1 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
                     value={
@@ -143,9 +144,7 @@ export default function QuestionDetailCard({
                   </select>
                 )}
             </div>
-            {publicId &&
-              question?.publicId &&
-              publicId === question.publicId && (
+            { isAuthor && (
                 <div className="flex gap-2 items-center mt-2">
                   <Button
                     variant="outline"
