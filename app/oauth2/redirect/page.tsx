@@ -80,10 +80,14 @@ function OAuth2Content() {
           : payload.nickname ?? payload.name ?? null
 
       // ✅ publicId (쿼리스트링 > JWT payload 우선순위)
-      const publicId =
+      let publicId =
         publicIdParam
           ? decodeURIComponent(publicIdParam)
           : payload.publicId ?? payload.userPublicId ?? null
+
+      if (!publicId) {
+        publicId = await fetchPublicIdFromServer(accessToken)
+      }
 
       // ✅ AuthContext 시그니처에 맞게 모두 전달
       login(
