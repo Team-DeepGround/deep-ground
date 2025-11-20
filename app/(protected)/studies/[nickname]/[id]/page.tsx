@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
-import { useAuth } from "@/hooks/use-auth"
+import { useAuth } from "@/components/auth-provider"
 import { api } from "@/lib/api-client"
 import { StudyGroupDetail, StudySession, Participant } from "@/types/study"
 import { StudyHeader } from "@/components/studies/StudyHeader"
@@ -14,6 +14,7 @@ import { CommentSection } from "@/components/studies/CommentSection"
 import { StudySchedule } from "@/components/studies/StudySchedule"
 import { Separator } from "@/components/ui/separator"
 import { fetchStudySchedulesByGroup } from "@/lib/api/studySchedule"
+
 
 import {
   AlertDialog,
@@ -67,8 +68,21 @@ export default function StudyDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [showLeaveDialog, setShowLeaveDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-
+ 
   useEffect(() => {
+
+    // 🔒 비로그인인데 상세 페이지 들어온 경우 → 바로 로그인으로 보냄
+    if (!isAuthenticated) {
+    toast({
+      title: "로그인이 필요합니다",
+      description: "로그인이 필요합니다. 로그인 페이지로 이동합니다.",
+      variant: "destructive",
+    })
+
+    router.replace(`/auth/login?redirect=${encodeURIComponent(window.location.pathname)}`)
+    return
+  }
+
     const fetchStudy = async () => {
       // params.id가 없거나 유효하지 않은 경우 처리
       if (!params.id || params.id === 'undefined') {

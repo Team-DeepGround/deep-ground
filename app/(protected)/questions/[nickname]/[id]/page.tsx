@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
-import { useAuth } from "@/hooks/use-auth"
+import { useAuth } from "@/components/auth-provider"
 import { ThumbsUp, CheckCircle2, Calendar, ArrowLeft, X, Pencil, Trash } from "lucide-react"
 import FileUpload from "@/components/file-upload"
 import { api } from "@/lib/api-client"
@@ -115,10 +115,11 @@ export default function QuestionDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
-  const { user } = useAuth()
+  const { isAuthenticated, user } = useAuth()
   const publicId = user?.publicId
   const [answerContent, setAnswerContent] = useState("")
   const [uploadedImages, setUploadedImages] = useState<File[]>([])
+  
 
   // 상태 관리 부분에 다음 상태들을 추가합니다 (useState 부분 근처에)
   const [likedAnswers, setLikedAnswers] = useState<number[]>([])
@@ -220,6 +221,19 @@ export default function QuestionDetailPage() {
 
   // 페이지 포커스 시 데이터 새로고침 (답변 수정 후 돌아올 때)
   useEffect(() => {
+
+    // 🔒 비로그인인데 상세 페이지 들어온 경우 → 바로 로그인으로 보냄
+    if (!isAuthenticated) {
+      toast({
+        title: "로그인이 필요합니다",
+        description: "로그인이 필요합니다. 로그인 페이지로 이동합니다.",
+        variant: "destructive",
+      })
+
+      router.replace(`/auth/login?redirect=${encodeURIComponent(window.location.pathname)}`)
+      return
+    }
+
     const handleFocus = () => {
       // 파일 선택 창에서 복귀 직후 상태 반영 전에 트리거되는 것을 방지하기 위해 지연 검사
       setTimeout(() => {
