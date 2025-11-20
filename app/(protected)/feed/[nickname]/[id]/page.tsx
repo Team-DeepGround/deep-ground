@@ -7,6 +7,7 @@ import { fetchFeedById, FetchFeedResponse } from "@/lib/api/feed"
 import { FeedPost } from "@/components/feed/feed-post"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
+import { useAuth } from "@/components/auth-provider"
 
 export default function FeedDetailPage() {
   const params = useParams()
@@ -14,12 +15,24 @@ export default function FeedDetailPage() {
   const { toast } = useToast()
   const [feed, setFeed] = useState<FetchFeedResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const { isAuthenticated } = useAuth()
 
   // Ensure 'id' is always a string, handling potential string array from params.
   const feedIdFromParams = Array.isArray(params.id) ? params.id[0] : params.id
   const feedId = feedIdFromParams ? parseInt(feedIdFromParams) : null
 
   useEffect(() => {
+    // 🔒 비로그인인데 상세 페이지 들어온 경우 → 바로 로그인으로 보냄
+    if (!isAuthenticated) {
+      toast({
+        title: "로그인이 필요합니다",
+        description: "로그인이 필요합니다. 로그인 페이지로 이동합니다.",
+        variant: "destructive",
+      })
+
+      router.replace(`/auth/login?redirect=${encodeURIComponent(window.location.pathname)}`)
+      return
+    }
     if (feedId) {
       loadFeed()
     }
