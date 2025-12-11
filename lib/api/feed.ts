@@ -42,10 +42,8 @@ export interface FetchFeedsResponse {
   message: string;
   result: {
     feeds: FetchFeedResponse[];
-    total: number;
     page: number;
-    pageSize: number;
-    totalPages: number;
+    hasNext: boolean;
   } | null;
 }
 
